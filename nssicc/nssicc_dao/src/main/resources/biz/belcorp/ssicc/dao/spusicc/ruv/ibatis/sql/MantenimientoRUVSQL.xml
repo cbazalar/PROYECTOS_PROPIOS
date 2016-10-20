@@ -1,0 +1,1330 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.ruv.MantenimientoRUVSQL">
+	
+	<typeAlias alias="baseGenerico"   type="biz.belcorp.ssicc.dao.sisicc.model.Base"/>
+	
+	<resultMap id="baseResult"          class="baseGenerico">
+    	<result property="codigo" 		column="CODIGO" 	/>
+    	<result property="descripcion" 	column="DESCRIPCION"/>
+    </resultMap>
+	
+    <select id="getTipoDocumentoContable" resultMap="baseResult">
+		SELECT oid_tipo_docu  AS CODIGO, 
+		       des_tipo_docu  AS DESCRIPCION
+		  FROM fac_tipo_docum
+		 ORDER BY des_tipo_docu 
+    </select>
+
+	<resultMap id="getLimitesDocumentosLegalesResult" class="java.util.HashMap">
+		<result property="minimo"				column="MINIMO" />
+		<result property="maximo"				column="MAXIMO" />
+		<result property="diferencia"			column="DIFERENCIA" />     		           
+	</resultMap>
+
+	<select id="getLimitesDocumentosLegales" parameterClass="java.util.Map" resultMap="getLimitesDocumentosLegalesResult">
+		select min(a.VAL_NUME_DOCU_LEGA) as MINIMO,
+		       max(a.VAL_NUME_DOCU_LEGA) as MAXIMO,
+		       (max(a.VAL_NUME_DOCU_LEGA) - min(a.VAL_NUME_DOCU_LEGA) + 1) as DIFERENCIA
+		  from FAC_REGIS_UNICO_VENTA a
+		 where a.TIDO_OID_TIPO_DOCU = #oidTipoDocumento#
+		   <![CDATA[
+		   and trunc(a.FEC_EMIS) >= to_date(#fechaDesde#, 'dd/mm/yyyy')		   
+		   and trunc(a.FEC_EMIS) <= to_date(#fechaHasta#, 'dd/mm/yyyy')
+		   ]]>
+		   <isNotEmpty prepend="AND" property="codigoSubacceso">
+		       a.SBAC_OID_SBAC = (SELECT s.oid_sbac
+		                            FROM SEG_SUBAC S
+		                           where S.COD_SBAC = #codigoSubacceso#) 
+		   </isNotEmpty>
+		   <isNotEmpty prepend="AND" property="serie">
+		      a.val_seri_docu_lega = #serie#
+		   </isNotEmpty>
+	</select>
+
+	<select id="getTotalDocumentosLegales" parameterClass="java.util.Map" resultClass="string">
+		select count(1) as Total
+		  from FAC_REGIS_UNICO_VENTA a
+		 where a.TIDO_OID_TIPO_DOCU = #oidTipoDocumento#
+		   <![CDATA[
+		   and trunc(a.FEC_EMIS) >= to_date(#fechaDesde#, 'dd/mm/yyyy')
+		   and trunc(a.FEC_EMIS) <= to_date(#fechaHasta#, 'dd/mm/yyyy')
+		   ]]>
+		   <isNotEmpty prepend="AND" property="codigoSubacceso">
+		      a.SBAC_OID_SBAC = (SELECT s.oid_sbac
+		                            FROM SEG_SUBAC S
+		                           where S.COD_SBAC = #codigoSubacceso#)
+		   </isNotEmpty>
+		   <isNotEmpty prepend="AND" property="serie">
+		      a.val_seri_docu_lega = #serie#
+		   </isNotEmpty>
+	</select>
+
+	<resultMap id="getSinImpresionSinUnidadesResult" class="java.util.HashMap">
+		<result property="oidRegi"				column="oid_regi" />
+		<result property="fechaEmision"			column="fec_emis" />
+		<result property="canal"				column="CANAL" />     	
+		<result property="acceso"				column="acceso" />
+		<result property="tipoDocumento"		column="tipoDocumento" />
+		<result property="subacceso"			column="subacceso" /> 
+		<result property="serie"				column="serie" /> 
+		<result property="numeroInterno"		column="NUM_DOCU_CONT_INTE" />	
+		<result property="importeTotal"			column="imp_tota" />
+	</resultMap>
+
+	<select id="getSinImpresionSinUnidades" parameterClass="java.util.Map" resultMap="getSinImpresionSinUnidadesResult">
+	    SELECT b.oid_regi,
+	           to_char(b.fec_emis, 'DD/MM/YYYY') as fec_emis,
+	           #descripcionCanal# as CANAL,
+	           #descripcionAcceso# as acceso,
+	           d.des_tipo_docu as tipoDocumento,
+	           #descripcionSubAcceso# as subacceso,
+	           #serie# as serie,
+	           b.NUM_DOCU_CONT_INTE,
+	           b.imp_tota 
+	      FROM FAC_REGIS_UNICO_VENTA b, 
+	           FAC_DOCUM_CONTA_CABEC a,
+	           FAC_TIPO_DOCUM        d
+	     WHERE b.DCCA_OID_CABE = a.oid_cabe
+			   AND b.TIDO_OID_TIPO_DOCU = d.OID_TIPO_DOCU
+	       AND a.TIDO_OID_TIPO_DOCU = #oidTipoDocumento#
+	       <![CDATA[
+	       AND trunc(a.FEC_EMIS) >= to_date(#fechaDesde#, 'dd/MM/yyyy')
+	       AND trunc(a.FEC_EMIS) <= to_date(#fechaHasta#, 'dd/MM/yyyy')
+	       ]]>
+	       <isNotEmpty prepend="AND" property="codigoSubacceso">
+	          a.SBAC_OID_SBAC = #oidSubAcceso#
+	       </isNotEmpty>
+	       AND a.IND_IMPR = 0
+	       AND a.NUM_UNID_ATEN_TOTA = 0
+	       
+	       <isNotEmpty prepend="AND" property="serie">
+		      a.val_seri_docu_lega = #serie#
+		   </isNotEmpty>
+	       
+	       AND b.imp_tota = 0
+	</select>
+	
+	<delete id="deleteRegistroUnicoVentasById" parameterClass="string">
+		delete fac_regis_unico_venta where OID_REGI = #oidRUV# 
+	</delete>	
+
+	<resultMap id="getLegalesDuplicadosResult" class="java.util.HashMap">		
+		<result property="fechaEmision"			column="fec_emis" />
+		<result property="canal"				column="CANAL" />     	
+		<result property="acceso"				column="acceso" />
+		<result property="tipoDocumento"		column="tipoDocumento" />
+		<result property="subacceso"			column="subacceso" /> 
+		<result property="serie"				column="serie" /> 
+		<result property="numeroInterno"		column="NUM_DOCU_CONT_INTE" />
+		<result property="numeroLegal"			column="val_nume_docu_lega" />
+		<result property="total"				column="contador" />	 	           
+	</resultMap>
+	
+	<select id="getLegalesDuplicados" parameterClass="java.util.Map" resultMap="getLegalesDuplicadosResult">
+		SELECT to_char(b.fec_emis,'DD/MM/YYYY') as fec_emis,
+		       #descripcionCanal# as CANAL,
+		       #descripcionAcceso# as acceso,
+		       D.DES_TIPO_DOCU as tipoDocumento,
+		       #descripcionSubAcceso# as subacceso,
+		       #serie# as serie,
+		       b.NUM_DOCU_CONT_INTE,
+		       b.val_nume_docu_lega,
+        	   count(1) contador   
+		  FROM FAC_REGIS_UNICO_VENTA B,
+		       FAC_TIPO_DOCUM        D
+		 WHERE B.TIDO_OID_TIPO_DOCU = D.OID_TIPO_DOCU 
+		   AND b.TIDO_OID_TIPO_DOCU = #oidTipoDocumento# 
+		   <![CDATA[
+		   and trunc(b.FEC_EMIS) >= to_date(#fechaDesde#, 'dd/mm/yyyy')
+		   and trunc(b.FEC_EMIS) <= to_date(#fechaHasta#, 'dd/mm/yyyy')
+		   ]]>
+		   and b.SBAC_OID_SBAC = #oidSubAcceso#
+		   and b.val_seri_docu_lega = #serie#
+		 group by b.fec_emis,
+		  		  D.DES_TIPO_DOCU,
+                  b.NUM_DOCU_CONT_INTE,
+                  b.val_nume_docu_lega
+        having count(1)>1   
+	</select>
+	
+	<resultMap id="getSinAsignarNumeroDocumentoResult" class="java.util.HashMap">		
+		<result property="fechaEmision"			column="fec_emis" />
+		<result property="canal"				column="CANAL" />     	
+		<result property="acceso"				column="acceso" />
+		<result property="tipoDocumento"		column="tipoDocumento" />
+		<result property="subacceso"			column="subacceso" /> 
+		<result property="serie"				column="serie" /> 
+		<result property="numeroInterno"		column="NUM_DOCU_CONT_INTE" />
+		<result property="total"				column="contador" />	 	           
+	</resultMap>
+	
+	<select id="getSinAsignarNumeroDocumento" parameterClass="java.util.Map" resultMap="getSinAsignarNumeroDocumentoResult">
+		SELECT to_char(b.fec_emis,'DD/MM/YYYY') as fec_emis,
+		       #descripcionCanal# as CANAL,
+		       #descripcionAcceso# as acceso,
+		       D.DES_TIPO_DOCU as tipoDocumento,
+		       #descripcionSubAcceso# as subacceso,
+		       #serie# as serie,
+		       b.NUM_DOCU_CONT_INTE,
+        	   count(1) contador      
+		  FROM FAC_REGIS_UNICO_VENTA B,
+		       FAC_TIPO_DOCUM D
+		 WHERE B.TIDO_OID_TIPO_DOCU = D.OID_TIPO_DOCU 
+		   AND B.TIDO_OID_TIPO_DOCU = #oidTipoDocumento# 
+		   <![CDATA[
+		   and trunc(b.FEC_EMIS) >= to_date(#fechaDesde#, 'dd/mm/yyyy')
+		   and trunc(b.FEC_EMIS) <= to_date(#fechaHasta#, 'dd/mm/yyyy')
+		   ]]>
+		   
+		   <isNotEmpty prepend="AND" property="codigoSubacceso">
+	          b.SBAC_OID_SBAC = #oidSubAcceso#
+	       </isNotEmpty>
+	       <isNotEmpty prepend="AND" property="serie">
+		      b.val_seri_docu_lega = #serie#
+		   </isNotEmpty>
+		   and b.VAL_NUME_DOCU_LEGA is null 
+		   and b.NUM_DOCU_CONT_INTE is not null
+		 group by b.fec_emis, D.DES_TIPO_DOCU, b.NUM_DOCU_CONT_INTE 
+	</select>
+	
+
+	<parameterMap id="executeGenerarDataDocumentosContablesParams" class="map">
+		<parameter property="oidTipoDocumento" jdbcType="NUMBER" javaType="java.lang.Integer" mode="IN"/>
+		<parameter property="fechaDesde" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="fechaHasta" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="codigoSubacceso" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="serie" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+	</parameterMap>
+	
+	<procedure id="executeGenerarDataDocumentosContables" parameterMap="executeGenerarDataDocumentosContablesParams">
+		{call RUV_PKG_PROCE.RUV_PR_GENER_DOCUM_CONTA(?,?,?,?,?)}
+	</procedure>
+	
+
+	<parameterMap id="getAsignarNulosPorDiasParams" class="map" >		
+	    <parameter property="oidTipoDocumento"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="serie"                 	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoSubacceso"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaDesde"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaHasta"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="cantidad"                   jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+	
+	<procedure id="getAsignarNulosPorDias" parameterMap="getAsignarNulosPorDiasParams">
+		{call RUV_PKG_PROCE.RUV_PR_CANTI_ASIGN_NULOS_XDIAS(?,?,?,?,?,?)}
+	</procedure>
+	
+	<parameterMap id="getAsignarNulosPorRangoParams" class="map" >	   
+	    <parameter property="oidTipoDocumento"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="serie"                 	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoSubacceso"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaDesde"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaHasta"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="rangoInicio"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="rangoFin"	                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="cantidad"                   jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+	
+	<procedure id="getAsignarNulosPorRango" parameterMap="getAsignarNulosPorRangoParams">
+		{call RUV_PKG_PROCE.RUV_PR_CANTI_ASIGN_NULOS_RANGO(?,?,?,?,?,?,?,?)}
+	</procedure>			
+		
+	<parameterMap id="executeAsignarNulosPorDiasParams" class="map" >
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="oidTipoDocumento"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="serie"                 	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoSubacceso"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaDesde"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaHasta"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <procedure id="executeAsignarNulosPorDias" parameterMap="executeAsignarNulosPorDiasParams" >
+		{call RUV_PKG_PROCE.RUV_PR_PROCE_ASIGN_NULOS_XDIAS(?,?,?,?,?,?)}
+    </procedure> 	
+	
+	<parameterMap id="executeAsignarNulosPorRangoParams" class="map" >
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="oidTipoDocumento"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="serie"                 	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoSubacceso"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaDesde"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>	    
+	    <parameter property="fechaHasta"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="rangoInicio"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="rangoFin"	             	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <procedure id="executeAsignarNulosPorRango" parameterMap="executeAsignarNulosPorRangoParams" >
+		{call RUV_PKG_PROCE.RUV_PR_PROCE_ASIGN_NULOS_RANGO(?,?,?,?,?,?,?,?)}
+    </procedure>
+    
+	<select id="getDescripcionAcceso" parameterClass="java.util.Map" resultClass="string">
+		SELECT GEN.VAL_I18N DESCRIPCION
+		  FROM seg_acces SA, GEN_I18N_SICC_COMUN GEN
+		 WHERE cana_oid_cana = #oidCanal#
+		   AND cod_acce = #codigoAcceso#
+		   AND GEN.ATTR_ENTI = #entidadSegAccess#
+		   AND SA.OID_ACCE = GEN.VAL_OID
+	</select>
+	
+	<select id="getOidSegAcceso" parameterClass="java.util.Map" resultClass="string">
+		SELECT ac.oid_acce oidacceso
+		  FROM SEG_ACCES ac
+		 WHERE ac.cana_oid_cana = #oidCanal#
+		   AND ac.cod_acce = #codigoAcceso#
+	</select> 
+	
+	<select id="getDescripcionSubAcceso" parameterClass="java.util.Map" resultClass="string">
+		 SELECT GEN.VAL_I18N DESCRIPCION
+		   FROM SEG_SUBAC S, GEN_I18N_SICC_COMUN GEN
+		  WHERE S.ACCE_OID_ACCE = #oidAcceso#
+		    AND GEN.ATTR_ENTI = #entidadSubAcceso#
+		    AND S.OID_SBAC = GEN.VAL_OID
+		    AND S.COD_SBAC = #codigoSubAcceso#
+	</select>   
+	
+	<select id="getOidSegSubAcceso" parameterClass="java.util.Map" resultClass="string">
+	    SELECT s.oid_sbac oidsbac
+	      FROM SEG_SUBAC S
+	     WHERE S.ACCE_OID_ACCE = #oidAcceso#
+	       AND S.COD_SBAC = #codigoSubAcceso#
+	</select>
+	
+	<resultMap id="getDocContablesLegalesResult" class="java.util.HashMap">		
+		<result property="fechaEmision"			column="fec_emis" />
+		<result property="canal"				column="CANAL" />     	
+		<result property="acceso"				column="acceso" />
+		<result property="tipoDocumento"		column="tipoDocumento" />
+		<result property="subacceso"			column="subacceso" /> 
+		<result property="serie"				column="serie" /> 
+		<result property="numeroInterno"		column="NUM_DOCU_CONT_INTE" />
+		<result property="numeroLegal"			column="val_nume_docu_lega" />
+		<result property="total"				column="contador" />	
+		<result property="anulado"				column="anulado" />
+		<result property="numeroControl"		column="NUM_CONT_DOCU_LEGA" />
+		<result property="baseImponible"		column="Val_base_impo" />
+		<result property="descuento"		    column="Val_desc" />
+		<result property="importeNeto"		    column="Val_base_impo_neto" />
+		<result property="impuesto"		        column="Imp_impu" />
+		<result property="totalImporte"		    column="Imp_tota" />
+	</resultMap>
+	
+	<select id="getDocContablesLegales" parameterClass="java.util.Map" resultMap="getDocContablesLegalesResult">
+		SELECT TO_CHAR(b.fec_emis, 'DD/MM/YYYY') as fec_emis,
+		       #descripcionCanal# as CANAL, 
+		       #descripcionAcceso# as acceso, 
+		       D.DES_TIPO_DOCU as tipoDocumento,
+		       #descripcionSubAcceso# as subacceso, 
+		       b.val_seri_docu_lega as serie,
+		       b.NUM_DOCU_CONT_INTE,
+		       b.val_nume_docu_lega,
+		       COUNT(1) OVER(partition by b.val_nume_docu_lega) as contador,
+		       b.Val_base_impo,
+	           b.Val_desc,
+	           b.Val_base_impo_neto,
+	           b.Imp_impu,
+	           b.Imp_tota,
+		       CASE b.ind_esta WHEN 0 THEN 'Bien' ELSE 'Anulado' END as anulado,
+		       NUM_CONT_DOCU_LEGA
+		  FROM FAC_REGIS_UNICO_VENTA B, FAC_TIPO_DOCUM D
+		 WHERE B.TIDO_OID_TIPO_DOCU = D.OID_TIPO_DOCU
+		   AND b.TIDO_OID_TIPO_DOCU = #oidTipoDocumento#
+		   <![CDATA[
+		   AND trunc(b.FEC_EMIS) >= to_date(#fechaDesde#, 'dd/mm/yyyy')
+		   AND trunc(b.FEC_EMIS) <= to_date(#fechaHasta#, 'dd/mm/yyyy')
+		   ]]>
+		   <isNotEmpty prepend="AND" property="codigoSubAcceso">
+		   		  b.SBAC_OID_SBAC 		= #oidSubAcceso#
+		   </isNotEmpty>
+		   <isNotEmpty prepend="AND" property="serie">
+		          b.val_seri_docu_lega = #serie#
+		   </isNotEmpty>
+      	   <isNotEmpty prepend="AND" property="numeroDocumentoInicial">
+     			<![CDATA[
+		   			b.val_nume_docu_lega >= #numeroDocumentoInicial#
+		   		]]>
+     	   </isNotEmpty>
+      	   <isNotEmpty prepend="AND" property="numeroDocumentoFinal">
+     			<![CDATA[
+		   			b.val_nume_docu_lega <= #numeroDocumentoFinal#
+		   		]]>
+     	   </isNotEmpty>
+		 ORDER BY b.val_nume_docu_lega
+
+	</select>
+	
+	<resultMap id="getDocContablesInternosResult" class="java.util.HashMap">		
+		<result property="fechaEmision"			column="fec_emis" />
+		<result property="canal"				column="CANAL" />     	
+		<result property="acceso"				column="acceso" />
+		<result property="tipoDocumento"		column="tipoDocumento" />
+		<result property="subacceso"			column="subacceso" /> 
+		<result property="serie"				column="serie" /> 
+		<result property="numeroInterno"		column="NUM_DOCU_CONT_INTE" />
+		<result property="numeroLegal"			column="val_nume_docu_lega" />
+		<result property="total"				column="contador" />	
+		<result property="anulado"				column="anulado" />
+		<result property="numeroControl"		column="NUM_CONT_DOCU_LEGA" />
+		<result property="baseImponible"		column="Val_base_impo" />
+		<result property="descuento"		    column="Val_desc" />
+		<result property="importeNeto"		    column="Val_base_impo_neto" />
+		<result property="impuesto"		        column="Imp_impu" />
+		<result property="totalImporte"		        column="Imp_tota" />
+	</resultMap>
+	
+	<select id="getDocContablesInternos" parameterClass="java.util.Map" resultMap="getDocContablesInternosResult">
+		SELECT TO_CHAR(b.fec_emis, 'DD/MM/YYYY') as fec_emis,
+		       #descripcionCanal# as CANAL, 
+		       #descripcionAcceso# as acceso, 
+		       D.DES_TIPO_DOCU as tipoDocumento,
+		       #descripcionSubAcceso# as subacceso, 
+		       b.val_seri_docu_lega as serie,
+		       b.NUM_DOCU_CONT_INTE,
+		       b.val_nume_docu_lega,
+		       COUNT(1) OVER(partition by b.val_nume_docu_lega) as contador,
+		       b.Val_base_impo,
+	           b.Val_desc,
+	           b.Val_base_impo_neto,
+	           b.Imp_impu,
+	           b.Imp_tota,
+		       CASE b.ind_esta WHEN 0 THEN 'Bien' ELSE 'Anulado' END as anulado,
+		       NUM_CONT_DOCU_LEGA
+		  FROM FAC_REGIS_UNICO_VENTA B, FAC_TIPO_DOCUM D
+		 WHERE B.TIDO_OID_TIPO_DOCU = D.OID_TIPO_DOCU
+		   AND b.TIDO_OID_TIPO_DOCU = #oidTipoDocumento#
+		   <![CDATA[
+		   AND trunc(b.FEC_EMIS) >= to_date(#fechaDesde#, 'dd/mm/yyyy')
+		   AND trunc(b.FEC_EMIS) <= to_date(#fechaHasta#, 'dd/mm/yyyy')
+		   ]]>
+		   <isNotEmpty prepend="AND" property="codigoSubAcceso">
+		   		  b.SBAC_OID_SBAC 		= #oidSubAcceso#
+		   </isNotEmpty>
+		   <isNotEmpty prepend="AND" property="serie">
+		          b.val_seri_docu_lega = #serie#
+		   </isNotEmpty>
+      	   <isNotEmpty prepend="AND" property="numeroDocumentoInicial">
+     			<![CDATA[
+		   			b.num_docu_cont_inte >= #numeroDocumentoInicial#
+		   		]]>
+     	   </isNotEmpty>
+      	   <isNotEmpty prepend="AND" property="numeroDocumentoFinal">
+     			<![CDATA[
+		   			b.num_docu_cont_inte <= #numeroDocumentoFinal#
+		   		]]>
+     	   </isNotEmpty>
+		 ORDER BY b.num_docu_cont_inte 
+
+	</select>
+	
+	<parameterMap id="executeGenerarDataDocumentosLegalDuplicadosParams" class="map">
+		<parameter property="oidTipoDocumento" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="fechaDesde" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="fechaHasta" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="oidSubAcceso" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="serie" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="descripcionCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="descripcionAcceso" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="descripcionSubAcceso" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+	</parameterMap>
+	
+	<procedure id="executeGenerarDataDocumentosLegalDuplicado" parameterMap="executeGenerarDataDocumentosLegalDuplicadosParams">
+		{call RUV_PKG_PROCE.RUV_PR_GENER_DOCUM_LEGDP(?,?,?,?,?,?,?,?)}
+	</procedure>
+	
+	<resultMap id="getDocLegalDuplicadoResult" class="java.util.HashMap">		
+		<result property="fechaEmision"			column="fec_emis" />
+		<result property="canal"				column="CANAL" />     	
+		<result property="acceso"				column="acceso" />
+		<result property="tipoDocumento"		column="tipoDocumento" />
+		<result property="subacceso"			column="subacceso" /> 
+		<result property="serie"				column="serie" /> 
+		<result property="numeroInterno"		column="NUM_DOCU_CONT_INTE" />
+		<result property="numeroLegal"			column="val_nume_docu_lega" />
+		<result property="total"				column="contador" />	
+	</resultMap>
+	
+	<select id="getDocLegalDuplicadosList" parameterClass="java.util.Map" resultMap="getDocLegalDuplicadoResult">
+		SELECT FEC_EMIS           as fec_emis,
+		       VAL_DESC_CANA      as CANAL,
+		       VAL_DESC_ACCE      as acceso,
+		       VAL_DESC_TDOC      as tipoDocumento,
+		       VAL_DESC_SACC      as subacceso,
+		       VAL_SERI_DOCU      as serie,
+		       NUM_DOCU_CONT_INTE as NUM_DOCU_CONT_INTE,
+		       VAL_NUME_DOCU_LEGA as val_nume_docu_lega,
+		       VAL_NUME_CONTA     as contador
+		  FROM RUV_GTT_DOCU_ANULA
+	</select>
+	
+	<select id="getDescCanal" parameterClass="java.util.Map" resultClass="string">
+		SELECT s.val_i18n as descripcion	
+	      FROM SEG_CANAL c,
+	           GEN_I18N_SICC_COMUN s
+	     WHERE c.oid_cana = s.val_oid
+	       AND s.attr_enti = 'SEG_CANAL'
+	       AND c.cod_cana  = #codigoCanal#
+	</select>
+	
+	<select id="getOidCanalxCod" parameterClass="java.util.Map"  resultClass="string">
+		SELECT oid_cana
+		FROM SEG_CANAL
+		WHERE cod_cana = #codCanal#
+	</select>
+	
+	<delete id="deleteDocuLegalesLimites" parameterClass="java.util.Map">
+		<![CDATA[
+		delete from FAC_REGIS_UNICO_VENTA a
+		where a.TIDO_OID_TIPO_DOCU = #oidTipoDocumento#
+		and TRUNC(a.FEC_EMIS) >= to_date(#fechaDesde#, 'dd/mm/yyyy')
+		and TRUNC(a.FEC_EMIS) <= to_date(#fechaHasta#, 'dd/mm/yyyy')
+		and a.SBAC_OID_SBAC = #oidSubAcceso#
+		and a.val_seri_docu_lega = #serie#	
+		]]>	
+	</delete>
+	
+	<delete id="deleteDocuLegales" parameterClass="java.util.Map">
+		delete from FAC_REGIS_UNICO_VENTA a
+		where a.TIDO_OID_TIPO_DOCU = #oidTipoDocumento#
+		<![CDATA[
+		and TRUNC(a.FEC_EMIS) >= to_date(#fechaDesde#, 'dd/mm/yyyy')
+		and TRUNC(a.FEC_EMIS) <= to_date(#fechaHasta#, 'dd/mm/yyyy')
+		]]>
+		and a.SBAC_OID_SBAC = #oidSubAcceso#
+		and a.val_seri_docu_lega = #serie#
+		<isNotEmpty prepend="AND" property="numeroDocuLegalInicio">
+			<![CDATA[
+				a.val_nume_docu_lega >= #numeroDocuLegalInicio#
+			]]>
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="numeroDocuLegalFinal">
+			<![CDATA[
+				a.val_nume_docu_lega <= #numeroDocuLegalFinal#	
+			]]>
+		</isNotEmpty>
+    </delete>
+    
+    <delete id="deleteDocuInternos" parameterClass="java.util.Map">
+		delete from FAC_REGIS_UNICO_VENTA a
+		where a.TIDO_OID_TIPO_DOCU = #oidTipoDocumento#
+		<![CDATA[
+		and TRUNC(a.FEC_EMIS) >= to_date(#fechaDesde#, 'dd/mm/yyyy')
+		and TRUNC(a.FEC_EMIS) <= to_date(#fechaHasta#, 'dd/mm/yyyy')
+		]]>
+		and a.SBAC_OID_SBAC = #oidSubAcceso#
+		and a.val_seri_docu_lega = #serie#
+		<isNotEmpty prepend="AND" property="numeroDocuInternoInicio">
+			<![CDATA[
+				a.num_docu_cont_inte >= #numeroDocuInternoInicio#
+			]]>
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="numeroDocuInternoFinal">
+			<![CDATA[
+				a.num_docu_cont_inte <= #numeroDocuInternoFinal#	
+			]]>
+		</isNotEmpty>
+    </delete>
+    
+    <select id="getIndicadorRUVEliminarDocumentoContable" parameterClass="string" resultClass="string">
+    	SELECT VAL_PARA 
+		FROM BAS_PARAM_PAIS
+		WHERE COD_PAIS = #codigoPais#
+		AND   COD_SIST = 'RUV'
+		AND   NOM_PARA = 'indEliminarDocCont'
+    </select>
+    
+    <select id="getIndicadorActivacionDocumentoContable" parameterClass="java.util.Map" resultClass="java.lang.String">
+		select    VAL_PARA
+		from      BAS_PARAM_PAIS
+		where     COD_PAIS = #codigoPais#
+		  and     COD_SIST = #codigoSistema#
+		  and     COD_PARA = #codigoParametro#        
+    </select>
+
+	<select id="getLimitesControlDocumentosLegales" parameterClass="java.util.Map" resultMap="getLimitesDocumentosLegalesResult">
+		select    nvl(min(a.num_cont_docu_lega), 0) as MINIMO,
+		          nvl(max(a.num_cont_docu_lega), 0) as MAXIMO,
+		          nvl( (max(a.num_cont_docu_lega) - min(a.num_cont_docu_lega) + 1), 0 )  as DIFERENCIA
+		from      FAC_REGIS_UNICO_VENTA a
+		where     a.TIDO_OID_TIPO_DOCU = #oidTipoDocumento#
+		  <![CDATA[
+		  and     trunc(a.FEC_EMIS) >= to_date(#fechaDesde#, 'dd/mm/yyyy')
+		  and     trunc(a.FEC_EMIS) <= to_date(#fechaHasta#, 'dd/mm/yyyy') 
+		  ]]>
+		  <isNotEmpty prepend="AND" property="codigoSubacceso">
+		       a.SBAC_OID_SBAC in (
+		            SELECT    s.oid_sbac 
+		            FROM      SEG_SUBAC S 
+		            where     S.COD_SBAC = #codigoSubacceso#
+		          )
+		  </isNotEmpty>
+		  <isNotEmpty prepend="AND" property="serie">
+		     a.val_seri_docu_lega = #serie#
+		  </isNotEmpty>
+	</select>
+
+	<select id="getTotalControlDocumentosLegales" parameterClass="java.util.Map" resultClass="string">
+		select    count(1) as Total
+		from      FAC_REGIS_UNICO_VENTA a
+		where     a.TIDO_OID_TIPO_DOCU = #oidTipoDocumento#
+		  <![CDATA[
+		  and     trunc(a.FEC_EMIS) >= to_date(#fechaDesde#, 'dd/mm/yyyy')
+		  and     trunc(a.FEC_EMIS) <= to_date(#fechaHasta#, 'dd/mm/yyyy') 
+		  ]]>
+		  <isNotEmpty prepend="AND" property="codigoSubacceso">
+		      a.SBAC_OID_SBAC in (
+		            SELECT    s.oid_sbac 
+		            FROM      SEG_SUBAC S 
+		            where     S.COD_SBAC = #codigoSubacceso#
+		          ) 
+		   </isNotEmpty>
+		   <isNotEmpty prepend="AND" property="serie">
+		       a.val_seri_docu_lega = #serie#
+		   </isNotEmpty>
+	</select>
+
+	<resultMap id="getNumeroControlDocLegResult" class="java.util.HashMap">		
+		<result property="fechaEmision"			column="fec_emis" />
+		<result property="canal"				column="CANAL" />     	
+		<result property="acceso"				column="acceso" />
+		<result property="tipoDocumento"		column="tipoDocumento" />
+		<result property="subacceso"			column="subacceso" /> 
+		<result property="serie"				column="serie" /> 
+		<result property="numeroInterno"		column="NUM_DOCU_CONT_INTE" />
+		<result property="numeroLegal"			column="val_nume_docu_lega" />
+		<result property="total"				column="contador" />	
+		<result property="anulado"				column="anulado" />
+		<result property="numeroControl"		column="NUM_CONT_DOCU_LEGA" />
+	</resultMap>
+	<select id="getNumeroControlDocLeg" parameterClass="java.util.Map" resultMap="getNumeroControlDocLegResult">
+		SELECT    TO_CHAR(b.fec_emis, 'DD/MM/YYYY') as fec_emis,
+				  #descripcionCanal# as CANAL,  
+				  #descripcionAcceso# as acceso,
+				  D.DES_TIPO_DOCU as tipoDocumento,
+				  #descripcionSubAcceso# as subacceso,
+				  #serie# as serie, 
+				  b.NUM_DOCU_CONT_INTE,
+				  b.val_nume_docu_lega,
+				  COUNT(1) OVER(partition by b.val_nume_docu_lega) as contador,
+				  CASE b.ind_esta WHEN 0 THEN 'Bien' ELSE 'Anulado' END as anulado,
+		          b.NUM_CONT_DOCU_LEGA
+		FROM      FAC_REGIS_UNICO_VENTA B, 
+		          FAC_TIPO_DOCUM D
+		WHERE     B.TIDO_OID_TIPO_DOCU = D.OID_TIPO_DOCU
+		  AND     b.TIDO_OID_TIPO_DOCU = #oidTipoDocumento#
+		  <![CDATA[
+		  AND     trunc(b.FEC_EMIS) >= to_date(#fechaDesde#, 'dd/mm/yyyy') 
+		  AND     trunc(b.FEC_EMIS) <= to_date(#fechaHasta#, 'dd/mm/yyyy')  
+		  ]]>
+		  
+		  <isNotEmpty prepend="AND" property="codigoSubacceso">
+	          b.SBAC_OID_SBAC = #oidSubAcceso#
+	       </isNotEmpty>
+	       <isNotEmpty prepend="AND" property="serie">
+		      b.val_seri_docu_lega = #serie#
+		   </isNotEmpty>
+		  
+      	  <isNotEmpty prepend="AND" property="numeroControlInicial">
+     	  <![CDATA[
+		   		  b.NUM_CONT_DOCU_LEGA >= #numeroControlInicial#
+		  ]]>
+     	  </isNotEmpty>
+      	  <isNotEmpty prepend="AND" property="numeroControlFinal">
+     	  <![CDATA[
+		   		  b.NUM_CONT_DOCU_LEGA <= #numeroControlFinal#
+		  ]]>
+     	  </isNotEmpty>
+		ORDER BY  b.NUM_CONT_DOCU_LEGA
+	</select>
+
+	<parameterMap id="executeGenerarDataNumeroControlDuplicadoParams" class="map">
+		<parameter property="oidTipoDocumento" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="fechaDesde" 			jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="fechaHasta" 			jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="oidSubAcceso" 			jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="serie" 				jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="descripcionCanal" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="descripcionAcceso" 	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="descripcionSubAcceso" 	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+	</parameterMap>
+	<procedure id="executeGenerarDataNumeroControlDuplicado" parameterMap="executeGenerarDataNumeroControlDuplicadoParams">
+		{call RUV_PKG_PROCE.RUV_PR_GENER_NUMER_CONDL(?,?,?,?,?,?,?,?)}
+	</procedure>
+	
+	<resultMap id="getNumeroControlDuplicadosResult" class="java.util.HashMap">		
+		<result property="fechaEmision"			column="fec_emis" />
+		<result property="canal"				column="CANAL" />     	
+		<result property="acceso"				column="acceso" />
+		<result property="tipoDocumento"		column="tipoDocumento" />
+		<result property="subacceso"			column="subacceso" /> 
+		<result property="serie"				column="serie" /> 
+		<result property="numeroInterno"		column="documentoInterno" />
+		<result property="numeroLegal"			column="documentoLegal" />
+		<result property="total"				column="contador" />	
+		<result property="numeroControl"		column="numeroControl" />
+	</resultMap>
+	<select id="getNumeroControlDuplicados" resultMap="getNumeroControlDuplicadosResult">
+		SELECT    FEC_EMIS as fec_emis,
+				  VAL_DESC_CANA as CANAL,
+				  VAL_DESC_ACCE as acceso,
+				  VAL_DESC_TDOC as tipoDocumento,
+				  VAL_DESC_SACC as subacceso,
+				  VAL_SERI_DOCU as serie,
+				  NUM_DOCU_CONT_INTE as documentoInterno,
+				  VAL_NUME_DOCU_LEGA as documentoLegal,
+				  VAL_NUME_CONTA as contador,
+		          NUM_CONT_DOCU_LEGA as numeroControl
+		FROM      RUV_GTT_DOCU_ANULA
+		WHERE	  VAL_NUME_CONTA > 1 
+	</select>
+
+	<resultMap id="getSinAsignarNumeroControlResult" class="java.util.HashMap">		
+		<result property="fechaEmision"			column="fec_emis" />
+		<result property="canal"				column="CANAL" />     	
+		<result property="acceso"				column="acceso" />
+		<result property="tipoDocumento"		column="tipoDocumento" />
+		<result property="subacceso"			column="subacceso" /> 
+		<result property="serie"				column="serie" /> 
+		<result property="numeroInterno"		column="NUM_DOCU_CONT_INTE" />
+		<result property="numeroControl"		column="num_cont_docu_lega" />
+		<result property="total"				column="contador" />	 	           
+	</resultMap>
+	<select id="getSinAsignarNumeroControl" parameterClass="java.util.Map" resultMap="getSinAsignarNumeroControlResult">
+		SELECT    to_char(b.fec_emis,'DD/MM/YYYY') as fec_emis,
+				  #descripcionCanal# as CANAL, 
+				  #descripcionAcceso# as acceso, 
+				  D.DES_TIPO_DOCU as tipoDocumento,
+				  #descripcionSubAcceso# as subacceso, 
+				  #serie# as serie, 
+				  b.NUM_DOCU_CONT_INTE,
+		          b.num_cont_docu_lega,
+		          count(1) contador      
+		FROM      FAC_REGIS_UNICO_VENTA B,
+				  FAC_TIPO_DOCUM D
+		WHERE     B.TIDO_OID_TIPO_DOCU = D.OID_TIPO_DOCU 
+		  AND     B.TIDO_OID_TIPO_DOCU = #oidTipoDocumento# 
+		   <![CDATA[
+		  and     trunc(b.FEC_EMIS) >= to_date(#fechaDesde#, 'dd/mm/yyyy') 
+		  and     trunc(b.FEC_EMIS) <= to_date(#fechaHasta#, 'dd/mm/yyyy') 
+		   ]]>
+		  <isNotEmpty prepend="AND" property="codigoSubacceso">
+	          b.SBAC_OID_SBAC = #oidSubAcceso#
+	       </isNotEmpty>
+	      <isNotEmpty prepend="AND" property="serie">
+		      b.val_seri_docu_lega = #serie#
+		   </isNotEmpty>
+		  and     b.VAL_NUME_DOCU_LEGA is null 
+		  and     b.NUM_DOCU_CONT_INTE is not null
+		group by  b.fec_emis, 
+		          D.DES_TIPO_DOCU, 
+		          b.NUM_DOCU_CONT_INTE,
+		          b.num_cont_docu_lega 
+	</select>
+
+	<parameterMap id="executeAsignarNulosPorDiasPorPaisParams" class="map" >
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="oidTipoDocumento"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="serie"                 	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoSubacceso"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaDesde"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaHasta"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    <procedure id="executeAsignarNulosPorDiasPorPais" parameterMap="executeAsignarNulosPorDiasPorPaisParams" >
+		{call RUV_PKG_PROCE.RUV_PR_ASIGN_NULOS_XDIAS_XPAIS(?,?,?,?,?,?)}
+    </procedure> 
+    
+	<resultMap id="getAsignarNulosDiasPaisResult" class="java.util.HashMap">		
+		<result property="oidRegistro"			column="OID_REGI" />
+		<result property="ejercicio"			column="VAL_EJER_DOCU_INTE" />     	
+		<result property="fecha"				column="FEC_EMIS" />
+		<result property="numeroDocumento"		column="VAL_NUME_DOCU_LEGA" />
+		<result property="numeroControl"		column="NUM_CONT_DOCU_LEGA" />
+	</resultMap>
+	<select id="getAsignarNulosDiasPais" parameterClass="java.util.Map" resultMap="getAsignarNulosDiasPaisResult">
+		SELECT    A.OID_REGI,
+		          A.VAL_EJER_DOCU_INTE,
+		          TO_CHAR(A.FEC_EMIS, 'DD/MM/YYYY') FEC_EMIS,
+		          A.VAL_NUME_DOCU_LEGA,
+		          A.NUM_CONT_DOCU_LEGA 
+		FROM      RUV_GTT_REGIS_NULOS A
+		ORDER BY  A.VAL_NUME_DOCU_LEGA
+	</select>    
+	
+	<update id="updateNulosDiasPais" parameterClass="java.util.Map">
+		update    FAC_REGIS_UNICO_VENTA a
+		   set    a.num_cont_docu_lega = #numeroControl#
+		where     a.pais_oid_pais = gen_pkg_gener.GEN_FN_DEVUELVE_ID_PAIS(#codigoPais#)
+		  and     a.oid_regi = #oidRegistro#
+		  and     a.val_ejer_docu_inte = #ejercicio#	
+	</update>
+
+	<select id="getValidarAsignarNulosDocLeg" parameterClass="java.util.Map" resultClass="java.lang.String">
+		select    count(1)
+		from      FAC_REGIS_UNICO_VENTA a
+		where     a.TIDO_OID_TIPO_DOCU = #oidTipoDocumento# 
+		  and     a.val_seri_docu_lega = #serie#
+		   <![CDATA[
+		  and     trunc(a.FEC_EMIS) >= to_date(#fechaDesde#, 'dd/mm/yyyy')
+		  and     trunc(a.FEC_EMIS) <= to_date(#fechaHasta#, 'dd/mm/yyyy') 
+		   ]]>
+		  and     a.SBAC_OID_SBAC = #oidSubAcceso#
+		  and     a.VAL_NUME_DOCU_LEGA is null
+	</select>    
+	    
+	<parameterMap id="getAsignarNulosPorDiasVenezuelaParams" class="map" >		
+	    <parameter property="oidTipoDocumento"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="serie"                 	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoSubacceso"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaDesde"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaHasta"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="cantidad"                   jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+	<procedure id="getAsignarNulosPorDiasVenezuela" parameterMap="getAsignarNulosPorDiasVenezuelaParams">
+		{call RUV_PKG_PROCE.RUV_PR_CANTI_ASIGN_NULOS_XDIVE(?,?,?,?,?,?)}
+	</procedure>
+	
+	<parameterMap id="executeAsignarNulosPorDiasVenezuelaParams" class="map" >
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="oidTipoDocumento"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="serie"                 	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoSubacceso"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaDesde"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaHasta"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    <procedure id="executeAsignarNulosPorDiasVenezuela" parameterMap="executeAsignarNulosPorDiasVenezuelaParams" >
+		{call RUV_PKG_PROCE.RUV_PR_PROCE_ASINU_XDIAS_VENEZ(?,?,?,?,?,?)}
+    </procedure>
+    
+	<parameterMap id="getAsignarNulosPorRangoVenezuelaParams" class="map" >	   
+	    <parameter property="oidTipoDocumento"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="serie"                 	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoSubacceso"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaDesde"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaHasta"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="rangoInicio"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="rangoFin"	                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="cantidad"                   jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+	<procedure id="getAsignarNulosPorRangoVenezuela" parameterMap="getAsignarNulosPorRangoVenezuelaParams">
+		{call RUV_PKG_PROCE.RUV_PR_CANTI_ASIGN_NULOS_RANVE(?,?,?,?,?,?,?,?)}
+	</procedure>
+
+    <parameterMap id="executeAsignarNulosPorRangoVenezuelaParams" class="map" >
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="oidTipoDocumento"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="serie"                 	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoSubacceso"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaDesde"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>	    
+	    <parameter property="fechaHasta"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="rangoInicio"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="rangoFin"	             	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    <procedure id="executeAsignarNulosPorRangoVenezuela" parameterMap="executeAsignarNulosPorRangoVenezuelaParams" >
+		{call RUV_PKG_PROCE.RUV_PR_PROCE_ASINU_RANGO_VENEZ(?,?,?,?,?,?,?,?)}
+    </procedure>
+    
+	<parameterMap id="executeAsignarNulosPorDiasPorVenezuelaParams" class="map" >
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="oidTipoDocumento"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="serie"                 	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoSubacceso"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaDesde"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaHasta"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    <procedure id="executeAsignarNulosPorDiasPorVenezuela" parameterMap="executeAsignarNulosPorDiasPorVenezuelaParams" >
+		{call RUV_PKG_PROCE.RUV_PR_ASIGN_NULOS_XDIAS_XVENE(?,?,?,?,?,?)}
+    </procedure>
+	
+    <resultMap id="getAsignarNulosDiasVenezuelaResult" class="java.util.HashMap">		
+		<result property="oidRegistro"			column="OID_REGI" />
+		<result property="ejercicio"			column="VAL_EJER_DOCU_INTE" />     	
+		<result property="fecha"				column="FEC_EMIS" />
+		<result property="numeroDocumento"		column="VAL_NUME_DOCU_LEGA" />
+		<result property="numeroControl"		column="NUM_CONT_DOCU_LEGA" />
+	</resultMap>
+	<select id="getAsignarNulosDiasVenezuela" parameterClass="java.util.Map" resultMap="getAsignarNulosDiasVenezuelaResult">
+		SELECT    A.OID_REGI,
+		          A.VAL_EJER_DOCU_INTE,
+		          TO_CHAR(A.FEC_EMIS, 'DD/MM/YYYY') FEC_EMIS,
+		          A.VAL_NUME_DOCU_LEGA,
+		          A.NUM_CONT_DOCU_LEGA 
+		FROM      RUV_ASIGN_NUMER_CONTR_TEMPO A
+		ORDER BY  A.VAL_NUME_DOCU_LEGA
+	</select>
+	
+	<update id="updateNulosDiasVenezuela" parameterClass="java.util.Map">
+		update    FAC_REGIS_UNICO_VENTA a
+		   set    a.num_cont_docu_lega = #numeroControl#
+		where     a.pais_oid_pais = gen_pkg_gener.GEN_FN_DEVUELVE_ID_PAIS(#codigoPais#)
+		  and     a.oid_regi = #oidRegistro#
+		  and     a.val_ejer_docu_inte = #ejercicio#	
+	</update>
+
+	<resultMap id="getListRegistroVentasResult" class="java.util.HashMap">
+		<result property="oid"					column="OID_REGI" />
+		<result property="fechaEmision"			column="FEC_EMIS" />
+		<result property="codigoCliente"		column="COD_CLIE" />     	
+		<result property="oidTipoDocumento"		column="OID_TIPO_DOCU" />
+		<result property="tipoDocumento"		column="DES_TIPO_DOCU" />
+		<result property="serieDocuLegal"		column="VAL_SERI_DOCU_LEGA" /> 
+		<result property="numeroDocLegal"		column="VAL_NUME_DOCU_LEGA" /> 
+		<result property="baseImponible"		column="VAL_BASE_IMPO" />	
+		<result property="descuento"			column="VAL_DESC" />
+		<result property="baseImponibleNeto"	column="VAL_BASE_IMPO_NETO" />
+		<result property="importeImpuesto"		column="IMP_IMPU" />
+		<result property="importeTotal"			column="IMP_TOTA" />
+		<result property="tasaImpuesto"			column="VAL_TASA_IMPU" />
+		<result property="estado"				column="IND_ESTA" />
+		<result property="indicadorRUV"			column="VAL_INDI_RUV" />
+	</resultMap>
+
+	<select id="getListRegistroVentas" parameterClass="java.util.Map" resultMap="getListRegistroVentasResult">
+		SELECT OID_REGI, 
+		       FEC_EMIS, 
+		       COD_CLIE, 
+			   OID_TIPO_DOCU, 
+			   DES_TIPO_DOCU,
+			   VAL_SERI_DOCU_LEGA,
+			   VAL_NUME_DOCU_LEGA,
+			   VAL_BASE_IMPO,
+			   VAL_DESC,
+			   VAL_BASE_IMPO_NETO,
+			   IMP_IMPU,
+			   IMP_TOTA,
+			   VAL_TASA_IMPU,
+			   IND_ESTA,
+			   VAL_INDI_RUV
+		     
+		 FROM (SELECT ROWNUM,
+			       r.OID_REGI,
+			       TO_CHAR(r.FEC_EMIS, 'dd/MM/yyyy') FEC_EMIS,
+			       c.COD_CLIE,
+			       f.OID_TIPO_DOCU,
+			       f.DES_TIPO_DOCU,
+			       r.VAL_SERI_DOCU_LEGA,
+			       r.VAL_NUME_DOCU_LEGA,
+			       r.VAL_BASE_IMPO,
+			       r.VAL_DESC,
+			       r.VAL_BASE_IMPO_NETO,
+			       r.IMP_IMPU,
+			       r.IMP_TOTA,
+			       t.VAL_TASA_IMPU,
+			       r.IND_ESTA,
+			       r.VAL_INDI_RUV
+			  FROM FAC_REGIS_UNICO_VENTA r,
+			       PED_TASA_IMPUE        t,
+			       MAE_CLIEN             c,
+			       FAC_TIPO_DOCUM        f,
+			       SEG_SUBAC
+			 WHERE r.CLIE_OID_CLIE = c.OID_CLIE(+)
+			   AND r.TAIM_OID_TASA_IMPU = t.OID_TASA_IMPU
+			   AND r.TIDO_OID_TIPO_DOCU = f.OID_TIPO_DOCU
+			   AND r.SBAC_OID_SBAC = SEG_SUBAC.OID_SBAC(+)
+			   
+			   <isNotEmpty prepend="AND" property="oidTipoDocLegal">
+			   		f.OID_TIPO_DOCU = #oidTipoDocLegal#
+			   </isNotEmpty>
+			   
+			   <isNotEmpty prepend="AND" property="oidSubacceso">
+			   		SEG_SUBAC.OID_SBAC = #oidSubacceso#
+			   </isNotEmpty>
+			   
+			   <isNotEmpty prepend="AND" property="fechaEmisionDesde">
+			   		r.FEC_EMIS >= to_date(#fechaEmisionDesde#, 'dd/MM/yyyy')
+			   </isNotEmpty>
+			   
+			   <isNotEmpty prepend="AND" property="fechaEmisionHasta">
+			   <![CDATA[
+			   		r.FEC_EMIS <= to_date(#fechaEmisionHasta#, 'dd/MM/yyyy')
+			   		]]>
+			   </isNotEmpty>
+			   
+			   <isNotEmpty prepend="AND" property="codigoClienteDesde">
+			   		c.COD_CLIE >= #codigoClienteDesde#
+			   </isNotEmpty>
+			   
+			   <isNotEmpty prepend="AND" property="codigoClienteHasta">
+			   <![CDATA[
+			   		c.COD_CLIE <= #codigoClienteHasta#
+			   		]]>
+			   </isNotEmpty>
+			   
+			   <isNotEmpty prepend="AND" property="numeroDocLegalDesde">
+			   		r.VAL_NUME_DOCU_LEGA >= #numeroDocLegalDesde#
+			   </isNotEmpty>
+			   
+			   <isNotEmpty prepend="AND" property="numeroDocLegalHasta">
+			   <![CDATA[
+			   		r.VAL_NUME_DOCU_LEGA <= #numeroDocLegalHasta#
+			   	]]>	
+			   </isNotEmpty> 
+			   
+			   <isNotEmpty prepend="AND" property="oidImpuestos">
+			   		r.TAIM_OID_TASA_IMPU = #oidImpuestos#
+			   </isNotEmpty>
+			   
+			   <isNotEmpty prepend="AND" property="oid">
+			   		r.OID_REGI = #oid#
+			   </isNotEmpty>
+			   
+			 ORDER BY OID_REGI
+			 )
+		<![CDATA[
+			WHERE ROWNUM < 501
+	    ]]>			 
+	</select>
+	
+	<select id="getCanales" parameterClass="java.util.Map" resultMap="baseResult">
+		SELECT  C.OID_CANA AS CODIGO, 
+		        VAL_I18N AS DESCRIPCION
+		FROM    GEN_I18N_SICC_COMUN P, 
+		        SEG_CANAL C, 
+		        SEG_IDIOM I  
+		WHERE    P.VAL_OID = C.OID_CANA
+		     AND P.IDIO_OID_IDIO = I.OID_IDIO
+		     AND P.ATTR_ENTI = 'SEG_CANAL'
+		     AND I.COD_ISO_IDIO = #codigoISOIdioma#
+		ORDER BY 2
+    </select>
+    
+    <select id="getAccesos" parameterClass="java.util.Map" resultMap="baseResult">
+		select oid_acce codigo, 
+   			   GEN.VAL_I18N DESCRIPCION 
+   		  FROM seg_acces SA,GEN_I18N_SICC_COMUN GEN  
+   	     WHERE cana_oid_cana = #oidCanal#
+		   AND GEN.ATTR_ENTI='SEG_ACCES' 
+		   AND SA.OID_ACCE = GEN.VAL_OID
+	     ORDER BY 2 ASC  
+    </select>
+    
+    <select id="getSubAccesos" parameterClass="java.util.Map" resultMap="baseResult">
+   		SELECT S.OID_SBAC CODIGO, 
+   			   GEN.VAL_I18N DESCRIPCION  
+   		FROM  SEG_SUBAC S,GEN_I18N_SICC_COMUN GEN  
+   		WHERE S.ACCE_OID_ACCE = #oidAcceso#
+	      AND GEN.ATTR_ENTI='SEG_SUBAC' 
+	      AND S.OID_SBAC = GEN.VAL_OID	  
+	    ORDER BY 2 ASC  
+    </select>
+		
+	<select id="getTasasImpuesto" resultMap="baseResult">
+		SELECT a.oid_tasa_impu AS CODIGO,
+			   i.VAL_I18N      AS DESCRIPCION
+		  FROM ped_tasa_impue a, GEN_I18N_SICC_PAIS i, SEG_PAIS p
+		 WHERE a.pais_oid_pais = p.oid_pais
+		   AND p.cod_pais = #codigoPais#
+		   AND a.oid_tasa_impu = i.val_oid
+		   AND i.attr_enti = 'PED_TASA_IMPUE'
+		   AND i.attr_num_atri = 1
+		   AND i.idio_oid_idio = 1
+    </select>
+    
+    <select id="getTiposDocumentoLegal" resultMap="baseResult">
+		SELECT OID_TIPO_DOCU AS CODIGO, 
+		       DES_TIPO_DOCU AS DESCRIPCION
+		  FROM FAC_TIPO_DOCUM
+		 ORDER BY DES_TIPO_DOCU
+    </select>
+    
+    <select id="getSociedades" resultMap="baseResult">
+		SELECT s.OID_SOCI AS CODIGO, 
+		       s.VAL_DENO AS DESCRIPCION
+		  FROM seg_socie s, seg_pais p
+		 WHERE s.pais_oid_pais = p.oid_pais
+		   and p.cod_pais = #codigoPais#
+		 ORDER BY s.VAL_DENO
+    </select>
+    
+    <select id="getTiposDocumento" resultMap="baseResult">
+    	SELECT OID_TIPO_DOCU AS CODIGO, 
+    		   VAL_SIGL AS DESCRIPCION   
+          FROM MAE_TIPO_DOCUM   
+         ORDER BY 2
+    </select>
+    
+    <resultMap id="getFormatoFechaNumericoResult" class="java.util.HashMap">
+		<result property="formatoFecha"			column="VAL_FORM_FECH" />
+		<result property="separadorMiles"		column="VAL_SEPA_MILE" />
+		<result property="separadorDecimal"	    column="VAL_SEPA_DECI" />     	
+		<result property="numeroDecimales"		column="NUM_DECI" />
+		<result property="numeroDecimalesAlterno"	column="NUM_DECI_ALTE" /> 	
+	</resultMap>
+			
+    <select id="getFormatoFechaNumerico" parameterClass="string" resultMap="getFormatoFechaNumericoResult">
+	    SELECT VAL_FORM_FECH,
+		       VAL_SEPA_MILE,
+		       VAL_SEPA_DECI,
+		       m.NUM_DECI,
+		       ma.NUM_DECI NUM_DECI_ALTE
+		  FROM SEG_PAIS p, SEG_MONED m, SEG_MONED ma
+		 WHERE p.cod_pais = #value#
+		   AND p.MONE_OID_MONE = m.OID_MONE
+		   AND p.MONE_OID_MONE_ALT = ma.OID_MONE
+    </select>
+        
+	<resultMap id="getRegistroVentasResult" class="java.util.HashMap">
+		<result property="oidEmpresa"			column="SOCI_OID_SOCI" />
+		<result property="oidIndImpuestos"		column="TAIM_OID_TASA_IMPU" />
+		<result property="indicadorImpuesto"	column="VAL_INDI_IMPU" />     	
+		<result property="fechaEmision"			column="FEC_EMIS" />
+		<result property="oidCliente"			column="CLIE_OID_CLIE" />
+		<result property="codigoCliente"		column="COD_CLIE" /> 
+		<result property="nombre1"				column="VAL_NOM1" /> 
+		<result property="nombre2"				column="VAL_NOM2" />	
+		<result property="apellido1"			column="VAL_APE1" />
+		<result property="apellido2"			column="VAL_APE2" />
+		<result property="baseImponible"		column="VAL_BASE_IMPO" />
+		<result property="importeImpuesto"		column="IMP_IMPU" />
+		<result property="importeTotal"			column="IMP_TOTA" />
+		<result property="coeficienteImpuesto"	column="VAL_TASA_IMPU" />
+		<result property="oidCanal"				column="OID_CANA" />
+		<result property="oidAcceso"			column="OID_ACCE" />
+		<result property="oidSubAcceso"			column="SBAC_OID_SBAC" />
+		<result property="puntoEmision"			column="VAL_PUNT_EMIS" />
+		<result property="oidTipoDocumentoLegal"		column="TIDO_OID_TIPO_DOCU" />
+		<result property="serieDocumentoLegal"			column="VAL_SERI_DOCU_LEGA" />
+		<result property="numeroDocumentoLegal"			column="VAL_NUME_DOCU_LEGA" />
+		<result property="numeroIdentificacionFiscal"	column="VAL_NUME_IDEN_FISC" />
+		<result property="numeroIdentificacionNacional"	column="VAL_NUME_IDEN_NNAL" />
+		<result property="oidPais"						column="PAIS_OID_PAIS" />
+		<result property="oidTipoDocumentoRef"	column="TIDO_TIPO_DOCU_REFE" />
+		<result property="serieDocumentoRef"	column="VAL_SERI_DOCU_REFE" />
+		<result property="numeroDocumentoRef"	column="VAL_NUME_DOCU_REFE" />
+		<result property="estadoAnulado"		column="IND_ESTA" />
+		<result property="indTransfGratuita"	column="IND_TRAN_GRAT" />
+		<result property="estadoRUV"			column="VAL_INDI_RUV" />			
+		<result property="descuento"			column="VAL_DESC" />
+		<result property="baseImponibleNeto"	column="VAL_BASE_IMPO_NETO" />
+		<result property="oidTipoDocumento"		column="TDOC_OID_TIPO_DOCU" />
+		<result property="fechaEmisionReferencia"	column="FEC_EMIS_REFE" />
+		       
+	</resultMap>
+
+    <select id="getRegistroVenta" parameterClass="string" resultMap="getRegistroVentasResult">
+		SELECT r.SOCI_OID_SOCI,
+		       r.TAIM_OID_TASA_IMPU,
+		       t.VAL_INDI_IMPU,
+		       TO_CHAR(r.FEC_EMIS,'dd/MM/yyyy') FEC_EMIS,
+		       r.CLIE_OID_CLIE,
+		       c.COD_CLIE,
+		       r.VAL_NOM1,
+		       r.VAL_NOM2,
+		       r.VAL_APE1,
+		       r.VAL_APE2,
+		       r.VAL_BASE_IMPO,
+		       r.IMP_IMPU,
+		       r.IMP_TOTA,
+		       t.VAL_TASA_IMPU,
+		       l.OID_CANA,
+		       a.OID_ACCE,
+		       r.SBAC_OID_SBAC,
+		       r.VAL_PUNT_EMIS,
+		       r.TIDO_OID_TIPO_DOCU,
+		       r.VAL_SERI_DOCU_LEGA,
+		       r.VAL_NUME_DOCU_LEGA,
+		       r.VAL_NUME_IDEN_FISC,
+		       r.VAL_NUME_IDEN_NNAL,
+		       r.PAIS_OID_PAIS,
+		       r.TIDO_TIPO_DOCU_REFE,
+		       r.VAL_SERI_DOCU_REFE,
+		       r.VAL_NUME_DOCU_REFE,
+		       r.IND_ESTA,
+		       r.IND_TRAN_GRAT,
+		       r.VAL_INDI_RUV,
+		       r.VAL_DESC,
+		       r.VAL_BASE_IMPO_NETO,
+		       r.TDOC_OID_TIPO_DOCU,
+		       TO_CHAR(r.FEC_EMIS_REFE, 'dd/MM/yyyy') FEC_EMIS_REFE
+		  FROM FAC_REGIS_UNICO_VENTA r,
+		       MAE_CLIEN             c,
+		       SEG_SOCIE         s,
+		       PED_TASA_IMPUE        t,
+		       SEG_SUBAC         u,
+		       SEG_ACCES         a,
+		       SEG_CANAL         l
+		 WHERE r.CLIE_OID_CLIE = c.OID_CLIE(+)
+		   AND r.SOCI_OID_SOCI = s.OID_SOCI
+		   AND r.TAIM_OID_TASA_IMPU = t.OID_TASA_IMPU
+		   AND r.SBAC_OID_SBAC = u.OID_SBAC(+)
+		   AND u.ACCE_OID_ACCE = a.OID_ACCE(+)
+		   AND a.CANA_OID_CANA = l.OID_CANA(+)
+		   AND r.OID_REGI = #value#
+    </select>
+
+    <insert id="insertRegistroVenta" parameterClass="java.util.Map">
+		INSERT INTO FAC_REGIS_UNICO_VENTA
+		  (OID_REGI,
+		   CLIE_OID_CLIE,
+		   DCCA_OID_CABE,
+		   FEC_CIER,
+		   FEC_EMIS,
+		   IMP_IMPU,
+		   IMP_TOTA,
+		   IND_ESTA,
+		   IND_FACT_GRAT,
+		   IND_TRAN_GRAT,
+		   NUM_DOCU_CONT_INTE,
+		   PAIS_OID_PAIS,
+		   SBAC_OID_SBAC,
+		   SOCI_OID_SOCI,
+		   TAIM_OID_TASA_IMPU,
+		   TIDO_OID_TIPO_DOCU,
+		   TIDO_TIPO_DOCU_REFE,
+		   VAL_APE1,
+		   VAL_APE2,
+		   VAL_BASE_IMPO,
+		   VAL_BASE_IMPO_NETO,
+		   VAL_COMI,
+		   VAL_DESC,
+		   VAL_DOCU_INTE,
+		   VAL_EJER_DOCU_INTE,
+		   VAL_FLET,
+		   VAL_INDI_RUV,
+		   VAL_INTE_MORA,
+		   VAL_NOM1,
+		   VAL_NOM2,
+		   VAL_NUME_DOCU_LEGA,
+		   VAL_NUME_DOCU_REFE,
+		   VAL_NUME_IDEN_FISC,
+		   VAL_NUME_IDEN_NNAL,
+		   VAL_PUNT_EMIS,
+		   VAL_SERI_DOCU_LEGA,
+		   VAL_SERI_DOCU_REFE,
+		   TDOC_OID_TIPO_DOCU,
+		   FEC_EMIS_REFE,
+		   NUM_CONT_DOCU_LEGA)
+		VALUES
+	       (FAC_RUVE_SEQ.NEXTVAL,
+	        (SELECT OID_CLIE FROM MAE_CLIEN WHERE COD_CLIE = #codigoCliente#),
+	        NULL,
+	        NULL,
+	        TO_DATE(#fechaEmision#,'dd/MM/yyyy'),
+	        #importeImpuesto#,
+	        #importeTotal#,
+	        #estadoAnulado#,
+	        NULL,
+	        #indTransfGratuita#,
+	        NULL,
+	        (SELECT OID_PAIS FROM SEG_PAIS WHERE COD_PAIS = #codigoPais#),
+	        #oidSubAcceso#,
+	        #oidEmpresa#,
+	        #oidIndImpuestos#,
+	        #oidTipoDocumentoLegal#,
+	        #OidTipoDocumentoRef#,
+	        #apellido1#,
+	        #apellido2#,
+	        #baseImponible#,
+	        #baseImponibleNeto#,
+	        NULL,
+	        #descuento#,
+	        NULL,
+	        NULL,
+	        NULL,
+	        #estadoRUV#,
+	        NULL,
+	        #nombre1#,
+	        #nombre2#,
+	        #numeroDocumentoLegal#,
+	        #numeroDocumentoRef#,
+	        #numeroIdentificacionFiscal#,
+	        #numeroIdentificacionNacional#,
+	        #puntoEmision#,
+	        #serieDocumentoLegal#,
+	        #serieDocumentoRef#,
+	        #oidTipoDocumento#,
+	        TO_DATE(#fechaEmisionReferencia#, 'dd/MM/yyyy'),
+	        #numDocControlLegal#
+	        )
+	</insert>
+
+    <update id="updateRegistroVenta" parameterClass="java.util.Map">
+		UPDATE FAC_REGIS_UNICO_VENTA 
+		   SET CLIE_OID_CLIE = (SELECT OID_CLIE FROM MAE_CLIEN WHERE COD_CLIE = #codigoCliente#),
+		       FEC_EMIS = TO_DATE(#fechaEmision#,'dd/MM/yyyy'),
+          	   IMP_IMPU = #importeImpuesto#,
+          	   IMP_TOTA = #importeTotal#,
+          	   IND_ESTA = #estadoAnulado#,
+          	   IND_TRAN_GRAT = #indTransfGratuita#,
+          	   SBAC_OID_SBAC = #oidSubAcceso#,
+          	   SOCI_OID_SOCI = #oidEmpresa#,
+          	   TAIM_OID_TASA_IMPU = #oidIndImpuestos#,
+          	   TIDO_OID_TIPO_DOCU = #oidTipoDocumentoLegal#,
+          	   TIDO_TIPO_DOCU_REFE = #oidTipoDocumentoRef#,
+          	   VAL_APE1 = #apellido1#,
+          	   VAL_APE2 = #apellido2#,
+          	   VAL_BASE_IMPO = #baseImponible#,
+          	   VAL_BASE_IMPO_NETO = #baseImponibleNeto#,
+          	   VAL_DESC = #descuento#,
+          	   VAL_INDI_RUV = #estadoRUV#,
+          	   VAL_NOM1 = #nombre1#,
+          	   VAL_NOM2 = #nombre2#,
+          	   VAL_NUME_DOCU_LEGA = #numeroDocumentoLegal#,
+          	   VAL_NUME_DOCU_REFE = #numeroDocumentoRef#,
+          	   VAL_NUME_IDEN_FISC = #numeroIdentificacionFiscal#,
+          	   VAL_NUME_IDEN_NNAL = #numeroIdentificacionNacional#,
+          	   VAL_PUNT_EMIS = #puntoEmision#,
+          	   VAL_SERI_DOCU_LEGA = #serieDocumentoLegal#,
+          	   VAL_SERI_DOCU_REFE = #serieDocumentoRef#,
+          	   TDOC_OID_TIPO_DOCU = #oidTipoDocumento#,
+          	   FEC_EMIS_REFE = TO_DATE(#fechaEmisionReferencia#, 'dd/MM/yyyy')
+         WHERE OID_REGI = #oidReg#
+    </update>
+    
+    <select id="getTotalRegistroVentas" parameterClass="java.util.Map" resultClass="string">
+	    SELECT COUNT(1)
+		  FROM FAC_REGIS_UNICO_VENTA
+		 WHERE 1 = 1
+		 	<isNotEmpty property="oidSubAcceso">
+		   		AND FAC_REGIS_UNICO_VENTA.SBAC_OID_SBAC =#oidSubAcceso#
+		   	</isNotEmpty>
+		   	<isEmpty property="oidSubAcceso">
+		   		AND FAC_REGIS_UNICO_VENTA.SBAC_OID_SBAC IS NULL
+		   	</isEmpty>
+		   	
+		   	<isNotEmpty property="oidTipoDocumentoLegal">
+		   		AND FAC_REGIS_UNICO_VENTA.TIDO_OID_TIPO_DOCU =#oidTipoDocumentoLegal#
+		   	</isNotEmpty>
+		   	<isEmpty property="oidTipoDocumentoLegal">
+		   		AND FAC_REGIS_UNICO_VENTA.TIDO_OID_TIPO_DOCU IS NULL
+		   	</isEmpty>
+		   	
+		   	<isNotEmpty property="serieDocumentoLegal">
+		   		AND FAC_REGIS_UNICO_VENTA.VAL_SERI_DOCU_LEGA =#serieDocumentoLegal#
+		   	</isNotEmpty>
+		   	<isEmpty property="serieDocumentoLegal">
+		   		AND FAC_REGIS_UNICO_VENTA.VAL_SERI_DOCU_LEGA IS NULL
+		   	</isEmpty>
+		   	
+		   	<isNotEmpty property="numeroDocumentoLegal">
+		   		AND FAC_REGIS_UNICO_VENTA.VAL_NUME_DOCU_LEGA =#numeroDocumentoLegal#
+		   	</isNotEmpty>
+		   	<isEmpty property="numeroDocumentoLegal">
+		   		AND FAC_REGIS_UNICO_VENTA.VAL_NUME_DOCU_LEGA IS NULL
+		   	</isEmpty>
+		   		
+	</select>
+
+    <select id="getTotalRegistroRangoVentas" parameterClass="java.util.Map" resultClass="string">
+	    SELECT COUNT(1)
+		  FROM FAC_REGIS_UNICO_VENTA
+		 WHERE 1 = 1
+		 	<isNotEmpty property="oidSubAcceso">
+		   		AND FAC_REGIS_UNICO_VENTA.SBAC_OID_SBAC =#oidSubAcceso#
+		   	</isNotEmpty>
+		   	<isEmpty property="oidSubAcceso">
+		   		AND FAC_REGIS_UNICO_VENTA.SBAC_OID_SBAC IS NULL
+		   	</isEmpty>
+		   	
+		   	AND FAC_REGIS_UNICO_VENTA.TIDO_OID_TIPO_DOCU =#oidTipoDocumentoLegal#
+		   	AND FAC_REGIS_UNICO_VENTA.VAL_SERI_DOCU_LEGA =#serieDocumentoLegal#
+		    AND FAC_REGIS_UNICO_VENTA.VAL_NUME_DOCU_LEGA BETWEEN #numeroDocumentoLegal# AND #numeroDocumentoLegalFinal#
+		   		
+	</select>
+	
+	<delete id="deleteRegistroVenta" parameterClass="java.util.Map">
+		DELETE FAC_REGIS_UNICO_VENTA WHERE OID_REGI = #oidReg#
+	</delete>
+	        	    
+</sqlMap>

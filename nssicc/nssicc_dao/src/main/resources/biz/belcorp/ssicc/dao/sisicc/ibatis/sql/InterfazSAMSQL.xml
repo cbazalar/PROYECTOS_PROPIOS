@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="UTF-8"?>                                                      
+<!DOCTYPE sqlMap                                                        
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"                                                     
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">                                                      
+
+	<sqlMap namespace="sisicc.InterfazSAMSQL">     
+     
+     
+     <typeAlias alias="registrosStock"       type="biz.belcorp.ssicc.dao.model.RegistrosStock"/>
+     
+     <resultMap id="registrosStockResult"          class="registrosStock">
+    	<result property="codigoSap" 			column="COD_SAP"/>
+    	<result property="unidadesAtendidas" 	column="NUM_UNID_ATEN"/>
+    	<result property="candidadStock" 		column="VAL_CANT"/>
+    </resultMap>
+    
+     <parameterMap id="executeInterfazSAMEnviarMovimientosAlmacenParams" class="map" >													
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+	    <parameter property="codigoSistema"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+		<parameter property="codigoInterfaz"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+		<parameter property="nombreArchivo"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoPeriodo"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaFacturacion"		     jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroLote"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="indicadorEnvioUltimoLote"	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="indicadorEnvioLar"	 		 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>											
+    </parameterMap>														
+														
+    <procedure id="executeInterfazSAMEnviarMovimientosAlmacen" 														
+   			  parameterMap="executeInterfazSAMEnviarMovimientosAlmacenParams" >											
+		{call INT_PKG_SAPMM.INT_PR_SAP_ENVI_MOVIM_ALMAC(?,?,?,?,?,?,?,?,?)}									
+    </procedure> 	
+
+     <parameterMap id="executeInterfazSAMEnviarMovimientosAlmacenColombiaParams" class="map" >											
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+	    <parameter property="codigoSistema"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+		<parameter property="codigoInterfaz"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+		<parameter property="nombreArchivo"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoPeriodo"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaFacturacion"		     jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroLote"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="indicadorEnvioUltimoLote"	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="indicadorEnvioLar"	 		 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>											
+    </parameterMap>	
+    
+    <procedure id="executeInterfazSAMEnviarMovimientosAlmacenColombia" 														
+   			  parameterMap="executeInterfazSAMEnviarMovimientosAlmacenColombiaParams" >											
+		{call INT_PKG_SAPMM.INT_PR_SAP_ENV_MOV_ALMAC_COL(?,?,?,?,?,?,?,?,?)}									
+    </procedure> 
+    
+	 <select id="getNumeroMovimiento" parameterClass="java.util.Map" resultClass="java.lang.String"  >
+		 	SELECT max(cab.n_movimiento) numeroMovimiento
+			FROM  bel_movim_almac_cabec cab,
+			      bel_movim_almac_detal det,
+			      bel_tipo_movim_almac tip
+			WHERE cab.oid_movi_alma = det.mval_oid_movi_alma
+				AND det.tmal_oid_tipo_movi_alma = tip.oid_tipo_movi_alma  
+				AND cab.perd_oid_peri =gen_pkg_gener.GEN_FN_DEVUELVE_ID_CRA_PERIO2(#codigoPeriodo#)
+				AND tip.cod_tipo_movi = '05' -- Carga de stocks
+		     
+    </select>
+    
+     <select id="getNumeroRegistrosInterfazStock" parameterClass="java.util.Map" resultMap="registrosStockResult">
+		SELECT  pedidos.cod_sap COD_SAP,
+       			pedidos.num_unid_aten NUM_UNID_ATEN,
+                stocks.val_cant VAL_CANT 
+		FROM  (
+		SELECT cab.pais_oid_pais,
+		       det.almc_oid_alma_sali,
+		       det.prod_oid_prod,
+		       mp.cod_sap,
+		       det.val_cant
+		FROM  bel_movim_almac_cabec cab,
+		      bel_movim_almac_detal det,
+		      mae_produ mp
+		WHERE cab.oid_movi_alma = det.mval_oid_movi_alma 
+			AND det.prod_oid_prod = mp.oid_prod
+			AND cab.n_movimiento = #numeroMovimiento#
+			) stocks,
+			(
+		SELECT   cons.pais_oid_pais,
+		         cab.almc_oid_alma,
+		         pos.prod_oid_prod,
+		         pro.cod_sap,
+		         SUM (pos.num_unid_aten) num_unid_aten
+		    FROM ped_solic_cabec cab,
+		         ped_solic_cabec cons,
+		         ped_solic_posic pos,
+		         mae_produ pro,
+		         int_lar_tipo_solici_pedido_dis tspd
+		   WHERE pos.soca_oid_soli_cabe = cab.oid_soli_cabe
+		     AND cab.soca_oid_soli_cabe = cons.oid_soli_cabe
+		     AND pos.prod_oid_prod = pro.oid_prod
+		     AND cons.perd_oid_peri = gen_pkg_gener.GEN_FN_DEVUELVE_ID_CRA_PERIO2(#codigoPeriodo#)
+		     AND cons.ind_inte_lari_gene = #indicadorEnvioLar#
+		     AND cons.fec_fact = TO_DATE (#fechaFacturacion#, 'dd/mm/yyyy')
+		     AND cons.ind_ts_no_conso = 0
+		     AND (cons.ind_pedi_prue = 0 OR cons.ind_pedi_prue IS NULL)
+		     AND cons.tspa_oid_tipo_soli_pais = tspd.tspa_oid_tipo_soli_pais
+		     AND cons.pais_oid_pais = gen_pkg_gener.GEN_FN_DEVUELVE_ID_PAIS(#codigoPais#) 
+		     
+		     AND pos.espo_oid_esta_posi != 2
+		GROUP BY cons.pais_oid_pais,
+		         cab.almc_oid_alma,
+		         pos.prod_oid_prod,
+		         pro.cod_sap
+		) pedidos
+		where stocks.pais_oid_pais = pedidos.pais_oid_pais
+		and stocks.prod_oid_prod = pedidos.prod_oid_prod
+		and stocks.almc_oid_alma_sali = pedidos.almc_oid_alma
+		<![CDATA[
+		and pedidos.num_unid_aten > 0
+		  ]]>
+		<![CDATA[
+		and val_cant < num_unid_aten
+		]]>
+    </select>
+    
+    <delete id="deleteInterfazSAMRecepcionarProductosNacionalesImportados">
+		DELETE FROM PRE_PROD_ALTER_ICE 		 
+	</delete>
+     
+     <parameterMap id="executeInterfazSAMRecepcionarProductosNacionalesImportadosParams" class="map" >													
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+	    <parameter property="codigoSistema"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+		<parameter property="codigoInterfaz"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+		<parameter property="nombreArchivo"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>																
+    </parameterMap>														
+														
+    <procedure id="executeInterfazSAMRecepcionarProductosNacionalesImportados" parameterMap="executeInterfazSAMRecepcionarProductosNacionalesImportadosParams" >											
+		{call INT_PKG_SAPMM.INT_PR_SAP_RECEP_PRODU_NAIMP(?,?,?,?)}									
+    </procedure>
+     
+    <parameterMap id="executeInterfazSAMEnviarMovimientosAlmacenSiccParams" class="map" >													
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+	    <parameter property="codigoSistema"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+		<parameter property="codigoInterfaz"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+		<parameter property="nombreArchivo"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoPeriodo"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaFacturacion"		     jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroLote"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="indicadorEnvioUltimoLote"	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="indicadorEnvioLar"	 		 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>											
+    </parameterMap>														
+														
+    <procedure id="executeInterfazSAMEnviarMovimientosAlmacenSicc" parameterMap="executeInterfazSAMEnviarMovimientosAlmacenSiccParams" >											
+		{call INT_PKG_SAPMM.int_pr_sap_env_mov_almac_sicc(?,?,?,?,?,?,?,?,?)}									
+    </procedure> 
+
+    <procedure id="executeInterfazSAMEnviarMovimientosAlmacenSiccColombia" parameterMap="executeInterfazSAMEnviarMovimientosAlmacenSiccParams" >											
+		{call INT_PKG_SAPMM.int_pr_sap_env_mov_almac_col(?,?,?,?,?,?,?,?,?)}									
+    </procedure> 
+
+    <parameterMap id="executeUltimoNumeroMovimientoParams" class="map" >													
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+		<parameter property="codigoOperacion"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroMovimiento"		     jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>														
+     
+   <procedure id="executeUltimoNumeroMovimiento" parameterMap="executeUltimoNumeroMovimientoParams" >     
+   		{call INT_PKG_SAPMM.INT_PR_OBTIE_NUMER_MOVIM(?,?,?)}		
+   </procedure>	
+
+   <select id="getSecuencialMovimientoAlmacen" parameterClass="java.util.Map" resultClass="string">
+		SELECT BEL_MVAL_SEQ.nextval
+ 		  FROM DUAL
+   </select>	
+        
+    <insert id="insertMovimientoAlmacenCabecera" parameterClass="java.util.Map">
+		INSERT INTO BEL_MOVIM_ALMAC_CABEC
+		  (OID_MOVI_ALMA,
+		   PAIS_OID_PAIS,
+		   NUM_DOCU,
+		   SBAC_OID_SBAC,
+		   FEC_MOVI,
+		   VAL_OBSE,
+		   ALMC_OID_ALMA_1,
+		   ALMC_OID_ALMA_2,
+		   TMAL_OID_TIPO_MOVI_ALMA,
+		   PERD_OID_PERI,
+		   N_MOVIMIENTO)
+		VALUES
+		  (#oidSecuenciaCabecera#,
+		   (SELECT OID_PAIS FROM SEG_PAIS WHERE COD_PAIS = #codigoPais#),
+		   #numeroLote#,
+		   888,
+		   SYSDATE,
+		   'INT124-SAM6',
+		   NULL,
+		   NULL,
+		   NULL,
+		   (select max(c.oid_peri)
+		      from bas_ctrl_fact a, seg_perio_corpo b, cra_perio c
+		     where a.cod_peri = b.cod_peri
+		       and b.oid_peri = c.peri_oid_peri
+		       and a.sta_camp = 0
+		       and a.ind_camp_act = 1),
+		   #numeroMovimiento#)
+	</insert>
+	        
+    <insert id="insertMovimientoAlmacenDetalle" parameterClass="java.util.Map">
+		INSERT INTO BEL_MOVIM_ALMAC_DETAL
+		  (OID_DETA,
+		   MVAL_OID_MOVI_ALMA,
+		   NUM_LINE,
+		   VAL_CANT,
+		   VAL_PREC_VENT_NETO,
+		   VAL_PREC_CONT,
+		   NUM_DOCU_REFE,
+		   NUM_POSI_REFE,
+		   TMAL_OID_TIPO_MOVI_ALMA,
+		   PROD_OID_PROD,
+		   OPER_OID_OPER,
+		   ALMC_OID_ALMA_ENTR,
+		   ALMC_OID_ALMA_SALI,
+		   N_MOVIMIENTO,
+		   TOFE_OID_TIPO_OFER,
+		   NUM_LOTE_SAPM,
+		   TPOS_OID_TIPO_POSI,
+		   STPO_OID_SUBT_POSI)
+		values
+		  (BEL_MADE_SEQ.nextval,
+		   #oidSecuenciaCabecera#,
+		   #numeroLinea#,
+		   #cantidad#,
+		   NULL,
+		   NULL,
+		   NULL,
+		   NULL,
+		   2005,
+		   (select oid_prod from mae_produ where cod_sap = #codigoProducto#),
+		   25,
+		   NULL,
+		   (select oid_alma from bel_almac where cod_alma = #codigoAlmacen#),
+		   #numeroMovimiento#,
+		   NULL,
+		   NULL,
+		   NULL,
+		   NULL)
+   </insert>
+		        
+	<parameterMap id="executeInterfazSAMEnviarReservaPROLParams" class="map" >
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoSistema"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoInterfaz"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="nombreArchivo"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaFacturacion"		     jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroLote"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="indicadorEnvioUltimoLote"	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="indicadorEnvioLar"	 		 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    <procedure id="executeInterfazSAMEnviarReservaPROL" parameterMap="executeInterfazSAMEnviarReservaPROLParams" >
+		{call INT_PKG_SAPMM.int_pr_sap_envi_reser_prol(?, ?, ?, ?, ?, ?, ?, ?, ?)}
+    </procedure>
+    
+    
+	<parameterMap id="executeInterfazSAMEnviarCantidadProductoParams" class="map" >
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoSistema"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoInterfaz"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="nombreArchivo"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaFacturacion"		     jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroLote"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>    
+        
+    <procedure id="executeInterfazSAMEnviarCantidadProducto" parameterMap="executeInterfazSAMEnviarCantidadProductoParams" >
+		{call INT_PKG_SAPMM.INT_PR_SAP_ENVIO_CANTI_PRODU(?, ?, ?, ?, ?, ?, ?)}
+    </procedure>
+    
+     <parameterMap id="executeRecepcionLotesProductoParams"  class="map">
+    	<parameter property="codigoPais"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoSistema"	       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoInterfaz"  	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="nombreArchivo"  	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoUsuario"    	       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="cantidadRegistros"    jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+    <procedure id="executeRecepcionLotesProducto" parameterMap="executeRecepcionLotesProductoParams">
+        {call INT_PKG_SAPMM.INT_PR_SAP_RECEP_LOTE_PRODU(?, ?, ?, ? , ?,?  )}
+    </procedure>
+  
+    <delete id="deleteInterfazSAMRecepcionarStockMAV" parameterClass="java.util.Map">
+      DELETE FROM bel_stock
+      WHERE almc_oid_alma = (SELECT oid_alma
+					          FROM bel_almac
+					         WHERE pais_oid_pais = GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_PAIS(#codigoPais#)
+					           AND cod_alma = (SELECT val_para
+					                             FROM bas_param_pais
+					                            WHERE cod_sist = 'MAV' AND cod_para = '001'))
+    </delete>
+    
+    <insert id="insertInterfazSAMRecepcionarStockMAV" parameterClass="java.util.Map">
+		INSERT INTO BEL_STOCK(
+			OID_STOC, 
+            ALMC_OID_ALMA, 
+            ESME_OID_ESTA_MERC, 
+            PROD_OID_PROD, 
+            VAL_SALD)
+		VALUES(
+			BEL_STCK_SEQ.NEXTVAL,
+			#oidAlmacen#,
+			2001, 
+            GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_PRODU(TRIM(#codigoProducto#)), 
+            #variacionInventario#)
+    </insert>
+    
+    <select id="getOidAlmacenMAV" parameterClass="string" resultClass="string">
+        SELECT oid_alma
+          FROM bel_almac
+         WHERE pais_oid_pais = GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_PAIS(#value#)
+           AND cod_alma = (SELECT val_para
+                             FROM bas_param_pais
+                            WHERE cod_sist = 'MAV' AND cod_para = '001')
+    </select>
+
+	<parameterMap id="executeRecepcionNegocioParams"  class="map">
+    	<parameter property="codigoPais"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigo"     	       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoIdioma"  	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="descripcion"  	   	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>        
+    </parameterMap>
+    
+    <procedure id="executeRecepcionNegocio" parameterMap="executeRecepcionNegocioParams">
+        {call INT_PKG_SAPMM.INT_PR_SAP_RECEP_NEGO(?, ?, ?, ?)}
+    </procedure>
+    
+    <procedure id="executeRecepcionSuperGenerico" parameterMap="executeRecepcionNegocioParams">
+        {call INT_PKG_SAPMM.INT_PR_SAP_RECEP_SUPER_GENER(?, ?, ?, ?)}
+    </procedure>
+    
+    <procedure id="executeRecepcionGenerico" parameterMap="executeRecepcionNegocioParams">
+        {call INT_PKG_SAPMM.INT_PR_SAP_RECEP_GENER(?, ?, ?, ?)}
+    </procedure>
+	
+	<procedure id="executeRecepcionDescripcionProductoIdioma" parameterMap="executeRecepcionNegocioParams">
+        {call INT_PKG_SAPMM.INT_PR_SAP_RECEP_DESC_PRODU(?, ?, ?, ?)}
+    </procedure>
+    
+    <parameterMap id="executeRecepcionProductoParams"  class="map">
+    	<parameter property="codigoPais"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoSAP"     	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="descripcion"  	   	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="indPrdServ"  	   	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>        
+        <parameter property="marca"  	   	   	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="unidNego"  	   	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="negocio"  	   	       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="grupoArticulo"  	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="generico"  	   	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="superGenerico"  	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="jerarquia1"  	   	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="jerarquia2"  	   	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="jerarquia3"  	   	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="altostring"  	   	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="largostring"  	   	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="anchostring"  	   	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="indFueraCaja"  	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="volumenstring"  	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="pesoBrutostring"  	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="estatus"  	   	       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="costeEstandarstring"  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="unidadMediaVol"  	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="unidadMediaPeso"  	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoAntiguo"  	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="cuv"  	   	   		   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>        
+    </parameterMap>
+    
+    <procedure id="executeRecepcionProducto" parameterMap="executeRecepcionProductoParams">
+        {call INT_PKG_SAPMM.INT_PR_SAP_RECEP_PRODU(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)}
+    </procedure>
+	
+</sqlMap>                             

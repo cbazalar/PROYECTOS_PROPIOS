@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="LookupSQL">
+
+    <typeAlias alias="lookupPais" type="biz.belcorp.ssicc.dao.model.Pais"/>
+    <typeAlias alias="lookupIdioma" type="biz.belcorp.ssicc.dao.model.Idioma"/>
+    <typeAlias alias="lookupLabelValue" type="biz.belcorp.ssicc.dao.model.LabelValue"/>
+
+    <resultMap id="paisResult" class="lookupPais">
+        <result property="codigo" column="COD_PAIS"/>
+        <result property="descripcion" column="DES_PAIS"/>
+        <result property="codigoPrivilege" column="COD_EPRI"/>
+        <result property="URL" column="VAL_URL"/>
+        <result property="estado" column="EST_PAIS"/>
+        <result property="auditInfo.createdBy" column="USU_DIGI"/>
+        <result property="auditInfo.created" column="FEC_DIGI"/>
+        <result property="auditInfo.updatedBy" column="USU_MODI"/>
+        <result property="auditInfo.lastUpdated" column="FEC_MODI"/>
+		
+    </resultMap>
+
+    <resultMap id="idiomaResult" class="lookupIdioma">
+        <result property="codigo" column="COD_IDIO"/>
+        <result property="descripcion" column="DES_IDIO"/>
+        <result property="codigoISO" column="COD_ISO_IDIO"/>
+        <result property="codigoSiCC" column="COD_ESIC"/>
+        <result property="estado" column="EST_IDIO"/>
+        <result property="auditInfo.createdBy" column="USU_DIGI"/>
+        <result property="auditInfo.created" column="FEC_DIGI"/>
+        <result property="auditInfo.updatedBy" column="USU_MODI"/>
+        <result property="auditInfo.lastUpdated" column="FEC_MODI"/>
+    </resultMap>
+
+    <resultMap id="labelValueResult" class="lookupLabelValue">
+        <result property="value" column="CODIGO"/>
+        <result property="label" column="DESCRIPCION"/>
+    </resultMap>
+
+    <select id="getPaises" resultMap="paisResult">
+      <![CDATA[
+        SELECT 
+        COD_PAIS,
+        DES_PAIS, 
+        COD_EPRI, 
+        VAL_URL, 
+        EST_PAIS, 
+        USU_DIGI, 
+        FEC_DIGI, 
+        USU_MODI, 
+        FEC_MODI
+        FROM BAS_PAIS
+		WHERE EST_PAIS != '9'
+        ORDER BY DES_PAIS
+      ]]>
+    </select>
+    
+	<select id="getIdiomas" resultMap="idiomaResult">
+        SELECT 
+        COD_IDIO,
+        DES_IDIO, 
+        COD_ISO_IDIO, 
+        COD_ESIC,
+        EST_IDIO, 
+        USU_DIGI, 
+        FEC_DIGI, 
+        USU_MODI, 
+        FEC_MODI 
+        FROM BAS_IDIOM 
+        WHERE EST_IDIO != '9'
+        ORDER BY DES_IDIO
+    </select>
+
+    <select id="getExtensionesArchivo" resultMap="labelValueResult">
+        SELECT 
+        COD_EXAR AS CODIGO, 
+        DES_EXAR AS DESCRIPCION 
+        FROM BAS_EXTEN_ARCHI
+        WHERE EST_EXAR = 1
+        AND TIP_EXAR = '1'
+    </select>
+
+    <select id="getExtensionesLog" resultMap="labelValueResult">
+        SELECT 
+        COD_EXAR AS CODIGO, 
+        DES_EXAR AS DESCRIPCION 
+        FROM BAS_EXTEN_ARCHI
+        WHERE EST_EXAR = 1
+        AND TIP_EXAR = '2'
+    </select>
+    
+    <update id="updateProcesosBatch" parameterClass="java.util.Map">
+		 UPDATE BAS_PROCE_BATCH_ACTUA
+		   SET IND_EJEC           = 'N',
+		       FEC_FINA_PROC      = SYSDATE,
+		       EPBA_COD_ESTA_PROC = '99',
+		       DES_LOG            = 'Se reinicio el Servidor'
+		 WHERE IND_EJEC = 'S'
+  	</update>
+	<update id="updateProcesosSTO" parameterClass="java.util.Map">
+        UPDATE STO_HISTO_PROCE
+			   SET FEC_FPRO           = SYSDATE,
+			       IND_LOER           = 'S',			       
+			       IND_ESPR           = '0',
+			       LOG_PROC           = 'Se reinicio el Servidor'
+			 WHERE FEC_FPRO IS NULL
+  	</update>
+	<delete id="deleteTemporalConsultaSTO">
+        TRUNCATE TABLE STO_TMP_ELIMI_DOCUM
+    </delete>
+    <delete id="deleteDatosTempCUV" parameterClass="java.util.Map">
+       DELETE FROM pre_tmp_ofert_modif 
+    </delete>
+    <delete id="deleteTemporalPostVentaCabecera">
+        TRUNCATE TABLE INT_OCR_CABEC_SERVI_POSTV 
+    </delete>
+    <delete id="deleteTemporalPostVentaDetalle">
+        TRUNCATE TABLE INT_OCR_DETAL_SERVI_POSTV
+    </delete>
+    <delete id="deleteTemporalProcesosSTO">
+        TRUNCATE TABLE STO_PROCE_DOCUM_DIGIT
+    </delete>
+    <delete id="deleteTemporalPedidosCabecera">
+        TRUNCATE TABLE INT_SOLIC_CABEC
+    </delete>
+    <delete id="deleteTemporalPedidosDetalle">
+        TRUNCATE TABLE INT_SOLIC_POSIC
+    </delete>
+    <delete id="deleteTemporalIVRRecepcionPedidos">
+        TRUNCATE TABLE IVR_TMP_RECEP_PEDID
+    </delete>
+    <delete id="deleteTemporalClientesCarga">
+        TRUNCATE TABLE STO_TMP_CARGA_CLIEN_FILES
+    </delete>
+    
+    <select id="getTiposBloqueoUsuario" resultMap="labelValueResult">
+		SELECT 
+		VAL_OID AS CODIGO, 
+		VAL_I18N AS DESCRIPCION 
+		FROM GEN_I18N_SICC_COMUN
+		WHERE ATTR_ENTI = 'MAE_TIPO_BLOQU'
+		ORDER BY VAL_I18N
+    </select>
+
+    <select id="getTiposAcciones" resultMap="labelValueResult">
+		SELECT 
+		OID_VALO_USUA_BLOQ AS CODIGO, 
+		DES_VALO_BLOQ AS DESCRIPCION
+		FROM MAE_VALOR_USUAR_BLOQU
+		ORDER BY DES_VALO_BLOQ    
+    </select>
+    
+	<update id="updateProcesosPROL" parameterClass="java.util.Map">
+        UPDATE PED_AUDIT_PROL
+			   SET FEC_FIN        = SYSDATE,
+			       COD_ERRO       = '0',			       
+			       VAL_MENSA      = 'Se reinicio el Servidor'
+			 WHERE FEC_FIN IS NULL
+  	</update>
+    
+            
+   <delete id="deleteControlAsistenciaPER" parameterClass="java.util.Map">
+       DELETE FROM PER_REPOR_CNTRL_ASIST_CONFE 
+    </delete>
+    
+    <select id="getAllPoliticasSeguridadContrasenia" resultMap="labelValueResult">
+		SELECT COD_POLI AS CODIGO, 
+		       VAL_NOM_POLI || ': ' || VAL_POLI AS DESCRIPCION
+		FROM SEG_PARAM_POLIT
+		WHERE EST_POLI='1'
+		ORDER BY COD_POLI
+    </select>
+    
+</sqlMap>

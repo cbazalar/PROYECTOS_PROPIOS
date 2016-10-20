@@ -1,0 +1,275 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.sac.ProcesoSACGenerarReporteSQL">	
+	<select id="getListaCorreoReporteSACAsistenciaCompartamosEsika" parameterClass="java.util.Map" resultClass="java.lang.String"> 
+		select distinct (select val_text_comu
+				          from mae_clien_comun, zon_zona
+				         where mae_clien_comun.clie_oid_clie = zon_zona.clie_oid_clie
+				           and oid_zona = f.oid_zona
+				           and ticm_oid_tipo_comu = 3) MAIL_GERENTE         
+				  from mae_clien             b,
+				       mae_clien_unida_admin c,
+				       zon_terri_admin       d,
+				       zon_terri             e,
+				       zon_secci             h,
+				       zon_zona              f,
+				       zon_regio             g,
+				       mae_clien_datos_adici i,
+				       gen_i18n_sicc_comun   j
+				 where b.OID_CLIE = c.CLIE_OID_CLIE
+				   and c.ZTAD_OID_TERR_ADMI = d.OID_TERR_ADMI
+				   and d.TERR_OID_TERR = e.OID_TERR
+				   and d.ZSCC_OID_SECC = h.OID_SECC
+				   and h.ZZON_OID_ZONA = f.OID_ZONA
+				   and f.ZORG_OID_REGI = g.OID_REGI
+				   and c.PERD_OID_PERI_FIN is null
+				   and b.OID_CLIE = i.CLIE_OID_CLIE
+				   and i.esta_oid_esta_clie = j.val_oid
+				   and j.attr_enti = 'MAE_ESTAT_CLIEN'
+				   and f.oid_ZONA in
+				       (select zzon_oid_zona
+				          from cra_crono
+				         where CACT_OID_ACTI = (select oid_acti
+				                                  from cra_activ
+				                                 where pais_oid_pais = g.pais_oid_pais
+				                                   and cod_acti = 'CV')
+				           and trunc(fec_inic) = trunc(sysdate + 1))
+				   and i.ind_acti = 1
+				   and f.cod_zona = #codigoZona#
+	</select>
+	
+	<select id="getListaCorreoReporteSACActivasSaldo" parameterClass="java.util.Map" resultClass="java.lang.String">
+		select distinct (select val_text_comu
+		          from mae_clien_comun, zon_zona
+		         where mae_clien_comun.clie_oid_clie = zon_zona.clie_oid_clie
+		           and oid_zona = f.oid_zona
+		           and ticm_oid_tipo_comu = 3) MAIL_GERENTE    
+		  from mae_clien             b,
+		       mae_clien_unida_admin c,
+		       zon_terri_admin       d,
+		       zon_terri             e,
+		       zon_secci             h,
+		       zon_zona              f,
+		       zon_regio             g,
+		       mae_clien_datos_adici i,
+		       gen_i18n_sicc_comun   j
+		 where b.OID_CLIE = c.CLIE_OID_CLIE
+		   and c.ZTAD_OID_TERR_ADMI = d.OID_TERR_ADMI
+		   and d.TERR_OID_TERR = e.OID_TERR
+		   and d.ZSCC_OID_SECC = h.OID_SECC
+		   and h.ZZON_OID_ZONA = f.OID_ZONA
+		   and f.ZORG_OID_REGI = g.OID_REGI
+		   and c.PERD_OID_PERI_FIN is null
+		   and b.OID_CLIE = i.CLIE_OID_CLIE
+		   and i.esta_oid_esta_clie = j.val_oid
+		   and j.attr_enti = 'MAE_ESTAT_CLIEN'
+		   and f.oid_ZONA in
+		       (select zzon_oid_zona
+		          from cra_crono
+		         where CACT_OID_ACTI = (select oid_acti
+		                                  from cra_activ
+		                                 where pais_oid_pais = g.pais_oid_pais
+		                                   and cod_acti = 'FA')
+		           and trunc(fec_inic) = trunc(sysdate + 5))
+		   and i.ind_acti = 1
+		   and f.cod_zona = #codigoZona#
+	</select>		  
+	
+	<parameterMap id="executeGenerarReporteFechaRealEntregaParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaInicio"	 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaFin"		 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	
+	<procedure id="executeGenerarReporteFechaRealEntrega" parameterMap="executeGenerarReporteFechaRealEntregaParams">
+		{call SAC_PKG_REPOR.SAC_PR_GENER_REPOR_FECHA_ENTRE(?,?,?,?)}
+	</procedure>
+			  
+	<select id="getListaCorreoZonaReportePEJProgramaEjecutivas" parameterClass="java.util.Map" resultClass="java.lang.String">
+			   
+			SELECT CASE
+			         WHEN clco.val_text_comu IS NOT NULL THEN clco.val_text_comu 
+			         WHEN clco.val_text_comu IS NULL AND clco2.val_text_comu IS NOT NULL THEN clco2.val_text_comu 
+			         ELSE NULL
+			       END val_text_comu
+			  FROM zon_zona zzon,
+			       zon_regio zorg,
+			       mae_clien_comun clco,
+			       mae_tipo_comun ticm,
+			       mae_clien_comun clco2,
+			       mae_tipo_comun ticm2
+			WHERE zzon.zorg_oid_regi = zorg.oid_regi
+			   AND zzon.clie_oid_clie = clco.clie_oid_clie(+)
+			   AND zzon.clie_oid_clie = clco2.clie_oid_clie(+)
+			   AND clco.ticm_oid_tipo_comu = ticm.oid_tipo_comu(+)
+			   AND clco2.ticm_oid_tipo_comu = ticm2.oid_tipo_comu(+)
+			   AND ticm.cod_tipo_comu = 'MB'
+			   AND ticm2.cod_tipo_comu = 'ML'
+			   AND zzon.ind_acti = 1
+			   AND zzon.clie_oid_clie IS NOT NULL
+			   AND zzon.cod_zona = #codigoZona#
+		   
+	</select>
+	
+	<select id="getListaCorreoSeccionReportePEJProgramaEjecutivas" parameterClass="java.util.Map" resultClass="java.lang.String">
+		SELECT  clco.val_text_comu val_text_comu
+		  FROM zon_histo_geren gere,
+		       mae_clien clie,
+		       mae_clien_comun clco,
+		       mae_tipo_comun ticm
+		WHERE gere.perd_oid_peri_hast IS NULL
+		   AND gere.cod_zona||'-'||gere.cod_secc = #codigoSeccion#
+		   AND ticm.cod_tipo_comu = 'ML'
+		   AND gere.gere = clie.cod_clie
+		   AND clie.oid_clie = clco.clie_oid_clie
+		   AND clco.ticm_oid_tipo_comu = ticm.oid_tipo_comu  
+	</select>
+			  
+	<parameterMap id="executeListaCorreoMAENovedadesZonaParams" class="map">
+		<parameter property="codigoRegion"    jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN" />		
+		<parameter property="codigoZona" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN" />
+	</parameterMap>
+	
+	<select id="getListaCorreoMAENovedadesZona"  parameterMap="executeListaCorreoMAENovedadesZonaParams" resultClass="java.lang.String">
+		 select 
+		   MAE_PKG_REPOR.MAE_FN_DEVUE_RESPO_CORRE(?,?) 
+		 from dual 
+	</select>
+			  
+	<parameterMap id="executeListaCorreoFLXNovedadesZonaParams" class="map">
+		<parameter property="codigoZona" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN" />
+	</parameterMap>
+	
+	<select id="getListaCorreoFLXNovedadesZona"  parameterMap="executeListaCorreoFLXNovedadesZonaParams" resultClass="java.lang.String">
+		 select 
+		   MAE_PKG_REPOR.MAE_FN_DEVUE_RESPO_CORRE_ZONA(?) 
+		 from dual 
+	</select>
+	
+	<select id="getListaCorreoRegionReportePEJProgramaEjecutivas" parameterClass="java.util.Map" resultClass="java.lang.String">
+		SELECT CASE
+		         WHEN clco.val_text_comu IS NOT NULL THEN clco.val_text_comu 
+		         WHEN clco.val_text_comu IS NULL AND clco2.val_text_comu IS NOT NULL THEN clco2.val_text_comu 
+		         ELSE NULL
+		       END val_text_comu
+		  FROM zon_regio zorg,
+		       mae_clien_comun clco,
+		       mae_tipo_comun ticm,
+		       mae_clien_comun clco2,
+		       mae_tipo_comun ticm2
+		WHERE zorg.clie_oid_clie = clco.clie_oid_clie(+)
+		   AND zorg.clie_oid_clie = clco2.clie_oid_clie(+)
+		   AND clco.ticm_oid_tipo_comu = ticm.oid_tipo_comu(+)
+		   AND clco2.ticm_oid_tipo_comu = ticm2.oid_tipo_comu(+)
+		   AND ticm.cod_tipo_comu = 'MB'
+		   AND ticm2.cod_tipo_comu = 'ML'
+		   AND zorg.ind_acti = 1
+		   AND zorg.clie_oid_clie IS NOT NULL
+		   AND zorg.cod_regi = #codigoRegion#
+	</select>
+			  
+	<select id="getResultConsulorasHabiles" parameterClass="java.util.Map" resultClass="string">
+		SELECT 
+		    COUNT(1)
+		 FROM 
+		   flx_consu_habil_flexi ch,
+		   flx_calif_compo       fcc,
+		  mae_clien mc,
+		  mae_clien_unida_admin mcua,
+		  zon_terri_admin zta,
+		  zon_secci zs,
+		  zon_zona zz,
+		  zon_regio zr
+		 WHERE ch.cod_clie = mc.cod_clie   
+		   AND mc.oid_clie = mcua.clie_oid_clie
+		   AND mcua.ind_acti = 1
+		   AND mcua.ztad_oid_terr_admi = zta.oid_terr_admi
+		   AND zta.zscc_oid_secc = zs.oid_secc
+		   AND zs.zzon_oid_zona = zz.oid_zona
+		   AND zz.zorg_oid_regi = zr.oid_regi
+		   AND ch.cod_peri_comu =  #codigoCampana#
+		   AND ch.ind_habi = 1 
+		   and ch.ind_cali_comp = fcc.cod_cali
+		   and exists (select null from mae_clien_datos_adici mad
+		               where mad.clie_oid_clie = mc.oid_clie
+		               and mad.esta_oid_esta_clie not in (5,7) )
+		$condicionRegion$
+		$condicionZona$
+		$condicionSeccion$
+	</select>
+	
+	<resultMap id="datosZonaRecuperacionCobranzaResult"   class="java.util.HashMap">
+    	<result property="codigoPeriodo" 		column="COD_PERI"/>
+    	<result property="codigoRegion" 		column="COD_REGI"/>
+    	<result property="codigoZona"	 		column="COD_ZONA"/>
+    	<result property="montoFacturacion" 	column="VAL_MONT_FACT"/>
+    	<result property="montoRecuperacion" 	column="VAL_MONT_RECU"/>    	 
+   		<result property="faltante88" 		column="VAL_FALT_88"/>
+   		<result property="faltante90" 		column="VAL_FALT_90"/>
+   		<result property="faltante93" 	    column="VAL_FALT_93"/>
+   		<result property="porcRecuperacion" column="VAL_PORC_RECU"/>
+   		<result property="comision88" 		column="VAL_COMI_88"/>
+   		<result property="comision90" 		column="VAL_COMI_90"/>
+   		<result property="comision93" 		column="VAL_COMI_93"/>
+    </resultMap>
+				
+    <select id="getDatosZonaRecuperacionCobranza" parameterClass="java.util.Map" resultMap="datosZonaRecuperacionCobranzaResult">
+             WITH temp AS
+                  (
+                   SELECT brec.cod_regi codigoRegion,
+                          brec.cod_zona codigoZona,
+                          SUM(NVL(brec.val_mont_carg,0)) facturadoNeto,
+                          SUM(NVL(brec.val_mont_abon,0)) montoRecuperado,
+                          ROUND( ( SUM(NVL(brec.val_mont_abon,0)) / SUM(NVL(brec.val_mont_carg,0) ) ) * 100,2 ) porcComision,
+                          CASE
+                            WHEN ROUND( ( SUM( NVL(brec.val_mont_abon,0 ) ) / SUM( NVL( brec.val_mont_carg,0 ) ) ) * 100,2 ) BETWEEN 0 AND 87.99 THEN 88
+                            WHEN ROUND( ( SUM( NVL(brec.val_mont_abon,0 ) ) / SUM( NVL( brec.val_mont_carg,0 ) ) ) * 100,2 ) BETWEEN 88 AND 89.99 THEN 90
+                            WHEN ROUND( ( SUM( NVL(brec.val_mont_abon,0 ) ) / SUM( NVL( brec.val_mont_carg,0 ) ) ) * 100,2 ) BETWEEN 90 AND 92.99 THEN 93
+                          END porcProximo,
+                          CASE
+                            WHEN ROUND( ( SUM( NVL(brec.val_mont_abon,0 ) ) / SUM( NVL( brec.val_mont_carg,0 ) ) ) * 100,2 ) BETWEEN 0 AND 87.99 THEN 1
+                            WHEN ROUND( ( SUM( NVL(brec.val_mont_abon,0 ) ) / SUM( NVL( brec.val_mont_carg,0 ) ) ) * 100,2 ) BETWEEN 88 AND 89.99 THEN 2
+                            WHEN ROUND( ( SUM( NVL(brec.val_mont_abon,0 ) ) / SUM( NVL( brec.val_mont_carg,0 ) ) ) * 100,2 ) BETWEEN 90 AND 92.99 THEN 3
+                          END montoComisionProximo
+                     FROM com_base_recup_consu brec,
+                          mae_clien clie
+                    WHERE brec.clie_cod_clie = clie.cod_clie
+                      AND brec.cod_zona = #codigoZona#
+                      AND brec.cam_reca = #codigoPeriodoRecup#
+                    GROUP BY brec.cod_regi,
+                             brec.cod_zona
+                  )
+             SELECT #codigoPeriodoRecup# COD_PERI,
+                    codigoRegion COD_REGI,
+                    codigoZona COD_ZONA,
+                    TRIM(TO_CHAR(facturadoNeto, '999,999,990.00')) VAL_MONT_FACT,
+                    TRIM(TO_CHAR(montoRecuperado, '999,999,990.00')) VAL_MONT_RECU,
+                    ROUND((temp.montoRecuperado / temp.facturadoNeto) * 100,2)  VAL_PORC_RECU,
+                    CASE WHEN porcComision BETWEEN 0 AND 87.99 THEN TRIM(TO_CHAR(ROUND( ( facturadoNeto * (88/100) ) - montoRecuperado,2 ), '999,999,990.00')) ELSE '0.00' END VAL_FALT_88,
+                    CASE WHEN porcComision BETWEEN 0 AND 89.99 THEN TRIM(TO_CHAR(ROUND( ( facturadoNeto * (90/100) ) - montoRecuperado,2 ), '999,999,990.00')) ELSE '0.00' END VAL_FALT_90,
+                    CASE WHEN porcComision BETWEEN 0 AND 92.99 THEN TRIM(TO_CHAR(ROUND( ( facturadoNeto * (93/100) ) - montoRecuperado,2 ), '999,999,990.00')) ELSE '0.00' END VAL_FALT_93,
+ 				    CASE WHEN ( facturadoNeto * (88/100) ) >= montoRecuperado THEN
+                              TRIM(TO_CHAR(ROUND( (( facturadoNeto * (88/100) ) * (1/100))/1.16,2 ), '999,999,990.00'))
+                         ELSE 
+                              TRIM(TO_CHAR(ROUND( (montoRecuperado * (1/100))/1.16,2 ), '999,999,990.00'))
+                    END VAL_COMI_88,
+                    CASE WHEN ( facturadoNeto * (90/100) ) >= montoRecuperado THEN
+                              TRIM(TO_CHAR(ROUND( (( facturadoNeto * (90/100) ) * (2/100))/1.16,2 ), '999,999,990.00'))
+                         ELSE 
+                              TRIM(TO_CHAR(ROUND( (montoRecuperado * (2/100))/1.16,2 ), '999,999,990.00'))
+                    END VAL_COMI_90,
+                    CASE WHEN ( facturadoNeto * (93/100) ) >= montoRecuperado THEN
+                              TRIM(TO_CHAR(ROUND( (( facturadoNeto * (93/100) ) * (3/100))/1.16,2 ), '999,999,990.00'))
+                         ELSE 
+                              TRIM(TO_CHAR(ROUND( (montoRecuperado * (3/100))/1.16,2 ), '999,999,990.00'))
+                    END VAL_COMI_93
+               FROM temp
+
+		      
+	</select>
+	
+</sqlMap>

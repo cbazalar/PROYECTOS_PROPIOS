@@ -1,0 +1,1284 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteINCPuntObtenidosPuntFaltantesXLS"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Landscape"
+		 pageWidth="2500"
+		 pageHeight="1274"
+		 columnWidth="2500"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 isIgnorePagination="true">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="condicion" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="oidConcurso" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("oidConcurso")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicionEstado" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicionEstado")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[select
+	COD_REGI,
+	DES_REGI,
+	COD_ZONA,
+	DES_ZONA,
+	COD_SECC,
+    To_char(COD_TERR, '9999999') AS COD_TERR, 
+	NUM_CONC,
+	VAL_NOMB,			
+  MAE_CLIEN.COD_CLIE, 
+  VAL_NOM1 || ' ' || VAL_NOM2 || ' ' || VAL_APE1 || ' ' || VAL_APE2 as Nombre, 
+  mtd.val_sigl as Tipo_Documento, 
+  mci.NUM_DOCU_IDEN as Nro_Documento, 
+  mcc.val_text_comu as Celular, 
+  DIRECCION.DESC_UNI as Direccion,  
+	puntaje,
+	pnp.NUM_NIVE,	
+	CASE
+		when (NUM_CANT_INIC_PUNT - puntaje) < 0 then 0
+		else (NUM_CANT_INIC_PUNT - puntaje)
+	end Puntos_Faltante,
+  (SELECT gsc.val_i18n
+          FROM gen_i18n_sicc_comun gsc
+         WHERE gsc.attr_enti = 'MAE_ESTAT_CLIEN'
+           AND gsc.val_oid = mcd.esta_oid_esta_clie) Estado
+			
+from
+	MAE_CLIEN,
+	MAE_CLIEN_UNIDA_ADMIN,
+	ZON_TERRI_ADMIN,
+	ZON_TERRI,
+	ZON_SECCI,
+	ZON_ZONA,
+	ZON_REGIO,
+	INC_CONCU_PARAM_GENER pgc,
+	INC_PARAM_GENER_PREMI pgp,
+	INC_PARAM_NIVEL_PREMI pnp,
+    MAE_CLIEN_IDENT mci,  
+	(
+		select
+			COPA_OID_PARA_GRAL,
+			CLIE_OID_CLIE,
+			SUM(NUM_PUNT) as puntaje
+		from
+			INC_CUENT_CORRI_PUNTO
+		where
+			COPA_OID_PARA_GRAL = $P{oidConcurso}
+AND 
+      VAL_DESC <> 'Entrega de Premio'
+			AND CLIE_OID_CLIE not in
+				(
+				select
+				INC_DESCA.CLIE_OID_CLIE
+		    		from
+				INC_DESCA
+				where
+				1=1
+				and INC_DESCA.COPA_OID_PARA_GRAL = INC_CUENT_CORRI_PUNTO.COPA_OID_PARA_GRAL 
+				)
+		group by
+			COPA_OID_PARA_GRAL,
+			CLIE_OID_CLIE
+  ) cliente,
+  
+        (						 -- agregar inicio
+        select COD_CLIE,DES_ABRV_TIPO_VIA || ' ' || VAL_NOMB_VIA || ' ' || NUM_PPAL || ' ' || VAL_OBSE || ' ' ||
+       nivel_1
+       || DECODE(nivel_2, NULL, '', '/' || nivel_2)
+       || DECODE(nivel_3, NULL, '', '/' || nivel_3)
+       || DECODE(nivel_4, NULL, '', '/' || nivel_4)
+       || DECODE(nivel_5, NULL, '', '/' || nivel_5)
+       || DECODE(nivel_6, NULL, '', '/' || nivel_6)
+       || DECODE(nivel_7, NULL, '', '/' || nivel_7)
+       || DECODE(nivel_8, NULL, '', '/' || nivel_8)
+       || DECODE(nivel_9, NULL, '', '/' || nivel_9) AS DESC_UNI
+/*       VAL_BARR,
+       DES_CIUD,
+       DES_VILLA_POBL*/
+   FROM (SELECT D.COD_CLIE,
+   mcd.OID_CLIE_DIRE OID,
+               c.DES_ABRV_TIPO_VIA,
+               mcd.VAL_NOMB_VIA,
+               mcd.NUM_PPAL,
+               mcd.VAL_OBSE,
+               mcd.VAL_BARR,
+               t.COD_TERR,
+               (SELECT DES_CIUD
+                  FROM ZON_CIUDA
+                 WHERE COD_UGEO_REGI = mcd.CIUD_COD_UGEO_REGI
+                   AND COD_CIUD = mcd.CIUD_COD_CIUD) DES_CIUD,
+               mcd.DES_VILLA_POBL,
+               (SELECT des_geog
+                  FROM zon_valor_estru_geopo
+                 WHERE pais_oid_pais = d.pais_oid_pais
+                   AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                   AND orde_2 IS NULL) AS nivel_1,
+               (SELECT des_geog
+                  FROM zon_valor_estru_geopo
+                 WHERE pais_oid_pais = d.pais_oid_pais
+                   AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                   AND orde_2 = SUBSTR(mcd.cod_unid_geog, 7, 6)
+                   AND orde_3 IS NULL) AS nivel_2,
+               (SELECT des_geog
+                  FROM zon_valor_estru_geopo
+                 WHERE pais_oid_pais = d.pais_oid_pais
+                   AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                   AND orde_2 = SUBSTR(mcd.cod_unid_geog, 7, 6)
+                   AND orde_3 = SUBSTR(mcd.cod_unid_geog, 13, 6)
+                   AND orde_4 IS NULL) AS nivel_3,
+               CASE
+                 WHEN LENGTH(mcd.cod_unid_geog) > 18
+                  THEN
+                  (SELECT des_geog
+                     FROM zon_valor_estru_geopo
+                    WHERE pais_oid_pais =
+                          d.pais_oid_pais
+                      AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                      AND orde_2 = SUBSTR(mcd.cod_unid_geog, 7, 6)
+                      AND orde_3 = SUBSTR(mcd.cod_unid_geog, 13, 6)
+                      AND orde_4 = SUBSTR(mcd.cod_unid_geog, 19, 6)
+                      AND orde_5 IS NULL)
+                 ELSE
+                  NULL
+               END AS nivel_4,
+               CASE
+                 WHEN LENGTH(mcd.cod_unid_geog) > 24
+                  THEN
+                  (SELECT des_geog
+                     FROM zon_valor_estru_geopo
+                    WHERE pais_oid_pais = d.pais_oid_pais
+                      AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                      AND orde_2 = SUBSTR(mcd.cod_unid_geog, 7, 6)
+                      AND orde_3 = SUBSTR(mcd.cod_unid_geog, 13, 6)
+                      AND orde_4 = SUBSTR(mcd.cod_unid_geog, 19, 6)
+                      AND orde_5 = SUBSTR(mcd.cod_unid_geog, 25, 6)
+                      AND orde_6 IS NULL)
+                 ELSE
+                  NULL
+               END AS nivel_5,
+               CASE
+                 WHEN LENGTH(mcd.cod_unid_geog) > 30
+                  THEN
+                  (SELECT des_geog
+                     FROM zon_valor_estru_geopo
+                    WHERE pais_oid_pais = d.pais_oid_pais
+                      AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                      AND orde_2 = SUBSTR(mcd.cod_unid_geog, 7, 6)
+                      AND orde_3 = SUBSTR(mcd.cod_unid_geog, 13, 6)
+                      AND orde_4 = SUBSTR(mcd.cod_unid_geog, 19, 6)
+                      AND orde_5 = SUBSTR(mcd.cod_unid_geog, 25, 6)
+                      AND orde_6 = SUBSTR(mcd.cod_unid_geog, 31, 6)
+                      AND orde_7 IS NULL)
+                 ELSE
+                  NULL
+               END AS nivel_6,
+               CASE
+                 WHEN LENGTH(mcd.cod_unid_geog) > 36
+                  THEN
+                  (SELECT des_geog
+                     FROM zon_valor_estru_geopo
+                    WHERE pais_oid_pais =  d.pais_oid_pais
+                      AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                      AND orde_2 = SUBSTR(mcd.cod_unid_geog, 7, 6)
+                      AND orde_3 = SUBSTR(mcd.cod_unid_geog, 13, 6)
+                      AND orde_4 = SUBSTR(mcd.cod_unid_geog, 19, 6)
+                      AND orde_5 = SUBSTR(mcd.cod_unid_geog, 25, 6)
+                      AND orde_6 = SUBSTR(mcd.cod_unid_geog, 31, 6)
+                      AND orde_7 = SUBSTR(mcd.cod_unid_geog, 37, 6)
+                      AND orde_8 IS NULL)
+                 ELSE
+                  NULL
+               END AS nivel_7,
+               CASE
+                 WHEN LENGTH(mcd.cod_unid_geog) > 42
+                  THEN
+                  (SELECT des_geog
+                     FROM zon_valor_estru_geopo
+                    WHERE pais_oid_pais = d.pais_oid_pais
+                      AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                      AND orde_2 = SUBSTR(mcd.cod_unid_geog, 7, 6)
+                      AND orde_3 = SUBSTR(mcd.cod_unid_geog, 13, 6)
+                      AND orde_4 = SUBSTR(mcd.cod_unid_geog, 19, 6)
+                      AND orde_5 = SUBSTR(mcd.cod_unid_geog, 25, 6)
+                      AND orde_6 = SUBSTR(mcd.cod_unid_geog, 31, 6)
+                      AND orde_7 = SUBSTR(mcd.cod_unid_geog, 37, 6)
+                      AND orde_8 = SUBSTR(mcd.cod_unid_geog, 43, 6)
+                      AND orde_9 IS NULL)
+                 ELSE
+                  NULL
+               END AS nivel_8,
+               CASE
+                 WHEN LENGTH(mcd.cod_unid_geog) > 48
+                  THEN
+                  (SELECT des_geog
+                     FROM zon_valor_estru_geopo
+                    WHERE pais_oid_pais = d.pais_oid_pais
+                      AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                      AND orde_2 = SUBSTR(mcd.cod_unid_geog, 7, 6)
+                      AND orde_3 = SUBSTR(mcd.cod_unid_geog, 13, 6)
+                      AND orde_4 = SUBSTR(mcd.cod_unid_geog, 19, 6)
+                      AND orde_5 = SUBSTR(mcd.cod_unid_geog, 25, 6)
+                      AND orde_6 = SUBSTR(mcd.cod_unid_geog, 31, 6)
+                      AND orde_7 = SUBSTR(mcd.cod_unid_geog, 37, 6)
+                      AND orde_8 = SUBSTR(mcd.cod_unid_geog, 43, 6)
+                      AND orde_9 = SUBSTR(mcd.cod_unid_geog, 49, 6))
+                 ELSE
+                  NULL
+               END AS nivel_9
+          FROM MAE_CLIEN_DIREC mcd,
+               MAE_TIPO_DIREC mtd,
+               SEG_TIPO_VIA c,
+               MAE_CLIEN d,
+               ZON_TERRI t
+         WHERE 
+            d.OID_CLIE = mcd.CLIE_OID_CLIE
+           AND mcd.IND_ELIM = 0
+           AND mtd.OID_TIPO_DIRE = mcd.TIDC_OID_TIPO_DIRE
+           AND c.OID_TIPO_VIA = mcd.TIVI_OID_TIPO_VIA
+           AND mcd.IND_DIRE_PPAL = 1
+           AND mcd.TERR_OID_TERR = t.OID_TERR(+)
+         ORDER BY mcd.OID_CLIE_DIRE DESC)
+         ) DIRECCION ,                
+     MAE_CLIEN_COMUN mcc ,				
+     MAE_TIPO_DOCUM mtd,
+       MAE_CLIEN_DATOS_ADICI mcd      			
+  
+where
+	cliente.COPA_OID_PARA_GRAL = pgc.OID_PARA_GRAL 
+	and pgc.OID_PARA_GRAL = pgp.COPA_OID_PARA_GRAL
+	and pgp.OID_PARA_GENE_PREM = pnp.PAGP_OID_PARA_GENE_PREM
+	and cliente.CLIE_OID_CLIE = MAE_CLIEN.OID_CLIE
+	and MAE_CLIEN.OID_CLIE = MAE_CLIEN_UNIDA_ADMIN.CLIE_OID_CLIE
+	and MAE_CLIEN_UNIDA_ADMIN.IND_ACTI = 1
+	and MAE_CLIEN_UNIDA_ADMIN.ZTAD_OID_TERR_ADMI = ZON_TERRI_ADMIN.OID_TERR_ADMI
+	and ZON_TERRI_ADMIN.ZSCC_OID_SECC = ZON_SECCI.OID_SECC
+	and ZON_SECCI.ZZON_OID_ZONA = ZON_ZONA.OID_ZONA
+	and ZON_ZONA.ZORG_OID_REGI = ZON_REGIO.OID_REGI	
+	and ZON_TERRI_ADMIN.TERR_OID_TERR = ZON_TERRI.OID_TERR
+ $P!{condicion}
+  AND MAE_CLIEN.OID_CLIE = mci.clie_oid_clie 						
+  AND mci.val_iden_docu_prin=1					
+  AND DIRECCION.COD_CLIE = MAE_CLIEN.COD_CLIE 
+  AND MAE_CLIEN.OID_CLIE  = MCC.CLIE_OID_CLIE (+)  
+  AND MCC.TICM_OID_TIPO_COMU(+) = 6 -- CELULAR
+  AND mtd.oid_tipo_docu = mci.tdoc_oid_tipo_docu
+  AND mcd.clie_oid_clie = cliente.CLIE_OID_CLIE
+  $P!{condicionEstado}
+order by 
+	COD_REGI,
+	COD_ZONA,
+	COD_TERR,
+  MAE_CLIEN.COD_CLIE,			
+  pnp.NUM_NIVE]]></queryString>
+
+	<field name="COD_REGI" class="java.lang.String"/>
+	<field name="DES_REGI" class="java.lang.String"/>
+	<field name="COD_ZONA" class="java.lang.String"/>
+	<field name="DES_ZONA" class="java.lang.String"/>
+	<field name="COD_SECC" class="java.lang.String"/>
+	<field name="COD_TERR" class="java.lang.String"/>
+	<field name="NUM_CONC" class="java.lang.String"/>
+	<field name="VAL_NOMB" class="java.lang.String"/>
+	<field name="COD_CLIE" class="java.lang.String"/>
+	<field name="NOMBRE" class="java.lang.String"/>
+	<field name="TIPO_DOCUMENTO" class="java.lang.String"/>
+	<field name="NRO_DOCUMENTO" class="java.lang.String"/>
+	<field name="CELULAR" class="java.lang.String"/>
+	<field name="DIRECCION" class="java.lang.String"/>
+	<field name="PUNTAJE" class="java.math.BigDecimal"/>
+	<field name="NUM_NIVE" class="java.math.BigDecimal"/>
+	<field name="PUNTOS_FALTANTE" class="java.math.BigDecimal"/>
+	<field name="Estado" class="java.lang.String"/>
+
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="50"  isSplitAllowed="true" >
+				<crosstab >
+					<reportElement
+						x="0"
+						y="0"
+						width="2500"
+						height="50"
+						key="crosstab-1"/>
+					<crosstabHeaderCell>						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="66"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporte.generico.codigo.region}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="66"
+						y="0"
+						width="89"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosPuntFaltantesForm.descripcionRegion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="155"
+						y="0"
+						width="61"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporte.generico.codigo.zona}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="216"
+						y="0"
+						width="180"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosPuntFaltantesForm.descripcionZona}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="596"
+						y="0"
+						width="99"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosPuntFaltantesForm.numeroConcurso}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="695"
+						y="0"
+						width="250"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosPuntFaltantesForm.nomValor}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="945"
+						y="0"
+						width="100"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporte.generico.codigoCliente}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1045"
+						y="0"
+						width="240"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosPuntFaltantesForm.nombres}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1285"
+						y="0"
+						width="100"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosPuntFaltantesForm.puntaje}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1385"
+						y="0"
+						width="100"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosPuntFaltantesForm.tipodocumento}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1485"
+						y="0"
+						width="100"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosPuntFaltantesForm.nrodocumento}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1585"
+						y="0"
+						width="100"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosPuntFaltantesForm.celular}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1685"
+						y="0"
+						width="240"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosPuntFaltantesForm.direccion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="396"
+						y="0"
+						width="100"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporte.generico.codigo.seccion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="496"
+						y="0"
+						width="100"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporte.generico.codigo.territorio}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1925"
+						y="0"
+						width="100"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosPuntFaltantesForm.estado}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+					</crosstabHeaderCell>					<rowGroup name="COL_FICT" width="0">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{COD_REGI}+$F{COD_ZONA}+$F{COD_TERR}+$F{COD_CLIE}]]></bucketExpression>
+						</bucket>
+					</rowGroup>
+					<rowGroup name="COD_REGI" width="65">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{COD_REGI}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="65"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{COD_REGI}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+						<crosstabTotalRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+						</crosstabTotalRowHeader>
+					</rowGroup>
+					<rowGroup name="DES_REGI" width="90">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{DES_REGI}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="89"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{DES_REGI}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="COD_ZONA" width="61">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{COD_ZONA}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="61"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{COD_ZONA}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="DES_ZONA" width="180">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{DES_ZONA}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="180"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{DES_ZONA}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="COD_SECC" width="100">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{COD_SECC}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="100"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{COD_SECC}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="COD_TERR" width="100">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{COD_TERR}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="100"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{COD_TERR}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="NUM_CONC" width="99">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{NUM_CONC}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="99"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{NUM_CONC}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="VAL_NOMB" width="250">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{VAL_NOMB}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="250"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{VAL_NOMB}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="COD_CLIE" width="100">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{COD_CLIE}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="100"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{COD_CLIE}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="NOMBRE" width="240">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{NOMBRE}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Transparent"
+						x="0"
+						y="0"
+						width="240"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{NOMBRE}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="PUNTAJE" width="100">
+						<bucket>
+							<bucketExpression class="java.math.BigDecimal"><![CDATA[$F{PUNTAJE}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="100"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{PUNTAJE}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="TIPO_DOCUMENTO" width="100">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{TIPO_DOCUMENTO}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="100"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{TIPO_DOCUMENTO}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="NRO_DOCUMENTO" width="100">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{NRO_DOCUMENTO}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="100"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{NRO_DOCUMENTO}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="CELULAR" width="100">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{CELULAR}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="100"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{CELULAR}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="DIRECCION" width="240">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{DIRECCION}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="240"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{DIRECCION}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="ESTADO" width="100">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{Estado}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="100"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{ESTADO}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<columnGroup name="NUM_NIVE" height="23" headerPosition="Center">
+						<bucket>
+							<bucketExpression class="java.math.BigDecimal"><![CDATA[$F{NUM_NIVE}]]></bucketExpression>
+						</bucket>
+						<crosstabColumnHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="88"
+						height="23"
+						forecolor="#000000"
+						backcolor="#999999"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosPuntFaltantesForm.faltanteNivel}+" "+$V{NUM_NIVE}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabColumnHeader>
+					</columnGroup>
+
+					<measure name="PUNTOS_FALTANTE_Nothing" class="java.math.BigDecimal">
+						<measureExpression><![CDATA[$F{PUNTOS_FALTANTE}]]></measureExpression>
+					</measure>
+					<crosstabCell width="88" height="13">
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="88"
+						height="13"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{PUNTOS_FALTANTE_Nothing}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="13" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="0" rowTotalGroup="NOMBRE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="NOMBRE" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="30" rowTotalGroup="COD_REGI">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="30" rowTotalGroup="COD_REGI" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="0" rowTotalGroup="DES_REGI">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="DES_REGI" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="0" rowTotalGroup="COD_ZONA">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="COD_ZONA" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="0" rowTotalGroup="DES_ZONA">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="DES_ZONA" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="0" rowTotalGroup="COD_CLIE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="COD_CLIE" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="0" rowTotalGroup="NUM_CONC">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="NUM_CONC" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="0" rowTotalGroup="VAL_NOMB">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="VAL_NOMB" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="0" rowTotalGroup="PUNTAJE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="PUNTAJE" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="0" rowTotalGroup="COL_FICT">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="COL_FICT" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="0" rowTotalGroup="TIPO_DOCUMENTO">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="TIPO_DOCUMENTO" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="0" rowTotalGroup="NRO_DOCUMENTO">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="NRO_DOCUMENTO" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="0" rowTotalGroup="CELULAR">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="CELULAR" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="0" rowTotalGroup="DIRECCION">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="DIRECCION" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="0" rowTotalGroup="COD_TERR">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="COD_TERR" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="0" rowTotalGroup="COD_SECC">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="COD_SECC" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="88" height="0" rowTotalGroup="ESTADO">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="ESTADO" columnTotalGroup="NUM_NIVE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<whenNoDataCell>						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</whenNoDataCell>					</crosstab>
+			</band>
+		</summary>
+</jasperReport>

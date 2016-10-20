@@ -1,0 +1,127 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:ssicc="http://java.sun.com/jsf/composite/componentes/ssicc">
+
+<body>
+	<ui:composition template="/templates/templatePopupEmergenteDetalleTabla.xhtml">
+
+		<ui:param name="mAlias" value="#{mantenimientoFLXConsultoraProcesoMasivoAction}" />
+
+		<ui:define name="titulo_Pantalla">
+			<h:outputText value="#{i18n['mantenimientoFLXConsultoraProcesoMasivoDetail.title']}" styleClass="clsEncabezadoPantalla" />
+		</ui:define>
+		
+		<ui:define name="toolbar_popup">
+			<ssicc:linkAjax id="btnProcesar" value="#{i18n['button.procesar']}" title="#{i18n['button.procesar']}"
+				accion="#{mantenimientoFLXConsultoraProcesoMasivoAction.processFile}"
+				icon="#{resource['images:ejecutarForm2.png']}" width="32" height="32" 
+				mostrarMensajePrincipal="false" idForm=":principalFormPopUp"
+				update=":principalFormPopUp:idtoolbar_popup 
+						:principalFormPopUp:idBody_encabezado_detalle
+						:principalFormPopUp:mensajesGrowl :principalFormPopUp:messagesPrincipalForm
+						:principalFormPopUp:idbody_adicional_antes_busqueda" />															
+		</ui:define>
+
+		<ui:define name="body_encabezado_detalle">
+			<p:panel id="panelDatosGenerales" toggleable="true">
+				<f:facet name="header">
+					<ssicc:cabeceraFieldset value="Proceso Masivo" icon="#{resource['images:signature.png']}" />
+				</f:facet>
+				<br/><br/><br/>
+				<h:panelGrid columns="3">				
+					<!-- ########################## ACTIVAR / DESACTIVAR ######################### -->
+					<ssicc:selectOneRadio id="idSeleccion" value="#{mAlias.formBusqueda.tipoProceso}">
+							<f:selectItem itemLabel="#{i18n['mantenimientoFLXConsultoraProcesoMasivoForm.tipoProceso.desactivar']}" itemValue="01" />
+							<f:selectItem itemLabel="#{i18n['mantenimientoFLXConsultoraProcesoMasivoForm.tipoProceso.activar']}" itemValue="02" />
+					</ssicc:selectOneRadio>
+					<ssicc:labelBlank />
+					<ssicc:labelBlank />
+					
+					<!-- ########################## ARCHIVO ######################### -->				
+					<ssicc:label key="#{i18n['mantenimientoFLXConsultoraProcesoMasivoForm.clienteFile']}" />
+					<h:form prependId="true" id="formCargaArchivo"
+						enctype="multipart/form-data">
+						<p:fileUpload widgetVar="upload"
+							fileUploadListener="#{mAlias.handleFileUpload}" mode="advanced"
+							update="@this :principalFormPopUp:idBody_encabezado_detalle 
+							            :principalFormPopUp:idDatatableMasiva
+										:principalFormPopUp:mensajesGrowl :principalFormPopUp:messagesPrincipalForm 
+										:principalFormPopUp:idbody_adicional_antes_busqueda"
+							multiple="false" allowTypes="/(\.|\/)(xls|XLS)$/"
+							dragDropSupport="false" label="Buscar archivo"
+							uploadLabel="Cargar" cancelLabel="Cancelar" required="true"
+							auto="true"
+							invalidFileMessage="#{i18n['mantenimientoFLXConsultoraProcesoMasivoForm.error.archivo.extension']}">
+						</p:fileUpload>						
+					</h:form>											
+					<!-- ########################## BOTON ELIMINAR ARCHIVO CARGADO ######################### -->	
+					<ssicc:linkAjax id="btnEliminar" value="#{i18n['button.reset']}" title="#{i18n['button.reset']}"
+									rendered="#{not empty mAlias.flxConsultoraCargaMasivaList}"
+									accion="#{mantenimientoFLXConsultoraProcesoMasivoAction.clearDataFile}"
+									icon="/resources/images/eliminarForm3.png" width="30" height="30" 
+									mostrarMensajePrincipal="false" idForm=":principalFormPopUp"
+									update=":principalFormPopUp:idBody_encabezado_detalle 											
+											:principalFormPopUp:mensajesGrowl :principalFormPopUp:messagesPrincipalForm
+											:principalFormPopUp:idDatatableMasiva
+											:principalFormPopUp:idbody_adicional_antes_busqueda" />
+											
+					<!-- ########################## NOMBRE ARCHIVO ######################### -->
+					<ssicc:labelBlank />	
+					<ssicc:label value="#{mAlias.attachment}" />	
+					<ssicc:labelBlank />				
+				</h:panelGrid>								
+			</p:panel>
+		</ui:define>
+		
+		<ui:define name="body_adicional_antes_busqueda">
+			<p:dataTable id="idDatatableMasiva" value="#{mAlias.cargaMasivaModel}" 
+				var="lista" rendered="#{not empty mAlias.flxConsultoraCargaMasivaList}"
+				exportable="true" 
+				emptyMessage="#{msg['dataTable.noExistenRegistrosFiltro']}" >		
+			
+				<p:column exportable="true" style="display:none;">
+					<f:facet name="header">
+						<h:outputText value="#{i18n['flxConsultoraCargaMasivaList.indicadorValido']}" />
+					</f:facet>
+					<h:outputText value="#{i18n['flxConsultoraCargaMasivaList.noValido']}" rendered="#{lista.flagActivo eq NO}" />
+					<h:outputText value="#{i18n['flxConsultoraCargaMasivaList.valido']}" rendered="#{lista.flagActivo eq SI}" />
+				</p:column>
+				
+				<p:column>
+					<f:facet name="header">
+						<h:outputText value="#{i18n['flxConsultoraCargaMasivaList.codigoConsultora']}" />
+					</f:facet>
+					<h:outputText value="#{lista.codigoCliente}" rendered="#{lista.flagActivo eq NO}" style="color:red;" />
+					<h:outputText value="#{lista.codigoCliente}" rendered="#{lista.flagActivo eq SI}" />
+				</p:column>				
+				
+				<p:column exportable="true" style="display:none;">
+					<f:facet name="header">
+						<h:outputText value="#{i18n['flxConsultoraCargaMasivaList.codigoConsultora']}" />
+					</f:facet>
+					<h:outputText value="#{lista.codigoCliente}" rendered="#{lista.flagActivo eq NO}"/>
+					<h:outputText value="#{lista.codigoCliente}" rendered="#{lista.flagActivo eq SI}" />
+				</p:column>					      
+			</p:dataTable>	
+						
+	  		<ssicc:alertDialogAction id="principalFormAlertAction" mensaje="#{mAlias.mensajeAlertaDefaultAction}" 
+	  									mostrarMensajePrincipal="false" manage="#{mAlias}" idForm=":principalFormPopUp" oncomplete="cerrarPopUp()" />
+			
+				
+		</ui:define>
+		
+		<ui:define name="body_javascript_adicionales">
+			function cerrarPopUp()
+			{		
+					window.close();		
+					window.opener.retorno();				
+			}
+		</ui:define>
+			
+	</ui:composition>
+</body>
+</html>

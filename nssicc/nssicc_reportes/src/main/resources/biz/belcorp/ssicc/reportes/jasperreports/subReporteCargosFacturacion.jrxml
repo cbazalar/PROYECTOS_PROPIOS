@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="subReporteCargosFacturacion"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Portrait"
+		 pageWidth="555"
+		 pageHeight="842"
+		 columnWidth="555"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="NoPages"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false">
+	<property name="com.jasperassistant.designer.GridHeight" value="12" />
+	<property name="com.jasperassistant.designer.GridWidth" value="12" />
+	<property name="com.jasperassistant.designer.DataSource" value="oracleConexion" />
+	<property name="com.jasperassistant.designer.SnapToGrid" value="false" />
+	<property name="com.jasperassistant.designer.Grid" value="false" />
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="codigoPais" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPais")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoSociedad" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoSociedad")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaDesde" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaDesde")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaHasta" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaHasta")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[WITH TEMPORAL AS
+		 (SELECT SEG_PAIS.COD_PAIS,
+		   		 SEG_SOCIE.COD_SOCI,
+		   		 CCC_CABEC_CARGA_ABONO_DIREC.FEC_DOCU,
+		   		 CCC_CABEC_CARGA_ABONO_DIREC.VAL_NUME_LOTE_CONT,
+				 CCC_DETAL_CARGO_ABONO_DIREC.IMP,
+				 CCC_SUBPR.COD_SUBP,
+				 CCC_PROCE.COD_PROC
+		    FROM CCC_CABEC_CARGA_ABONO_DIREC,
+		 		 SEG_PAIS,
+		 		 SEG_SOCIE,
+		 		 CCC_DETAL_CARGO_ABONO_DIREC,
+		 		 CCC_TIPO_ABONO_SUBPR,
+		 		 CCC_SUBPR,
+		 		 CCC_PROCE
+	        WHERE (CCC_CABEC_CARGA_ABONO_DIREC.PAIS_OID_PAIS = SEG_PAIS.OID_PAIS)
+			AND	  (CCC_CABEC_CARGA_ABONO_DIREC.SOCI_OID_SOCI = SEG_SOCIE.OID_SOCI)
+			AND	  (CCC_CABEC_CARGA_ABONO_DIREC.OID_CABE_CARG = CCC_DETAL_CARGO_ABONO_DIREC.CCAD_OID_CABE_CARG)
+			AND	  (CCC_DETAL_CARGO_ABONO_DIREC.TASP_OID_TIPO_ABON_SUBP = CCC_TIPO_ABONO_SUBPR.OID_TIPO_ABON_SUBP)
+			AND	  (CCC_TIPO_ABONO_SUBPR.SUBP_OID_SUBP = CCC_SUBPR.OID_SUBP)
+			AND	  (CCC_SUBPR.CCPR_OID_PROC = CCC_PROCE.OID_PROC)
+			AND	  (SEG_PAIS.COD_PAIS = $P{codigoPais})
+				AND	  (CCC_CABEC_CARGA_ABONO_DIREC.FEC_DOCU >= TO_DATE($P{fechaDesde},'DD/MM/YYYY'))
+				AND	  (CCC_CABEC_CARGA_ABONO_DIREC.FEC_DOCU <= TO_DATE($P{fechaHasta},'DD/MM/YYYY'))
+				AND   SEG_SOCIE.COD_SOCI=$P{codigoSociedad}
+	     )
+	    SELECT TEMPORAL.COD_PAIS AS PAIS,
+		   TEMPORAL.COD_SOCI AS SOCIEDAD,
+		   TEMPORAL.FEC_DOCU AS FECHA_DOCUMENTO,
+		   TEMPORAL.VAL_NUME_LOTE_CONT AS NUMERO_LOTE,
+		   SUM(TEMPORAL.IMP) AS SUMA
+		FROM TEMPORAL
+		WHERE (TEMPORAL.IMP > 0)
+		AND	  (TEMPORAL.COD_PROC = 'CCC001')
+		GROUP BY TEMPORAL.COD_PAIS,
+			  	 TEMPORAL.COD_SOCI,
+				 TEMPORAL.FEC_DOCU,
+				 TEMPORAL.VAL_NUME_LOTE_CONT
+		ORDER BY TEMPORAL.FEC_DOCU,
+			   	 TEMPORAL.VAL_NUME_LOTE_CONT]]></queryString>
+
+	<field name="FECHA_DOCUMENTO" class="java.util.Date"/>
+	<field name="IMPORTE" class="java.math.BigDecimal"/>
+	<field name="NUMERO_LOTE" class="java.lang.String"/>
+	<field name="PAIS" class="java.lang.String"/>
+	<field name="SOCIEDAD" class="java.lang.String"/>
+
+	<variable name="sumaImporteFacturacion" class="java.math.BigDecimal" resetType="Report" calculation="Sum">
+		<variableExpression><![CDATA[$F{IMPORTE}]]></variableExpression>
+	</variable>
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="50"  isSplitAllowed="true" >
+				<staticText>
+					<reportElement
+						x="9"
+						y="4"
+						width="285"
+						height="20"
+						key="staticText"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" pdfFontName="Times-Bold" size="11" isBold="true" isPdfEmbedded ="true" pdfEncoding ="Cp1252"/>
+					</textElement>
+				<text><![CDATA[Resumen de Cargos por Tipo y Comprobante]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						x="10"
+						y="26"
+						width="164"
+						height="20"
+						key="staticText"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" pdfFontName="Times-Bold" size="11" isBold="true" isPdfEmbedded ="true" pdfEncoding ="Cp1252"/>
+					</textElement>
+				<text><![CDATA[Cargos Facturación]]></text>
+				</staticText>
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="29"  isSplitAllowed="true" >
+				<staticText>
+					<reportElement
+						x="7"
+						y="4"
+						width="80"
+						height="20"
+						key="staticText"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" pdfFontName="Times-Bold" size="11" isBold="true" isItalic="false" isPdfEmbedded ="true" pdfEncoding ="Cp1252"/>
+					</textElement>
+				<text><![CDATA[Fecha]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						x="217"
+						y="3"
+						width="80"
+						height="20"
+						key="staticText"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" pdfFontName="Times-Bold" size="11" isBold="true" isPdfEmbedded ="true" pdfEncoding ="Cp1252"/>
+					</textElement>
+				<text><![CDATA[Importe]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						x="112"
+						y="4"
+						width="80"
+						height="20"
+						key="staticText"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" pdfFontName="Times-Bold" size="11" isBold="true" isPdfEmbedded ="true" pdfEncoding ="Cp1252"/>
+					</textElement>
+				<text><![CDATA[Comprobante]]></text>
+				</staticText>
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="31"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" pattern="d/MM/yyyy" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="7"
+						y="3"
+						width="80"
+						height="20"
+						key="textField"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="SansSerif"/>
+					</textElement>
+				<textFieldExpression   class="java.util.Date"><![CDATA[$F{FECHA_DOCUMENTO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="110"
+						y="4"
+						width="80"
+						height="20"
+						key="textField"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{NUMERO_LOTE}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="#,##0.###" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="217"
+						y="5"
+						width="80"
+						height="20"
+						key="textField"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Right">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{IMPORTE}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="41"  isSplitAllowed="true" >
+				<staticText>
+					<reportElement
+						x="112"
+						y="8"
+						width="80"
+						height="20"
+						key="staticText"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" pdfFontName="Times-Bold" size="11" isBold="true" isPdfEmbedded ="true" pdfEncoding ="Cp1252"/>
+					</textElement>
+				<text><![CDATA[Total]]></text>
+				</staticText>
+				<textField isStretchWithOverflow="false" pattern="#,##0.###" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="217"
+						y="7"
+						width="80"
+						height="20"
+						key="textField"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" pdfFontName="Times-Bold" size="11" isBold="true" isPdfEmbedded ="true" pdfEncoding ="Cp1252"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{sumaImporteFacturacion}]]></textFieldExpression>
+				</textField>
+				<rectangle>
+					<reportElement
+						x="2"
+						y="35"
+						width="303"
+						height="4"
+						key="rectangle"
+						positionType="Float"/>
+					<graphicElement stretchType="NoStretch">
+					<pen lineWidth="0.25" lineStyle="Solid"/>
+</graphicElement>
+				</rectangle>
+			</band>
+		</summary>
+</jasperReport>

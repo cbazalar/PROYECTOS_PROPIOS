@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.sessionexperte.PeriodoProgramaSQL">
+	<typeAlias alias="periodoPrograma" 		type="biz.belcorp.ssicc.dao.spusicc.sessionexperte.model.PeriodoPrograma"/>
+
+	<resultMap id="periodosProgramaSSEResult" class="periodoPrograma">                     
+		<result property="codigoPais"			column="COD_PAIS"	/>
+		<result property="codigoPrograma"		column="COD_PROG"	/>
+		<result property="codigoPeriodo"		column="COD_PERI"	/>
+		<result property="estadoRegistro"		column="EST_REGI"	/>
+	</resultMap>
+
+	<!-- xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx SSE_PROGR_PERIO xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx -->
+    <!-- OBTIENE PRODUCTOS DE LOS PERIODOS DE PROGRAMAS SESSION EXPERTE SEGUN CRITERIOS  -->
+	<select id="getPeriodosProgramaByCriteria" parameterClass="periodoPrograma" 
+		resultMap="periodosProgramaSSEResult">
+		SELECT                                 
+				perio.COD_PAIS || '|' || perio.COD_PROG || '|' || perio.COD_PERI  "ID"	,      
+				perio.COD_PAIS	,
+				perio.COD_PROG	,
+				perio.COD_PERI	,
+				perio.EST_REGI
+		FROM SSE_PROGR_PERIO perio
+		<dynamic prepend="where">
+			<isNotEmpty prepend="AND" property="codigoPais">
+				perio.COD_PAIS = #codigoPais#
+	    	</isNotEmpty>
+			<isNotEmpty prepend="AND" property="codigoPrograma">
+				perio.COD_PROG = #codigoPrograma#
+	    	</isNotEmpty>
+			<isNotEmpty prepend="AND" property="codigoPeriodo">
+				perio.COD_PERI = #codigoPeriodo#
+	    	</isNotEmpty>
+			<isNotEmpty prepend="AND" property="estadoRegistro">
+				perio.EST_REGI = #estadoRegistro#
+    		</isNotEmpty>
+		</dynamic>
+		ORDER BY
+			perio.COD_PROG, perio.COD_PERI
+	</select>
+
+	<!-- OBTIENE EL MAXIMO CODIGO DE PERIODO EXISTENTE PARA UN PROGRAMA SSE -->
+	 <select id="getPeriodoDefaultByPrograma" parameterClass="periodoPrograma" 
+		resultClass="string">
+		SELECT	max(cod_peri)
+		FROM 	SSE_PROGR_PERIO												
+		WHERE	COD_PAIS = #codigoPais#
+				and COD_PROG = #codigoPrograma#
+				and EST_REGI = 1				
+	  </select>
+
+	<!-- INSERTA UN NUEVO PERIODO DE UN PROGRAMA SSE -->
+    <insert id="insertPeriodoProgramaSSE" parameterClass="periodoPrograma">
+	INSERT INTO SSE_PROGR_PERIO
+    	(	cod_pais, cod_prog, cod_peri, est_regi )
+	VALUES
+		(	#codigoPais#		,
+			#codigoPrograma#	,
+			#codigoPeriodo#		,    
+			#estadoRegistro#	
+		)
+	</insert>
+
+	<!-- BORRA/ACTUALIZA UN PERIODO DE UN PROGRAMA SSE A ESTADO INACTIVO-->
+	<update id="deletePeriodoProgramaSSE" parameterClass="periodoPrograma">
+		UPDATE SSE_PROGR_PERIO
+		SET est_regi	= #estadoRegistro#
+		WHERE cod_pais = #codigoPais#
+			AND cod_prog = #codigoPrograma#
+			AND cod_peri = #codigoPeriodo#
+	</update>
+
+	<!-- OBTIENE EL CODIGO DE PERIODO SIGUIENTE PARA UN PROGRAMA SSE -->
+	<select id="getNextPeriodoBySSEProgPerio" parameterClass="periodoPrograma" 
+		resultClass="string">
+	select 	
+      GEN_FN_CALCU_PERIO( 
+			(	SELECT MAX (SSE_PROGR_PERIO.COD_PERI )
+				FROM  SSE_PROGR_PERIO
+				where	SSE_PROGR_PERIO.COD_PAIS = #codigoPais#
+				AND		SSE_PROGR_PERIO.COD_PROG = #codigoPrograma#
+			), 1)
+	from dual 
+ 	</select>
+
+</sqlMap>

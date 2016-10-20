@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="scdf.PremioSQL">
+
+    <typeAlias alias="premio" type="biz.belcorp.ssicc.dao.scdf.model.Premio"/>
+
+	<resultMap id="premioMapResult" class="java.util.HashMap">
+		<result property="numeroTarjeta" column="TARJ_NUM_TARJ"/>
+		<result property="correlativoPremio" column="COR_PREM"/>
+		<result property="statusEntrega" column="STA_PREM"/>
+		<result property="campanhaSolicitudPremio" column="CAM_SPRE"/>
+		<result property="campanhaDespachoPremio" column="CAM_DPRE"/>
+    </resultMap>
+
+	<resultMap id="premioResult" class="premio">
+		<result property="codigoPais" column="PAIS_COD_PAIS"/>
+		<result property="numeroTarjeta" column="TARJ_NUM_TARJ"/>
+		<result property="correlativo" column="COR_PREM"/>
+		<result property="codigoProducto" column="COD_PROD"/>
+		<result property="cantidad" column="CAN_PREM"/>
+		<result property="puntaje" column="PUN_PREM"/>
+		<result property="puntajeTotal" column="PUN_TOTA"/>
+		<result property="campañaSolicitud" column="CAM_SPRE"/>
+		<result property="campañaDespacho" column="CAM_DPRE"/>
+		<result property="status" column="STA_PREM"/>
+		<result property="indicador" column="IND_PREM"/>
+		<result property="fecha" column="FEC_PROC"/>
+        <result property="indicadorCarnet" column="IND_CARN"/>
+    </resultMap>
+	
+	<resultMap id="estadosPremioResult" class="java.util.HashMap">
+		<result property="codigoConsultora" column="COD_CONS"/>
+		<result property="codigoProducto" column="COD_PROD"/>
+		<result property="statusPremio" column="STA_PREM"/>		
+		<result property="numeroPremiosProcesados" column="NUM_PREM"/>		
+    </resultMap>
+
+	<resultMap id="cabeceraOCRResult" class="java.util.HashMap">
+		<result property="codigoPais" column="PAIS_COD_PAIS"/>
+		<result property="campaña" column="CAM_PROC"/>
+		<result property="codigoConsultora" column="COD_CONS"/>
+		<result property="fechaCapturaPedido" column="FEC_CPED"/>
+		<result property="numeroClientes" column="NUM_CLIE"/>
+		
+		<result property="tipoSolicitud" column="TIP_SOL"/>
+		<result property="subacceso" column="SUB_ACC"/>
+		<result property="accesoFisico" column="ACC_FIS"/>
+		<result property="tipoFlete" column="TIP_FLE"/>
+		
+    </resultMap>
+	
+	<resultMap id="detalleOCRResult" class="java.util.HashMap">
+		<result property="codigoPais" column="PAIS_COD_PAIS"/>
+		<result property="campaña" column="CAM_PROC"/>
+		<result property="codigoConsultora" column="COD_CONS"/>
+		<result property="codigoUnicoVenta" column="COD_UNIC_VENT"/>
+		<result property="cantidad" column="CAN_PREM"/>
+		<result property="tipoPosicion" column="TIP_POS"/>
+        <result property="formaPago" column="FOR_PAGO"/>
+    </resultMap>
+	
+	<resultMap id="premiosPremioConsultoraResult" class="java.util.HashMap">
+		<result property="descripcionEstado" column="DES_ESTA"/>
+		<result property="numeroConsultoras" column="NUM_CONS"/>
+		<result property="numeroPremios" column="NUM_PREM"/>
+    </resultMap>
+	
+	<select id="getPremiosByPais" parameterClass="string" resultMap="premioResult">
+		SELECT
+		PAIS_COD_PAIS,
+		TARJ_NUM_TARJ,
+		COR_PREM,
+		COD_PROD,
+		CAN_PREM,
+		PUN_PREM,
+		PUN_TOTA,
+		CAM_SPRE,
+		CAM_DPRE,
+		STA_PREM,
+		IND_PREM,
+		FEC_PROC,
+        IND_CARN
+		FROM PRI_PREMI
+		WHERE PAIS_COD_PAIS = #value#
+	</select>
+	
+	<select id="getPremiosMapByPais" parameterClass="string" resultMap="premioMapResult">
+		SELECT
+		TARJ_NUM_TARJ,
+		COR_PREM,
+		STA_PREM,		
+		CAM_SPRE,
+		CAM_DPRE
+		FROM PRI_PREMI
+		WHERE PAIS_COD_PAIS = #value#
+	</select>
+	
+	<select id="getCabeceraOCR" parameterClass="map" resultMap="cabeceraOCRResult">
+		SELECT
+		P.PAIS_COD_PAIS,
+		B.CAM_PROC,
+		T.COD_CONS,
+		SYSDATE FEC_CPED,
+		COUNT(DISTINCT T.CLIE_COD_CLIE) NUM_CLIE,
+		#tipoSolicitud# TIP_SOL,
+		#subacceso# SUB_ACC,
+		#accesoFisico# ACC_FIS,
+		#tipoFlete# TIP_FLE
+		FROM PRI_PREMI P, PRI_TARJE T, BAS_CONTR B
+		WHERE P.PAIS_COD_PAIS = T.PAIS_COD_PAIS
+		AND T.PAIS_COD_PAIS = B.PAIS_COD_PAIS
+		AND P.TARJ_NUM_TARJ = T.NUM_TARJ
+		AND B.PAIS_COD_PAIS = #codigoPais#
+		AND P.STA_PREM = 'P'
+		AND P.IND_PREM = #indicadorPremio#
+		GROUP BY P.PAIS_COD_PAIS, B.CAM_PROC, T.COD_CONS
+	</select>
+	
+	<select id="getDetalleOCR" parameterClass="map" resultMap="detalleOCRResult">
+		SELECT 
+		C.PAIS_COD_PAIS, 
+		C.CAM_PROC, 
+		T.COD_CONS,
+		M.COD_UNIC_VENT, 
+		SUM(P.CAN_PREM) CAN_PREM,
+		#tipoPosicion# TIP_POS,
+        #formaPago# FOR_PAGO
+		FROM BAS_CONTR C, PRI_TARJE T, PRI_PREMI P, PRI_MATRI M
+		WHERE C.PAIS_COD_PAIS = T.PAIS_COD_PAIS
+		AND T.PAIS_COD_PAIS = P.PAIS_COD_PAIS
+		AND T.NUM_TARJ = P.TARJ_NUM_TARJ
+		AND P.PAIS_COD_PAIS = M.PAIS_COD_PAIS
+		AND P.COD_PROD = M.COD_PROD
+		AND P.IND_PREM = M.IND_ESTR
+		AND P.STA_PREM = 'P'
+		AND P.IND_PREM = #indicadorPremio#
+		AND C.PAIS_COD_PAIS = #codigoPais#
+		GROUP BY C.PAIS_COD_PAIS, C.CAM_PROC, T.COD_CONS, M.COD_UNIC_VENT
+		ORDER BY T.COD_CONS
+	</select>
+
+	<select id="getEstadosPremiosByPais" parameterClass="string" resultMap="estadosPremioResult">
+		SELECT 
+		B.COD_CONS, 
+		A.COD_PROD, 
+		A.STA_PREM, 
+		COUNT(*) NUM_PREM
+		FROM PRI_PREMI A, PRI_TARJE B
+		WHERE A.PAIS_COD_PAIS = B.PAIS_COD_PAIS
+		AND A.TARJ_NUM_TARJ = B.NUM_TARJ
+		AND	A.PAIS_COD_PAIS = #value#
+		GROUP BY B.COD_CONS, A.COD_PROD, A.STA_PREM
+    </select>
+
+	<insert id="insertPremio" parameterClass="premio">
+		INSERT INTO PRI_PREMI (
+		PAIS_COD_PAIS,
+		TARJ_NUM_TARJ,
+		COR_PREM,
+		COD_PROD,
+		CAN_PREM,
+		PUN_PREM,
+		PUN_TOTA,
+		CAM_SPRE,
+		CAM_DPRE,
+		STA_PREM,
+		IND_PREM,
+		FEC_PROC,
+        IND_CARN)
+		VALUES (
+		#codigoPais#,
+		#numeroTarjeta#,
+		#correlativo#,
+		#codigoProducto#,
+		#cantidad#,
+		#puntaje#,
+		#puntajeTotal#,
+		#campañaSolicitud#,
+		#campañaDespacho#,
+		#status#,
+		#indicador#,
+		#fecha#,
+        NVL(#indicadorCarnet#,'0'))
+    </insert>
+  
+	<delete id="removePremioByPais" parameterClass="string">
+        DELETE FROM PRI_PREMI WHERE PAIS_COD_PAIS = #value#
+    </delete>
+	
+	<select id="getPremiosWithTarjetas" parameterClass="string" resultMap="premioResult">
+		SELECT DISTINCT
+		P.PAIS_COD_PAIS,
+		P.TARJ_NUM_TARJ,
+		P.COR_PREM,
+		P.COD_PROD,
+		P.CAN_PREM,
+		P.PUN_PREM,
+		P.PUN_TOTA,
+		P.CAM_SPRE,
+		P.CAM_DPRE,
+		P.STA_PREM,
+		P.IND_PREM,
+		P.FEC_PROC,
+        P.IND_CARN
+		FROM PRI_PREMI P, PRI_TARJE T, PRI_HISTO_STICK S
+		WHERE
+		P.PAIS_COD_PAIS = T.PAIS_COD_PAIS AND
+		P.PAIS_COD_PAIS = S.PAIS_COD_PAIS AND
+		T.COD_CONS = S.COD_CONS AND
+		P.PAIS_COD_PAIS = #value#
+	</select>
+	
+	<parameterMap id="parametros" class="map" >
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="totalPremios" jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>
+	</parameterMap>
+	
+	<procedure id="procesaPremios" parameterMap="parametros" >
+		{call PRI_PKG_SISTE_COMER_FIDEL.pri_pr_proce_premi(?, ?)}
+	</procedure>
+
+	<parameterMap id="executeGenerarSolicitudesPremiosPrivilegeParams" class="map" >
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="tipoSolicitud" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="subAcceso" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="accesoFisico" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="tipoFlete" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="indicadorPremio" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="tipoPosicion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="formaPago" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="numeroClientes" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+	    <parameter property="fechaProceso" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+	</parameterMap>
+	
+	<procedure id="executeGenerarSolicitudesPremiosPrivilege" parameterMap="executeGenerarSolicitudesPremiosPrivilegeParams" >
+		{call PRI_PKG_SISTE_COMER_FIDEL.PRI_PR_GENER_SOLIC_PREMI_PRIVI(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)}
+	</procedure>
+		
+	<select id="getCantidadPremiosxEstado" parameterClass="map" resultMap="premiosPremioConsultoraResult">
+		SELECT C.DES_ESTA, 
+			   COUNT(DISTINCT b.cod_cons) NUM_CONS,
+			   COUNT(sta_prem) NUM_PREM
+		  FROM pri_premi a, 
+			   pri_tarje b,
+			   PRI_ESTAD_PREMI C
+		WHERE a.tarj_num_tarj = b.num_tarj
+      		  AND C.COD_ESTA= A.STA_PREM
+	  		  AND A.IND_PREM = 'P'
+		GROUP BY C.DES_ESTA
+    </select>
+	
+	<select id="getNumeroSolicitudesGeneradas" parameterClass="java.util.Map" resultClass="int">
+		SELECT COUNT(DISTINCT b.cod_cons) NUM_CONS
+		  FROM pri_premi a, 
+			   pri_tarje b,
+		 	   PRI_ESTAD_PREMI C
+		 WHERE a.tarj_num_tarj = b.num_tarj
+           AND C.COD_ESTA= A.STA_PREM
+	  	   AND A.IND_PREM = 'P'
+           AND c.cod_esta = 'P'
+    </select>       
+	
+</sqlMap>

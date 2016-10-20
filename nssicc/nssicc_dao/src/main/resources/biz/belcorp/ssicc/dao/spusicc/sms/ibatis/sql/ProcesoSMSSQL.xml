@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.sms.ProcesoSMSSQL">
+       
+   <resultMap id="getSMSListResult" class="java.util.HashMap">		
+   		<result property="codigo"		             column="OID_CLIE_ENVI_MENS"/>
+		<result property="tipoCliente"	             column="TIPO_CLIE"/>
+		<result property="subTipoCliente"            column="SUBT_CLIE"/>
+		<result property="tipoClasificacionCliente"  column="TIPO_CLAS_CLIE"/>
+		<result property="clasificacionCliente"      column="CLAS_CLIE"/>
+		<result property="codigoRegion"		         column="REGI"/>
+		<result property="codigoZona"		         column="ZONA"/>
+		<result property="codigoSeccion"	         column="SECC"/>		
+   		<result property="codigoPeriodo"             column="PERI"/>
+   		<result property="estado"		             column="IND_ESTA"/>
+   		<result property="observacion"	             column="VAL_OBSE"/>
+    </resultMap>	
+   
+   <select id="getSMSList" parameterClass="java.util.Map" resultMap="getSMSListResult">
+    SELECT SMS.OID_CLIE_ENVI_MENS,
+           SMS.OID_TIPO_CLIE,
+           (SELECT P.VAL_I18N 
+            FROM   GEN_I18N_SICC_COMUN P           
+            WHERE  P.VAL_OID = SMS.OID_TIPO_CLIE
+               AND P.ATTR_ENTI = 'MAE_TIPO_CLIEN') TIPO_CLIE,         
+           SMS.OID_SUBT_CLIE,
+           (SELECT P2.VAL_I18N 
+              FROM GEN_I18N_SICC_COMUN P2
+             WHERE P2.VAL_OID = SMS.OID_SUBT_CLIE
+               AND P2.ATTR_ENTI = 'MAE_SUBTI_CLIEN') SUBT_CLIE,
+           SMS.OID_TIPO_CLAS_CLIE,
+           (SELECT P3.VAL_I18N 
+            FROM   GEN_I18N_SICC_COMUN P3			
+            WHERE  P3.VAL_OID = SMS.OID_TIPO_CLAS_CLIE
+               AND P3.ATTR_ENTI = 'MAE_TIPO_CLASI_CLIEN') TIPO_CLAS_CLIE, 
+           SMS.OID_CLAS_CLIE,
+           (SELECT P4.VAL_I18N
+              FROM GEN_I18N_SICC_COMUN P4
+             WHERE P4.VAL_OID = SMS.OID_CLAS_CLIE
+               AND P4.ATTR_ENTI = 'MAE_CLASI') CLAS_CLIE,
+           SMS.OID_REGI,
+           (SELECT UPPER(NVL(ZR.DES_REGI, ' ')) 
+              FROM ZON_REGIO ZR
+             WHERE ZR.IND_ACTI = 1
+               AND ZR.OID_REGI = SMS.OID_REGI) REGI,
+           SMS.OID_ZONA,
+           (SELECT NVL(ZZ.DES_ZONA, ' ')
+              FROM ZON_ZONA ZZ
+             WHERE ZZ.IND_ACTI = 1
+               AND ZZ.OID_ZONA = SMS.OID_ZONA) ZONA,
+           SMS.OID_SECC,
+           (SELECT NVL(ZS.DES_SECCI, ' ')
+              FROM ZON_SECCI ZS
+             WHERE ZS.IND_ACTI = 1
+               AND ZS.OID_SECC = SMS.OID_SECC) SECC,
+           SMS.OID_PERI,
+           (SELECT A.COD_PERI
+              FROM SEG_PERIO_CORPO A, CRA_PERIO B
+             WHERE A.OID_PERI = B.PERI_OID_PERI
+               AND B.OID_PERI =  SMS.OID_PERI) PERI,
+           DECODE(SMS.IND_ESTA, '1', 'SI', '2', 'NO') IND_ESTA,
+           SMS.VAL_OBSE 		       
+		 FROM SMS_CLIEN_ENVIO_MENSA SMS
+		 WHERE SMS.IND_ESTA != '0'
+		 
+			<isNotEmpty property="oidTipoCliente" prepend="AND">
+				SMS.OID_TIPO_CLIE = #oidTipoCliente#
+			</isNotEmpty>
+			
+			<isNotEmpty property="oidSubTipoCliente" prepend="AND">
+				SMS.OID_SUBT_CLIE = #oidSubTipoCliente#
+			</isNotEmpty>
+			
+			<isNotEmpty property="oidSubTipoClasificacion" prepend="AND">
+				SMS.OID_TIPO_CLAS_CLIE = #oidSubTipoClasificacion#
+			</isNotEmpty>
+			
+			<isNotEmpty property="oidClasificacion" prepend="AND">
+				SMS.OID_CLAS_CLIE = #oidClasificacion#
+			</isNotEmpty>
+
+			<isNotEmpty property="oidRegion" prepend="AND">
+				SMS.OID_REGI = #oidRegion#
+			</isNotEmpty>
+			
+			<isNotEmpty property="oidZona" prepend="AND">
+				SMS.OID_ZONA = #oidZona#
+			</isNotEmpty>
+			
+			<isNotEmpty property="oidSeccion" prepend="AND">
+				SMS.OID_SECC = #oidSeccion#
+			</isNotEmpty>
+
+		    <isNotEmpty property="oidPeriodo" prepend="AND">
+				SMS.OID_PERI = #oidPeriodo#
+			</isNotEmpty>
+			
+			<isNotEmpty property="estado" prepend="AND">
+				SMS.IND_ESTA = #estado#
+			</isNotEmpty>
+		
+   </select>	
+   
+   <insert id="insertSMS" parameterClass="java.util.Map">
+   		INSERT INTO SMS_CLIEN_ENVIO_MENSA
+   		(OID_CLIE_ENVI_MENS,
+   		 OID_TIPO_CLIE,
+   		 OID_SUBT_CLIE,
+   		 OID_TIPO_CLAS_CLIE,
+   		 OID_CLAS_CLIE,   		 
+   		 OID_REGI,
+   		 OID_ZONA,
+		 OID_SECC,
+   		 OID_PERI,
+   		 USU_CREA,
+   		 FEC_CREA,
+   		 IND_ESTA,
+   		 VAL_OBSE)
+   		VALUES(
+   		 CLIE_ENVI_MENS_SEQ.nextval,
+   		 #oidTipoCliente#,
+   		 #oidSubTipoCliente#,
+   		 #oidSubTipoClasificacion#,
+   		 #oidClasificacion#,
+		 #oidRegion#,
+   		 #oidZona#,
+   		 #oidSeccion#,
+   		 #oidPeriodo#,   		
+   		 #usuario#,
+		 SYSDATE,
+   		 #estado#,
+   		 #observaciones#
+   		 )
+   </insert>
+   
+   <update id="removeSMS" parameterClass="java.util.Map">
+        UPDATE SMS_CLIEN_ENVIO_MENSA SMS
+           SET SMS.IND_ESTA = '0',
+           	   SMS.USU_MODI = #usuario#,
+           	   SMS.FEC_MODI = SYSDATE
+		 WHERE SMS.OID_CLIE_ENVI_MENS = #codigo#		   
+  	</update>
+  	
+  	<update id="activarSMS" parameterClass="java.util.Map">
+        UPDATE SMS_CLIEN_ENVIO_MENSA SMS
+           SET SMS.IND_ESTA = '1',
+           	   SMS.USU_MODI = #usuario#,
+           	   SMS.FEC_MODI = SYSDATE
+		 WHERE SMS.OID_CLIE_ENVI_MENS = #codigo#		   
+  	</update>
+  	
+  	<update id="desactivarSMS" parameterClass="java.util.Map">
+        UPDATE SMS_CLIEN_ENVIO_MENSA SMS
+           SET SMS.IND_ESTA = '2',
+           	   SMS.USU_MODI = #usuario#,
+           	   SMS.FEC_MODI = SYSDATE
+		 WHERE SMS.OID_CLIE_ENVI_MENS = #codigo#		   
+  	</update>
+    
+  </sqlMap>

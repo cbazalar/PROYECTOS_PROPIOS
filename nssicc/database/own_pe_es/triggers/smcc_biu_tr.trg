@@ -1,0 +1,38 @@
+CREATE OR REPLACE TRIGGER "SMCC_BIU_TR" 
+BEFORE INSERT OR UPDATE
+ON CCC_MOVIM_CUENT_CORRI
+REFERENCING NEW AS NEW OLD AS OLD
+FOR EACH ROW
+DECLARE
+anioMes NUMBER;
+BEGIN
+
+       SELECT TO_NUMBER ( TO_CHAR( :NEW.FEC_DOCU, 'YYYYMM') ) INTO anioMes FROM dual;
+
+
+       IF  INSERTING  THEN
+            IF :NEW.IMP_MOVI <> :NEW.IMP_PAGA THEN
+               BEGIN
+                UPDATE CCC_SALDO_MOVIM_CUENT_CORRI SALD SET SALD_IMP_PEND = SALD_IMP_PEND + :NEW.IMP_PEND - :OLD.IMP_PEND
+                     WHERE SALD.CLIE_OID_CLIE = :NEW.CLIE_OID_CLIE
+                               AND SALD.MASI_OID_MARC_SITU = :NEW.MASI_OID_MARC_SITU
+                              AND SALD.ANIO_MES = anioMes ;
+                  EXCEPTION WHEN NO_DATA_FOUND THEN
+                               INSERT INTO CCC_SALDO_MOVIM_CUENT_CORRI ( OID_SALD_MOVI_CUEN_CORR, CLIE_OID_CLIE, MASI_OID_MARC_SITU, ANIO_MES, SALD_IMP_PEND )
+                                VALUES (  CCC_SMCC_SEQ.NEXTVAL , :NEW.CLIE_OID_CLIE, :NEW.MASI_OID_MARC_SITU , anioMes , :NEW.IMP_PEND  );
+                  END;
+            END IF;
+       ELSE
+            UPDATE CCC_SALDO_MOVIM_CUENT_CORRI SALD SET SALD_IMP_PEND = SALD_IMP_PEND + :NEW.IMP_PEND - :OLD.IMP_PEND
+                     WHERE SALD.CLIE_OID_CLIE = :NEW.CLIE_OID_CLIE
+                               AND SALD.MASI_OID_MARC_SITU = :NEW.MASI_OID_MARC_SITU
+                              AND SALD.ANIO_MES = anioMes ;
+       END IF;
+
+   EXCEPTION
+     WHEN OTHERS THEN
+       -- Consider logging the error and then re-raise
+       NULL;
+END SMCC_BIU_TR;
+/
+

@@ -1,0 +1,147 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" 
+      xmlns:h="http://java.sun.com/jsf/html" 
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:ui="http://java.sun.com/jsf/facelets"     
+      xmlns:p="http://primefaces.org/ui"      
+      xmlns:ssicc="http://java.sun.com/jsf/composite/componentes/ssicc"
+      >
+
+<body>
+<ui:composition template="/templates/templatePopupGraficosEXTJS.xhtml">
+  	 
+ <ui:define name="body_javascript_adicionales">	
+ 
+ <script type="text/javascript"> 	
+ generarReporteEmitidos();
+ function generardataReporteEmitidos(id) {
+		Ext.onReady(function() {
+			
+		    window.generateDataJsonReporteUsuario = function(id){
+		        var data = [];
+		        var dataJson = document.getElementById(id).value;
+		        var obj = $.parseJSON(dataJson);
+		        $.each(obj, function(i) {
+		          codigoReporte = this['codigoReporte'] ;
+		          duracionSegundos = this['duracionSegundos'] ;
+		          data.push({
+		                name: codigoReporte,
+		                data1: duracionSegundos
+		           });
+	            });
+		    	return data;
+		    };
+		    
+		    
+		    window.datajsonReporteUsuario = Ext.create('Ext.data.JsonStore', {
+		        fields: ['name', 'data1'],
+		        data: generateDataJsonReporteUsuario(id)
+		    });
+		});
+
+	}
+
+    function generarReporteEmitidos() {
+		
+		generardataReporteEmitidos('datajson');
+		Ext.onReady(function () {
+		
+		    var donut = false,
+		        chart = Ext.create('Ext.chart.Chart', {
+		            xtype: 'chart',
+		            id: 'chartCmp',
+		            animate: true,
+		            store: datajsonReporteUsuario,
+		            shadow: true,
+		            legend: {
+		            	labelFont: '10px Arial',
+		                position: 'right'
+		            },
+		            insetPadding: 60,
+		            theme: 'Base:gradients',
+		            series: [{
+		                type: 'pie',
+		                field: 'data1',
+		                showInLegend: true,
+		                donut: donut,
+		                tips: {
+		                  trackMouse: true,
+		                  width: 340,
+		                  height: 28,
+		                  renderer: function(storeItem, item) {
+		                    //calculate percentage.
+		                    var total = 0;
+		                    store1.each(function(rec) {
+		                        total += rec.get('data1');
+		                    });
+		                    this.setTitle(storeItem.get('name'));
+		                  }
+		                },
+		                highlight: {
+		                  segment: {
+		                    margin: 20
+		                  }
+		                },
+		                label: {
+		                    field: 'name',
+		                    display: 'rotate',
+		                    contrast: true,
+		                    font: '14px Arial',
+		                    renderer: function (label)  {
+		                    	var cmp = Ext.getCmp('chartCmp'); 
+		                    	var index = cmp.store.findExact('name', label); // the field containing the current label
+		                    	var data = cmp.store.getAt(index).data;
+		                    	return data.data1 + ' seg';
+		                    }
+		                }
+		            }]
+		        });
+		
+		    var win = Ext.create('Ext.Window', {
+		        width: 800,
+		        height: 600,
+		        minHeight: 400,
+		        minWidth: 550,
+		        hidden: false,
+		        maximizable: true,
+		        modal: true,
+		        title: 'Pie Chart',
+		        renderTo: Ext.getBody(),
+		        layout: 'fit',
+		        tbar: [{
+		            text: 'Grabar Chart',
+		            handler: function() {
+		                Ext.MessageBox.confirm('Confirmar descarga', 'Desea descargar BAR Chart en Imagen?', function(choice){
+		                    if(choice == 'yes'){
+		                        chart.save({
+		                            type: 'image/png'
+		                        });
+		                    }
+		                });
+		            },
+		        }, {
+		                enableToggle: true,
+		                pressed: false,
+		                text: 'Donut',
+		                toggleHandler: function(btn, pressed) {
+		                    var chart = Ext.getCmp('chartCmp');
+		                    chart.series.first().donut = pressed ? 35 : false;
+		                    chart.refresh();
+		                }
+		        }],
+		        items: chart
+		    });
+		   
+		});
+
+	}	
+
+ 
+ </script>
+ 
+ </ui:define>
+         
+</ui:composition>
+</body>
+</html>

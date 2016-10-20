@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="scdf.ProductoSQL">
+
+    <typeAlias alias="producto" type="biz.belcorp.ssicc.dao.scdf.model.Producto"/>
+
+	<resultMap id="productoResult" class="producto">
+		<result property="codigo" column="COD_PROD"/>
+		<result property="codigoPais" column="PAIS_COD_PAIS"/>
+		<result property="descripcion" column="DES_PROD"/>
+		<result property="indicadorGeneracionStickers" column="IND_GENE_STIC"/>
+        <result property="puntajeSticker" column="PUN_STIC" javaType="int" nullValue="0"/>
+		<result property="estado" column="EST_PROD"/>
+    </resultMap>
+	
+	<resultMap id="productoMapResult" class="java.util.HashMap">
+		<result property="codigoProducto" column="COD_PROD"/>
+		<result property="descripcionProducto" column="DES_PROD"/>
+        <result property="indicadorGeneracionStickers" column="IND_GENE_STIC"/>
+        <result property="puntajeSticker" column="PUN_STIC"/>
+    </resultMap>
+	
+	<select id="getProducto" parameterClass="producto" resultMap="productoResult">
+        SELECT 
+		PAIS_COD_PAIS,
+		COD_PROD,
+		DES_PROD,
+		IND_GENE_STIC,
+        PUN_STIC,
+		EST_PROD
+        FROM PRI_PRODU
+		<dynamic prepend="WHERE">
+			<isNotEmpty prepend="AND" property="codigo">
+				COD_PROD=#codigo#
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="codigoPais">
+				PAIS_COD_PAIS=#codigoPais#
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="descripcion">
+				DES_PROD=#descripcion#
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="indicadorGeneracionStickers">
+				IND_GENE_STIC=#indicadorGeneracionStickers#
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="estado">
+				EST_PROD=#estado#
+			</isNotEmpty>
+		</dynamic>
+    </select>
+
+	<select id="getProductosByPais" parameterClass="string" resultMap="productoResult">
+        SELECT 
+		PAIS_COD_PAIS,
+		COD_PROD,
+		DES_PROD,
+		IND_GENE_STIC,
+        PUN_STIC,
+		EST_PROD
+        FROM PRI_PRODU 
+        WHERE PAIS_COD_PAIS = #value#
+    </select>
+	
+	<select id="getProductosMapByPais" parameterClass="string" resultMap="productoMapResult">
+        SELECT 
+		COD_PROD,
+		DES_PROD,
+        IND_GENE_STIC,
+        PUN_STIC
+        FROM PRI_PRODU 
+        WHERE PAIS_COD_PAIS = #value#
+    </select>
+
+	<select id="getProductosByCriteria" parameterClass="java.util.Map" resultMap="productoResult">
+        SELECT 
+		PAIS_COD_PAIS,
+		COD_PROD,
+		DES_PROD,
+		IND_GENE_STIC,
+        PUN_STIC,
+		EST_PROD
+		FROM PRI_PRODU 
+		WHERE PAIS_COD_PAIS = #codigoPais#
+		<isNotEmpty prepend="AND" property="codigoProducto">
+			COD_PROD = #codigoProducto#
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="descripcionProducto">
+			DES_PROD LIKE #descripcionProducto#
+		</isNotEmpty>
+    </select>
+
+	<insert id="insertProducto" parameterClass="producto">
+		INSERT INTO PRI_PRODU (
+		PAIS_COD_PAIS,
+		COD_PROD,
+		DES_PROD,
+		IND_GENE_STIC,
+        PUN_STIC,
+		EST_PROD,
+        USU_DIGI,
+        FEC_DIGI)
+		VALUES (
+		#codigoPais#,
+		#codigo#,
+		#descripcion#,
+		#indicadorGeneracionStickers#,
+        #puntajeSticker#,
+		#estado#,
+        #auditInfo.createdBy#, 
+        #auditInfo.created#
+		)
+    </insert>
+  
+    <update id="updateProducto" parameterClass="producto">
+        UPDATE PRI_PRODU SET 
+        DES_PROD = #descripcion#,
+        IND_GENE_STIC = #indicadorGeneracionStickers#,
+        PUN_STIC = #puntajeSticker#,
+        EST_PROD = #estado#,
+        USU_MODI = #auditInfo.updatedBy#,
+        FEC_MODI = #auditInfo.lastUpdated#
+        WHERE PAIS_COD_PAIS = #codigoPais# 
+        AND COD_PROD = #codigo#
+    </update>
+    
+	<delete id="removeProductoByPais" parameterClass="string">
+        DELETE FROM PRI_PRODU WHERE PAIS_COD_PAIS = #value#
+    </delete>
+
+	<update id="updateProductoIndicadorGeneracionStickersByPais" parameterClass="producto">
+		UPDATE PRI_PRODU 
+        SET IND_GENE_STIC = #indicadorGeneracionStickers#
+		WHERE PAIS_COD_PAIS = #codigoPais# AND COD_PROD = #codigo#
+    </update>
+
+	
+	<resultMap id="getProductoStockListResult" class="java.util.HashMap">
+		<result property="descripcionError" 		column="ERROR"/>
+		<result property="tipoOferta" 				column="TIPO_OFERTA"/>
+		<result property="estategia" 				column="ESTRATEGIA"/>
+		<result property="codigoVenta"  			column="CODIGO_VENTA"/>
+		<result property="codigoUnico" 				column="CODIGO_UNICO"/>
+		<result property="descripcion" 				column="DESCRIPCION"/>
+		<result property="descripcionCatalogo" 		column="DESCR_CATA"/>
+		<result property="numeroPaginaCatalogo" 	column="NUM_PAGI_CATA"/>
+    </resultMap>
+	
+	<select id="getProductoStockList" parameterClass="java.util.Map" resultMap="getProductoStockListResult">
+		SELECT *
+			FROM
+			(
+			SELECT 'NULOS' AS ERROR,
+			            TOFE.COD_TIPO_OFER AS TIPO_OFERTA,
+			            i18est.val_i18n ESTRATEGIA,
+			            ofedet.val_codi_vent AS CODIGO_VENTA, 
+			            prod.COD_unic_vent AS CODIGO_UNICO,
+			            ofedet.VAL_TEXT_BREV AS DESCRIPCION,  
+			            cat.DES_CATA AS DESCR_CATA,
+			            ofedet.NUM_PAGI_CATA
+			FROM    pre_matri_factu_cabec mfc, 
+			            pre_ofert ofe, 
+			            pre_ofert_detal ofedet, 
+			            pre_estra es,
+			            mae_produ prod, 
+			            pre_catal cat,
+			            pre_tipo_ofert tofe,
+			            (SELECT v.val_oid, v.val_i18n FROM v_gen_i18n_sicc v WHERE v.attr_enti = 'PRE_ESTRA' AND v.idio_oid_idio = 1) i18est                          
+			WHERE mfc.OID_CABE = ofe.MFCA_OID_CABE
+			AND ofe.oid_ofer = ofedet.OFER_OID_OFER
+			AND ofe.coes_oid_estr = es.oid_estr(+)
+			AND ofedet.PROD_OID_PROD = prod.oid_prod
+			AND mfc.perd_oid_peri = #oidPeriodo#
+			AND ofedet.ocat_oid_catal = cat.oid_cata(+)
+			AND ofedet.tofe_oid_tipo_ofer = tofe.oid_tipo_ofer(+)
+			AND i18est.val_oid(+) = ofe.coes_oid_estr
+			AND ofedet.val_codi_vent IS NULL
+			UNION ALL
+			SELECT 'DUPLICADOS' AS ERROR,
+			            TOFE.COD_TIPO_OFER AS TIPO_OFERTA,
+			            i18est.val_i18n ESTRATEGIA, 
+			            ofedet.val_codi_vent AS CODIGO_VENTA, 
+			            prod.COD_unic_vent AS CODIGO_UNICO,
+			            ofedet.VAL_TEXT_BREV AS DESCRIPCION,  
+			            cat.DES_CATA AS DESCR_CATA,
+			            ofedet.NUM_PAGI_CATA
+			FROM    pre_matri_factu_cabec mfc, 
+			            pre_ofert ofe, 
+			            pre_ofert_detal ofedet, 
+			            pre_estra es,
+			            mae_produ prod, 
+			            pre_catal cat,
+			            pre_tipo_ofert tofe,
+			            (SELECT v.val_oid, v.val_i18n FROM v_gen_i18n_sicc v WHERE v.attr_enti = 'PRE_ESTRA' AND v.idio_oid_idio = 1) i18est,                    
+			            ( SELECT pre_ofert_detal.val_codi_vent,  count(*)  FROM  pre_matri_factu_cabec,  pre_ofert_detal,  pre_ofert
+			                WHERE pre_matri_factu_cabec.perd_oid_peri = #oidPeriodo#
+			                AND pre_matri_factu_cabec.oid_cabe = pre_ofert.mfca_oid_cabe
+			                AND pre_ofert_detal.ofer_oid_ofer = pre_ofert.oid_ofer
+			                GROUP BY pre_ofert_detal.val_codi_vent
+			                HAVING  count (*)>1
+			            ) t_val_codi                  
+			WHERE ofedet.val_codi_vent = t_val_codi.val_codi_vent 
+			AND mfc.OID_CABE = ofe.MFCA_OID_CABE
+			AND ofe.oid_ofer = ofedet.OFER_OID_OFER
+			AND ofe.coes_oid_estr = es.oid_estr(+)
+			AND ofedet.PROD_OID_PROD = prod.oid_prod
+			AND mfc.perd_oid_peri = #oidPeriodo#
+			AND ofedet.ocat_oid_catal = cat.oid_cata(+)
+			AND ofedet.tofe_oid_tipo_ofer = tofe.oid_tipo_ofer(+)
+			AND i18est.val_oid(+) = ofe.coes_oid_estr
+			)
+			order by 1,2
+	</select>
+</sqlMap>

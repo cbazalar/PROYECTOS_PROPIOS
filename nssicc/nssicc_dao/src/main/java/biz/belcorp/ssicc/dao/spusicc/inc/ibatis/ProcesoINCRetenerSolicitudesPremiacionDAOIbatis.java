@@ -1,0 +1,32 @@
+package biz.belcorp.ssicc.dao.spusicc.inc.ibatis;
+
+import java.util.Map;
+
+import org.springframework.stereotype.Repository;
+
+import biz.belcorp.ssicc.dao.framework.ibatis.BaseDAOiBatis;
+import biz.belcorp.ssicc.dao.spusicc.inc.ProcesoINCRetenerSolicitudesPremiacionDAO;
+
+/**
+ * Implementacion del DAO que ejecutara los metodos del proceso que Retiene Solicitudes
+ * de Premiacion de Niveles Electivos
+ * 
+ * <p>
+ * <a href="ProcesoINCRetenerSolicitudesPremiacionDAOIbatis.java.html"> <i>View Source </i> </a>
+ * </p>
+ * 
+ *  @author <a href="mailto:sapaza@belcorp.biz">Sergio Apaza</a>
+ */
+@Repository("spusicc.procesoINCRetenerSolicitudesPremiacionDAO")
+public class ProcesoINCRetenerSolicitudesPremiacionDAOIbatis extends BaseDAOiBatis implements 
+				ProcesoINCRetenerSolicitudesPremiacionDAO  {
+
+	/* (non-Javadoc)
+	 * @see biz.belcorp.ssicc.spusicc.inc.dao.ProcesoINCRetenerSolicitudesPremiacionDAO#executeRetenerSolicitudesPremiacion(java.util.Map)
+	 */
+	public void executeRetenerSolicitudesPremiacion(Map params) {
+		getSqlMapClientTemplate().update("spusicc.incentivos.ProcesoINCSQL.executeRetenerSolicitudesPremiacion",params);
+		
+	}
+
+}

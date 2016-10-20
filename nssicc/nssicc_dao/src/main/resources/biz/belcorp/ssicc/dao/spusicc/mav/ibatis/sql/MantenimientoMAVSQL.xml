@@ -1,0 +1,1228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+    
+<sqlMap namespace="spusicc.mav.MantenimientoMAVSQL">
+ 
+ 	<typeAlias alias="actividadTipoOfertaMap" type="biz.belcorp.ssicc.dao.spusicc.mav.model.ActividadTipoOferta"/>
+	
+    <resultMap id="baseResult"          class="baseGenerico">
+    	<result property="codigo" 		column="CODIGO" 	/>
+    	<result property="descripcion" 	column="DESCRIPCION"/>
+    </resultMap>
+    	
+    <select id="getActividades" parameterClass="java.util.Map"  resultMap="baseResult">
+    	SELECT OID_ACTI CODIGO, pq_apl_aux.Valor_Gen_I18n_Sicc(1, OID_ACTI, 'MAV_ACTIV') DESCRIPCION 
+		  FROM MAV_ACTIV
+		WHERE IND_ACTI=1  
+		 ORDER BY 2
+    </select>
+    
+    <select id="getActividadesbyTipoCliente" parameterClass="string" resultMap="baseResult">
+      SELECT OID_ACTI CODIGO, pq_apl_aux.Valor_Gen_I18n_Sicc(1, OID_ACTI, 'MAV_ACTIV') DESCRIPCION 
+		  FROM MAV_ACTIV
+      WHERE TICL_OID_TIPO_CLIE=#oidTipoActividad# 
+      AND IND_ACTI=1
+		 ORDER BY 2
+    </select>
+    
+    <select id="getTiposOferta" parameterClass="string" resultMap="baseResult">
+		SELECT ato.OID_TIPO_OFER_ACTI || '__' || COD_TIPO_OFER CODIGO, 
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(1, OID_TIPO_OFER, 'PRE_TIPO_OFERT') DESCRIPCION 
+		  FROM PRE_TIPO_OFERT ofe, MAV_ACTIV_TIPO_OFERT ato
+         WHERE ofe.OID_TIPO_OFER = ato.TOFE_OID_TIPO_OFER
+           AND ato.ACTI_OID_ACTI = #value#
+           AND IND_ACTI=1
+		 ORDER BY 2  
+ 	</select>
+    
+ 	
+    <select id="getTiposOfertaId" parameterClass="string" resultMap="baseResult">
+		SELECT G.VAL_I18N DESCRIPCION ,G.VAL_OID CODIGO FROM gen_i18n_sicc G  
+		WHERE  G.ATTR_ENTI='PRE_TIPO_OFERT'
+		ORDER BY 1 
+ 	</select>
+    
+    <resultMap id="listConfiguracionesByCriteriaResult" class="java.util.HashMap">
+    	<result property="codigoPais" 					column="PAIS_COD_PAIS"/>
+	    <result property="correlativo" 					column="COR_PARA_CONF"/>
+	    <result property="periodoProceso"		  		column="CAM_PARA_MAV"/>
+	    <result property="descripcionActividad"		    column="DES_ACTI"/>
+	    <result property="descripcion"					column="DES_CONF"/>
+	    <result property="tipoOferta"					column="DES_TIPO_OFER"/>
+	    <result property="codigoProducto"				column="COD_PROD"/>
+	    <result property="descripcionProducto"			column="DES_PROD"/>
+	    <result property="indicadorEnviaMensaje"		column="IND_ENVI_MENS"/>
+	    <result property="codigoEstado"					column="COD_ESTA_MAV"/>
+	    <result property="estado"						column="DES_ESTA"/>
+	    <result property="origen"						column="DES_ORIG"/>
+    	<result property="fechaCreacion"				column="FEC_CREA"/>
+	    <result property="codigoTipoCliente"			column="TICL_OID_TIPO_CLIE"/>
+	    <result property="indicadorUniDif"				column="IND_UNID_DIF"/>
+    </resultMap>
+	
+	<select id="getConfiguracionesByCriteria" parameterClass="java.util.Map" resultMap="listConfiguracionesByCriteriaResult">
+		SELECT con.PAIS_COD_PAIS,
+			   con.COR_PARA_CONF,
+		       con.CAM_PARA_MAV,
+		       con.FEC_CREA,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(1, con.ATOF_ACTI_OID_ACTI, 'MAV_ACTIV') DES_ACTI,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(1, con.TICL_OID_TIPO_CLIE, 'MAE_TIPO_CLIEN') DES_CONF,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(1, ato.TOFE_OID_TIPO_OFER, 'PRE_TIPO_OFERT') DES_TIPO_OFER,
+		       pro.COD_SAP COD_PROD,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(1, con.PROD_OID_PROD, 'MAE_PRODU') DES_PROD,
+		       DECODE(con.IND_ENVI_MENS, 'S', 'SI', 'NO') IND_ENVI_MENS,
+		       con.COD_ESTA_MAV,
+		       est.DES_TIPO_ESTA_PROC DES_ESTA,
+		       DECODE(con.IND_ORIG_MAV, 'D', 'Digitación', 'Carga Masiva') DES_ORIG,
+		       con.TICL_OID_TIPO_CLIE,
+		       con.IND_UNID_DIF
+		  FROM MAV_PARAM_CONFI con,
+		       MAV_ACTIV_TIPO_OFERT ato,
+		       MAV_TIPO_ESTAD_PROCE est,
+		       MAE_PRODU pro
+		 WHERE con.ATOF_OID_TIPO_OFER_ACTI = ato.OID_TIPO_OFER_ACTI
+		   AND con.COD_ESTA_MAV = est.OID_TIPO_ESTA_PROC
+		   AND con.PROD_OID_PROD = pro.OID_PROD
+		   AND con.EST_REGI = 1
+		   
+		   <isNotEmpty property="codigoPeriodoBusq">
+		    	AND con.CAM_PARA_MAV = #codigoPeriodoBusq#
+		   </isNotEmpty>
+		   
+		   <isNotEmpty property="actividadBusq">
+		    	AND con.ATOF_ACTI_OID_ACTI = #actividadBusq#
+		   </isNotEmpty>
+		   
+		   <isNotEmpty property="tipoOfertaBusq">
+		    	AND con.ATOF_OID_TIPO_OFER_ACTI = #tipoOfertaBusq#
+		   </isNotEmpty>
+		   
+		   <isNotEmpty property="codigoProductoBusq">
+		    	AND pro.COD_SAP = #codigoProductoBusq#
+		   </isNotEmpty>
+		   
+		   <isNotEmpty property="estadoBusq">
+		    	AND con.COD_ESTA_MAV = #estadoBusq#
+		   </isNotEmpty>
+		
+		   <isNotEmpty property="codigoTipoCliente">
+		    	AND con.COD_TIPO_CLIE = #codigoTipoCliente#
+		   </isNotEmpty>
+		
+		   <isNotEmpty property="indicadorOrigen">
+		    	AND con.ind_orig_mav = #indicadorOrigen#
+		   </isNotEmpty>
+		 ORDER BY 2, 3, 4, 5   
+	</select>
+ 	
+ 	<select id="getMaxConfiguracion" resultClass="string">
+		SELECT nvl(MAX(COR_PARA_CONF),0)+1 
+		  FROM MAV_PARAM_CONFI 
+	</select>
+
+    <insert id="insertConfiguracion" parameterClass="java.util.Map">
+		INSERT INTO MAV_PARAM_CONFI
+           (PAIS_COD_PAIS,
+	        COR_PARA_CONF,
+  	        ATOF_ACTI_OID_ACTI,
+ 	        ATOF_OID_TIPO_OFER_ACTI,
+	        PROD_OID_PROD,
+	        CAM_PARA_MAV,
+	        COD_ACTI,
+	        COD_TIPO_OFER,
+	        COD_SAP,
+	        TICL_OID_TIPO_CLIE,
+	        COD_TIPO_CLIE,
+	        COD_ESTA_MAV,
+	        IND_ORIG_MAV,
+	        IND_ENVI_MENS,
+	        FOR_COBR,
+	        FOR_PAGO,
+	        ACT_TIPO_DESP,
+	        ENV_SOLI,
+	        NUM_UNID_PROD,
+	        VAL_PREC,
+	        IND_UNID_DIF,
+	        VAL_BASE_ESTI_DEST,
+	        VAL_OBSE,
+	        IND_ACTI,
+	        USU_CREA,
+	        FEC_CREA,
+	        EST_REGI)
+		VALUES
+	       (#codigoPais#,
+	        #correlativo#,
+	        #oidActividad#,
+	        #oidActividadTipoOferta#,
+	        (SELECT OID_PROD FROM MAE_PRODU WHERE COD_SAP = #codigoProducto#),
+	        #codigoPeriodo#,
+	        #codigoActividad#,
+	        #codigoTipoOferta#,
+	        #codigoProducto#,
+	        #oidTipoCliente#,
+	        #codigoTipoCliente#,
+	        #codigoEstado#,
+	        #indicadorOrigen#,
+	        #indicadorEnviaMensaje#,
+	        #formaCobro#,
+	        #formaPago#,
+	        #tipoDespacho#,
+	        #envioSolicitud#,
+	        #numeroUnidades#,
+	        #precio#,
+	        #indicadorUnidad#,
+	        #unidadesEstimadas#,
+	        #observaciones#,	        
+	        1,
+	        #codigoUsuario#,
+	        SYSDATE,
+	        1)
+	</insert>
+
+    <update id="updateConfiguracion" parameterClass="java.util.Map">
+		UPDATE MAV_PARAM_CONFI
+           SET ATOF_ACTI_OID_ACTI = #oidActividad#,
+	 	       ATOF_OID_TIPO_OFER_ACTI = #oidActividadTipoOferta#,
+		       PROD_OID_PROD = (SELECT OID_PROD FROM MAE_PRODU WHERE COD_SAP = #codigoProducto#),
+		       CAM_PARA_MAV = #codigoPeriodo#,
+		       COD_ACTI = #codigoActividad#,
+		       COD_TIPO_OFER = #codigoTipoOferta#,
+		       COD_SAP = #codigoProducto#,
+		       TICL_OID_TIPO_CLIE = #oidTipoCliente#,
+		       COD_TIPO_CLIE = #codigoTipoCliente#,
+		       IND_ORIG_MAV = #indicadorOrigen#,
+		       IND_ENVI_MENS = #indicadorEnviaMensaje#,
+		       FOR_COBR = #formaCobro#,
+		       FOR_PAGO = #formaPago#,
+		       ACT_TIPO_DESP = #tipoDespacho#,
+		       ENV_SOLI = #envioSolicitud#,
+		       NUM_UNID_PROD = #numeroUnidades#,
+		       VAL_PREC = #precio#,
+		       IND_UNID_DIF = #indicadorUnidad#,
+		       VAL_BASE_ESTI_DEST = #unidadesEstimadas#,
+		       VAL_OBSE = #observaciones#,
+		       USU_MODI = #codigoUsuario#,
+		       FEC_MODI = SYSDATE
+	 	 WHERE PAIS_COD_PAIS = #codigoPais#
+	 	   AND COR_PARA_CONF = #correlativo#
+    </update>
+   		 	
+    <delete id="deleteConfiguracion" parameterClass="java.util.Map">
+		UPDATE MAV_PARAM_CONFI
+		   SET COD_ESTA_MAV = 5,
+		       USU_MODI = #codigoUsuario#,
+			   FEC_MODI = SYSDATE
+ 		 WHERE PAIS_COD_PAIS = #codigoPais#
+	 	   AND COR_PARA_CONF = #correlativo#
+    </delete>
+    
+    <resultMap id="datosActividadResult"   class="java.util.HashMap">
+		<result property="oidActividad"			  		  	column="OID_ACTI"/>					
+		<result property="oidTipoCliente"				  	column="OID_TIPO_CLIE"/>
+		<result property="codigoTipoCliente"				column="COD_TIPO_CLIE"/>
+		<result property="descripcionTipoCliente"			column="DES_TIPO_CLIE"/>
+		<result property="oidFormaPago"						column="OID_FORM_PAGO"/>
+		<result property="descripcionFormaPago"				column="DES_FORM_PAGO"/>
+		<result property="oidFormaCobro"					column="OID_FORM_COBR"/>
+		<result property="descripcionFormaCobro"			column="DES_FORM_COBR"/>
+		<result property="oidActividadTipoDespacho"			column="OID_ACTI_TIPO_DESP"/>	
+		<result property="oidTipoDespacho"					column="OID_TIPO_DESP"/>
+		<result property="descripcionTipoDespacho"			column="DES_TIPO_DESP"/>
+		<result property="oidEnvioSolicitud"				column="OID_ENVI_SOLI"/>
+		<result property="descripcionEnvioSolicitud"		column="DES_ENVI_SOLI"/>
+		<result property="descripcionAlmacen"				column="DES_ALMA"/>
+    </resultMap>
+
+	<select id="getDatosActividad" parameterClass="string" resultMap="datosActividadResult">
+		SELECT act.OID_ACTI,
+		       act.TICL_OID_TIPO_CLIE OID_TIPO_CLIE,
+		       tip.COD_TIPO_CLIE,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(1, tip.OID_TIPO_CLIE, 'MAE_TIPO_CLIEN') DES_TIPO_CLIE,
+		       act.FOPA_OID_FORM_PAGO OID_FORM_PAGO,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(1, act.FOPA_OID_FORM_PAGO, 'BEL_FORMA_PAGO') DES_FORM_PAGO,       
+		       act.TCPA_OID_TIPO_COND_PAGO OID_FORM_COBR,
+		       tcp.DES_TIPO_COND_PAGO DES_FORM_COBR,              
+		       atd.OID_ACTI_TIPO_DESP,
+		       atd.TDCH_OID_TIPO_DESP OID_TIPO_DESP,
+		       des.DES_TIPO_DESP,
+		       env.OID_ENVI_SOLI,
+		       env.DES_ENVI_SOLI,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(1, act.ALMA_OID_ALMA, 'BEL_ALMAC') DES_ALMA       
+		  FROM MAV_ACTIV act,
+		       MAV_ACTIV_TIPO_DESPA atd,
+		       MAE_TIPO_CLIEN tip,
+		       MAV_TIPO_CONDI_PAGO tcp,
+		       MAV_TIPO_DESPA des,
+		       MAV_ENVIO_SOLIC env
+		 WHERE act.OID_ACTI = atd.ACTI_OID_ACTI
+		   AND act.TICL_OID_TIPO_CLIE = tip.OID_TIPO_CLIE
+		   AND act.TCPA_OID_TIPO_COND_PAGO = tcp.OID_TIPO_COND_PAGO
+		   AND atd.TDCH_OID_TIPO_DESP = des.OID_TIPO_DESP
+		   AND atd.ENVS_OID_ENVI_SOLI = env.OID_ENVI_SOLI (+)
+		   AND act.OID_ACTI = #value#
+ 	</select>
+ 	
+    <resultMap id="configuracionResult"   class="java.util.HashMap">
+		<result property="codigoPais"					  	column="PAIS_COD_PAIS"/>					
+		<result property="correlativo"					  	column="COR_PARA_CONF"/>
+		<result property="oidActividad"						column="ATOF_ACTI_OID_ACTI"/>
+		<result property="oidActividadTipoOferta"			column="ATOF_OID_TIPO_OFER_ACTI"/>
+		<result property="oidProducto"						column="PROD_OID_PROD"/>
+		<result property="codigoPeriodo"					column="CAM_PARA_MAV"/>
+		<result property="codigoActividad"					column="COD_ACTI"/>
+		<result property="codigoTipoOferta"					column="COD_TIPO_OFER"/>
+		<result property="codigoProducto"					column="COD_SAP"/>	
+		<result property="descripcionProducto"				column="DES_PROD"/>
+		<result property="oidTipoCliente"					column="TICL_OID_TIPO_CLIE"/>
+		<result property="codigoTipoCliente"				column="COD_TIPO_CLIE"/>
+		<result property="descripcionTipoCliente"			column="DES_TIPO_CLIE"/>
+		<result property="codigoEstado"						column="COD_ESTA_MAV"/>
+		<result property="indicadorOrigen"					column="IND_ORIG_MAV"/>
+		<result property="indicadorEnviaMensaje"			column="IND_ENVI_MENS"/>
+		<result property="formaCobro"						column="FOR_COBR"/>
+		<result property="descripcionFormaCobro"			column="DES_FORM_COBR"/>
+		<result property="formaPago"						column="FOR_PAGO"/>	
+		<result property="descripcionFormaPago"				column="DES_FORM_PAGO"/>
+		<result property="tipoDespacho"						column="ACT_TIPO_DESP"/>
+		<result property="descripcionTipoDespacho"			column="DES_TIPO_DESP"/>
+		<result property="envioSolicitud"					column="ENV_SOLI"/>
+		<result property="descripcionEnvioSolicitud"		column="DES_ENVI_SOLI"/>
+		<result property="descripcionAlmacen"				column="DES_ALMA"/>
+		<result property="numeroUnidades"					column="NUM_UNID_PROD"/>
+		<result property="precio"							column="VAL_PREC"/>
+		<result property="indicadorUnidad"					column="IND_UNID_DIF"/>
+		<result property="codigoVenta"						column="VAL_CODI_VENT"/>
+		<result property="unidadesEstimadas"				column="VAL_BASE_ESTI_DEST"/>
+		<result property="observaciones"					column="VAL_OBSE"/>
+		<result property="indicadorActivo"					column="IND_ACTI"/>
+    </resultMap>
+
+	<select id="getConfiguracion" parameterClass="java.util.Map" resultMap="configuracionResult">
+		SELECT con.PAIS_COD_PAIS,
+		       COR_PARA_CONF,
+		       ATOF_ACTI_OID_ACTI,
+		       ATOF_OID_TIPO_OFER_ACTI,
+		       PROD_OID_PROD,
+		       CAM_PARA_MAV,
+		       COD_ACTI,
+		       COD_TIPO_OFER,
+		       COD_SAP,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(1, PROD_OID_PROD, 'MAE_PRODU') DES_PROD,
+		       con.TICL_OID_TIPO_CLIE,
+		       COD_TIPO_CLIE,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(1, con.TICL_OID_TIPO_CLIE, 'MAE_TIPO_CLIEN') DES_TIPO_CLIE,
+		       COD_ESTA_MAV,
+		       IND_ORIG_MAV,
+		       IND_ENVI_MENS,
+		       FOR_COBR,
+		       tcp.DES_TIPO_COND_PAGO DES_FORM_COBR,
+		       FOR_PAGO,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(1, FOR_PAGO, 'BEL_FORMA_PAGO') DES_FORM_PAGO,
+		       ACT_TIPO_DESP,
+		       des.DES_TIPO_DESP,
+		       ENV_SOLI,
+		       env.DES_ENVI_SOLI,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(1, act.ALMA_OID_ALMA, 'BEL_ALMAC') DES_ALMA,
+		       NUM_UNID_PROD,
+		       VAL_PREC,
+		       IND_UNID_DIF,
+		       VAL_CODI_VENT,
+		       VAL_BASE_ESTI_DEST,
+		       VAL_OBSE,
+		       con.IND_ACTI
+		  FROM MAV_PARAM_CONFI con,
+		       MAV_TIPO_CONDI_PAGO tcp,
+		       MAV_ACTIV_TIPO_DESPA atd,
+		       MAV_TIPO_DESPA des,
+		       MAV_ENVIO_SOLIC env,
+		       MAV_ACTIV act
+		 WHERE con.FOR_COBR = tcp.OID_TIPO_COND_PAGO
+		   AND con.COD_ACTI = act.OID_ACTI
+		   AND con.ACT_TIPO_DESP = atd.OID_ACTI_TIPO_DESP
+		   AND atd.TDCH_OID_TIPO_DESP = des.OID_TIPO_DESP
+		   AND atd.ENVS_OID_ENVI_SOLI = env.OID_ENVI_SOLI (+)
+		   AND con.PAIS_COD_PAIS = #codigoPais#
+		   AND con.COR_PARA_CONF = #correlativo#
+ 	</select>
+ 	
+ 	<resultMap id="consideracionResult" class="java.util.HashMap">     
+	    <result property="codigoConRes"	 		  	column="CODIGO"  />
+	    <result property="descripcionConRes" 		column="DESCRIPCION"  />
+	    <result property="abrevConRes" 				column="ABR_CONS_REST"  />	      
+		<result property="indTipo"		 			column="IND_TIPO"  />
+		<result property="dirigido"		 			column="IND_DIRI"  />
+	</resultMap>
+	  
+ 	<select id="getConsideracion"  parameterClass="java.util.Map" resultMap="consideracionResult">
+		SELECT COR_CONS_REST CODIGO,
+		       DES_CONS_REST  DESCRIPCION,
+		       ABR_CONS_REST,
+	           IND_TIPO,
+	           IND_DIRI     
+	      FROM MAV_CONSI_RESTR
+		 WHERE IND_CONS_REST='C'			
+		 
+		 	<isNotEmpty property="indicadorDirigido">
+   		 	  AND (IND_DIRI = #indicadorDirigido# OR IND_DIRI IS NULL)
+   		 	  
+   		 	  <isEqual property="indicadorDirigido" compareValue="C">
+	   		 	  <isEmpty prepend="AND" property="indicadorUnidad">
+					<![CDATA[  NVL(IND_TIPO,'X') <>'E'  ]]> 
+				  </isEmpty>
+   		 	  <isNotEmpty prepend="AND" property="indicadorUnidad">
+					<![CDATA[  COR_CONS_REST <> 61  ]]>
+				  </isNotEmpty>
+   		 	  </isEqual>
+   		 	  		   
+			</isNotEmpty>
+
+			<isNotEmpty prepend="AND" property="codigo">
+				 COR_CONS_REST=#codigo#
+			</isNotEmpty>
+
+			<isNotEmpty prepend="AND" property="indicadorUnidad">
+				((IND_TIPO = 'L' OR IND_TIPO='E') AND IND_DIRI IS NOT NULL)
+			</isNotEmpty>
+				
+		  AND IND_ACTI='1'					
+	</select>
+	
+	<select id="getRestriccion"  parameterClass="java.util.Map" resultMap="consideracionResult">
+		SELECT COR_CONS_REST CODIGO,
+		       DES_CONS_REST  DESCRIPCION,
+		       ABR_CONS_REST,
+		       IND_TIPO,
+		       IND_DIRI      
+	 	  FROM MAV_CONSI_RESTR
+	     WHERE IND_CONS_REST='R'
+	     
+	       <isNotEmpty property="indicadorDirigido">
+   		 	  AND (IND_DIRI = #indicadorDirigido# OR IND_DIRI IS NULL)
+   		 	  
+   		 	  <isEmpty prepend="AND" property="indicadorUnidad">
+				<![CDATA[  NVL(IND_TIPO,'X') <>'E'  ]]> 
+			  </isEmpty>
+<isNotEmpty prepend="AND" property="indicadorUnidad">
+				<![CDATA[  COR_CONS_REST <> 62  ]]> 
+			  </isNotEmpty>		   
+			</isNotEmpty>
+			
+		    <isNotEmpty prepend="AND" property="codigo">
+				 COR_CONS_REST=#codigo#
+			</isNotEmpty>	
+			
+			<isNotEmpty prepend="AND" property="indicadorUnidad">
+				((IND_TIPO = 'L' OR IND_TIPO='E') AND IND_DIRI IS NOT NULL)
+			</isNotEmpty>
+			
+		  AND IND_ACTI='1'						
+	</select>		  	
+ 	
+ 	<insert id="saveConRestCabecera" parameterClass="java.util.Map">     
+		INSERT INTO MAV_PARAM_CORES_CABEC (
+		   PAIS_COD_PAIS,
+		   PACO_COR_PARA_CONF,
+		   CORE_COR_CONS_REST,
+		   CAM_PROC_MAV,
+		   IND_CONS_REST,
+		   NUM_REGI,
+		   IND_ACTI, 
+		   USU_CREA, 
+		   FEC_CREA, 
+		   EST_REGI) 
+		VALUES ( #codigoPais#,
+		 #correlativoMAV#,
+		 #codigoConsRest#,
+		 #codigoPeriodo#, 
+		 #indicadorConsideracion#,
+		 TO_NUMBER(#numReg#,'999999999'), 
+		 '1', 
+		 #login#,
+		 SYSDATE, 
+		 '1')      
+    </insert>
+    
+    <insert id="saveConRestDetalle" parameterClass="java.util.Map">     
+		INSERT INTO MAV_PARAM_CORES_DETAL(
+		   PAIS_COD_PAIS,
+		   PACO_COR_PARA_CONF,
+		   CORE_COR_CONS_REST,
+		   COR_CONS_REST_DETA,
+		   CAM_PROC_MAV,
+		   IND_CONS_REST,
+		   NUM_UNID_PROD, 
+		   VAL_CONS_REST_1,
+		   VAL_CONS_REST_2,
+		   VAL_CONS_REST_3,
+		   VAL_CONS_REST_4,
+		   VAL_CONS_REST_5,
+		   VAL_CONS_REST_6,
+		   VAL_CONS_REST_7,
+		   VAL_CONS_REST_8,
+		   VAL_CONS_REST_9,
+		   VAL_CONS_REST_10,
+		   IND_ACTI, 
+		   USU_CREA, 
+		   FEC_CREA, 
+		   EST_REGI) 
+		VALUES (#codigoPais#,
+		 #correlativoMAV#,
+		 #codigoConsRest#,		 		
+		 NVL((SELECT MAX(X.COR_CONS_REST_DETA)+ 1 
+		      FROM MAV_PARAM_CORES_DETAL X 
+		      WHERE X.PAIS_COD_PAIS = #codigoPais# AND
+		            X.PACO_COR_PARA_CONF =#correlativoMAV# AND
+		            X.CORE_COR_CONS_REST = #codigoConsRest#),1),
+		 #codigoPeriodo#,
+		 #indicadorConsideracion#,
+		 #numeroUnidades#, 
+		 #condicion1#,
+		 #condicion2#,
+		 #condicion3#,
+		 #condicion4#,
+		 #condicion5#,
+		 #condicion6#,
+		 #condicion7#,
+		 #condicion8#,
+		 #condicion9#,
+		 #condicion10#,
+		 '1', 
+		 #login#,
+		 SYSDATE, 
+		 '1')      
+    </insert>
+    
+    <update id="updateConRestCabecera" parameterClass="java.util.Map">     
+			UPDATE MAV_PARAM_CORES_CABEC
+			SET    IND_ACTI           = #indicadorActivo#,
+			       USU_MODI           = #login#,
+			       FEC_MODI           = sysdate
+			     <isNotEmpty property="codigoPeriodo"> 
+			       ,CAM_PROC_MAV           = #codigoPeriodo#
+			     </isNotEmpty>
+			     <isNotEmpty property="estadoRegistro"> 
+			       ,EST_REGI           = #estadoRegistro#
+			     </isNotEmpty>
+			     <isNotEmpty property="numReg">			       
+			       ,NUM_REGI            = TO_NUMBER(#numReg#,'999999999')
+			      </isNotEmpty> 			       
+			WHERE PAIS_COD_PAIS  = #codigoPais#
+			  AND PACO_COR_PARA_CONF =  #correlativoMAV#
+			  AND CORE_COR_CONS_REST = #codigoConsRest#
+			  AND IND_CONS_REST =  #indicadorConsideracion#		    
+    </update>
+    
+    <update id="updateConRestDetalle" parameterClass="java.util.Map">     
+		UPDATE MAV_PARAM_CORES_DETAL
+		SET   VAL_CONS_REST_1          = #condicion1#,
+		      VAL_CONS_REST_2          = #condicion2#,
+		      VAL_CONS_REST_3          = #condicion3#,
+		      VAL_CONS_REST_4          = #condicion4#,
+		      VAL_CONS_REST_5          = #condicion5#,
+		      VAL_CONS_REST_6          = #condicion6#,
+		      VAL_CONS_REST_7          = #condicion7#,
+		      VAL_CONS_REST_8          = #condicion8#,
+		      VAL_CONS_REST_9          = #condicion9#,
+		      VAL_CONS_REST_10         = #condicion10#,
+		      <isNotEmpty property="numeroUnidades">
+		      NUM_UNID_PROD		       = #numeroUnidades#,
+		      </isNotEmpty>	
+		      <isNotEmpty property="codigoPeriodo"> 
+			  	CAM_PROC_MAV           = #codigoPeriodo#,
+			  </isNotEmpty>		      
+		      IND_ACTI           = #indicadorActivo#,
+		      USU_MODI           = #login#,
+		      FEC_MODI           = sysdate
+			  <isNotEmpty property="estadoRegistro"> 
+			       ,EST_REGI           = #estadoRegistro#
+			  </isNotEmpty>
+			  
+		WHERE PAIS_COD_PAIS  = #codigoPais#
+		  AND PACO_COR_PARA_CONF =  #correlativoMAV#
+		  AND CORE_COR_CONS_REST = #codigoConsRest#
+		  AND IND_CONS_REST =  #indicadorConsideracion#	
+		  
+		<isNotEmpty prepend="AND" property="correlativoConsideracion">
+			 COR_CONS_REST_DETA = #correlativoConsideracion#
+		</isNotEmpty>				 		 
+    </update>
+    
+    <update id="updateConRestDetalleCampanya" parameterClass="java.util.Map">     
+		UPDATE MAV_PARAM_CORES_DETAL
+		SET   
+			  CAM_PROC_MAV           = #codigoPeriodo#,
+		      USU_MODI           = #login#,
+		      FEC_MODI           = sysdate
+		WHERE PAIS_COD_PAIS  = #codigoPais#
+		  AND PACO_COR_PARA_CONF =  #correlativoMAV#
+    </update>
+    
+    <delete id="deleteConRestCabecera" parameterClass="java.util.Map">
+    	DELETE FROM MAV_PARAM_CORES_CABEC
+		 WHERE PAIS_COD_PAIS  = #codigoPais#
+		   AND PACO_COR_PARA_CONF  = #correlativoMAV#
+		   AND CORE_COR_CONS_REST = #codigoConsRest#
+		   AND IND_CONS_REST =  #indicadorConsideracion#		    
+    </delete>
+
+    <delete id="deleteConRestDetalle" parameterClass="java.util.Map">
+    	DELETE FROM MAV_PARAM_CORES_DETAL
+		 WHERE PAIS_COD_PAIS  = #codigoPais#
+		   AND PACO_COR_PARA_CONF =  #correlativoMAV#
+		   AND CORE_COR_CONS_REST = #codigoConsRest#
+		   AND IND_CONS_REST =  #indicadorConsideracion#
+    </delete>
+    
+    <resultMap id="restConsideracionResult" class="java.util.HashMap">     
+	 	  <result property="codigoPais" 				column="PAIS_COD_PAIS"  />
+	      <result property="correlativoMAV"				column="PACO_COR_PARA_CONF"  />
+	      <result property="codigoConsideracion"		column="COD_CONS"  />
+		  <result property="codigoRestriccion"			column="COD_REST"  />	      
+		  <result property="codigoPeriodo"				column="CAM_PROC_MAV"  />
+	      <result property="indicadorTipo"				column="IND_TIPO"  />
+	      <result property="dirigido"					column="IND_DIRI"  />
+	      <result property="descripcion" 				column="DES_CONS_REST"  />
+	      <result property="abrev"		 				column="ABR_CONS_REST"  />
+	      <result property="condicion"	 				column="VAL_COND"  />
+	      <result property="numeroUnidades"				column="NUM_UNID_PROD"  />	      
+	      <result property="condicion1"	 				column="VAL_CON1"  />
+	      <result property="condicion2"	 				column="VAL_CON2"  />
+	      <result property="condicion3"	 				column="VAL_CON3"  />
+	      <result property="condicion4"	 				column="VAL_CON4"  />
+	      <result property="condicion5"	 				column="VAL_CON5"  />
+ 		  <result property="indicadorAccion"			column="IND_ACCI"  />
+ 		  <result property="tipoConsideracionLista"		column="IND_LIST"  /> 		  	       		  
+	  </resultMap>
+	
+	 <select id="getRestConsideracion"  parameterClass="java.util.Map" resultMap="restConsideracionResult">
+		SELECT  X.PAIS_COD_PAIS,
+                X.PACO_COR_PARA_CONF,
+		        CASE WHEN X.IND_CONS_REST = 'C' THEN TO_CHAR(Z.COR_CONS_REST) ELSE '' END COD_CONS,
+		        CASE WHEN X.IND_CONS_REST = 'R' THEN TO_CHAR(Z.COR_CONS_REST) ELSE '' END COD_REST,					        
+                X.CAM_PROC_MAV,
+		        Z.IND_TIPO,
+		        Z.IND_DIRI,
+		        Z.DES_CONS_REST,
+		        Z.ABR_CONS_REST,
+		       case                     
+		            when (Z.IND_TIPO = 'S') OR (Z.IND_TIPO IS NULL) then ''
+		            when Z.IND_TIPO = 'U' then 
+		                    NVL((SELECT U.VAL_CONS_REST_1 
+		                            FROM MAV_PARAM_CORES_DETAL U 
+		                                WHERE U.PAIS_COD_PAIS =  X.PAIS_COD_PAIS 
+		                                    AND U.PACO_COR_PARA_CONF = x.PACO_COR_PARA_CONF
+		                                    AND U.CORE_COR_CONS_REST = x.CORE_COR_CONS_REST),'')
+		            when Z.IND_TIPO = 'D' then
+		                    NVL((SELECT U.VAL_CONS_REST_1 || ' , ' || U.VAL_CONS_REST_2 
+		                            FROM MAV_PARAM_CORES_DETAL U 
+		                                WHERE U.PAIS_COD_PAIS =  X.PAIS_COD_PAIS 
+		                                    AND U.PACO_COR_PARA_CONF = x.PACO_COR_PARA_CONF
+		                                    AND U.CORE_COR_CONS_REST = x.CORE_COR_CONS_REST),'')
+		            when (Z.IND_TIPO = 'M' AND x.CORE_COR_CONS_REST = 17) then
+		                    NVL((SELECT U.VAL_CONS_REST_1 || ' , ' || U.VAL_CONS_REST_2 
+		                            FROM MAV_PARAM_CORES_DETAL U 
+		                                WHERE U.PAIS_COD_PAIS =  X.PAIS_COD_PAIS 
+		                                    AND U.PACO_COR_PARA_CONF = x.PACO_COR_PARA_CONF
+		                                    AND U.CORE_COR_CONS_REST = x.CORE_COR_CONS_REST),'')
+		            when Z.IND_TIPO = 'M' AND (X.CORE_COR_CONS_REST = 7 OR X.CORE_COR_CONS_REST = 12 OR X.CORE_COR_CONS_REST = 63) then
+		                    NVL((SELECT U.VAL_CONS_REST_1 || ' , ' || U.VAL_CONS_REST_2  || ' , ' || U.VAL_CONS_REST_3
+		                            FROM MAV_PARAM_CORES_DETAL U 
+		                                WHERE U.PAIS_COD_PAIS =  X.PAIS_COD_PAIS 
+		                                    AND U.PACO_COR_PARA_CONF = x.PACO_COR_PARA_CONF
+		                                    AND U.CORE_COR_CONS_REST = x.CORE_COR_CONS_REST),'')
+					when Z.IND_TIPO = 'M' then
+		                    NVL((SELECT U.VAL_CONS_REST_1 || ' , ' || U.VAL_CONS_REST_2  || ' , ' || U.VAL_CONS_REST_3
+		                    			|| ' , ' || U.VAL_CONS_REST_4 
+		                            FROM MAV_PARAM_CORES_DETAL U 
+		                                WHERE U.PAIS_COD_PAIS =  X.PAIS_COD_PAIS 
+		                                    AND U.PACO_COR_PARA_CONF = x.PACO_COR_PARA_CONF
+		                                    AND U.CORE_COR_CONS_REST = x.CORE_COR_CONS_REST),'')		                                    
+		                                    
+		            else                   
+		                TO_CHAR(X.NUM_REGI)
+		        end VAL_COND,
+		        case                     
+					when ((Z.IND_TIPO IS NULL) OR NOT (Z.IND_TIPO = 'E' OR Z.IND_TIPO = 'L')) then
+		                    NVL((SELECT TO_CHAR(U.NUM_UNID_PROD)
+		                            FROM MAV_PARAM_CORES_DETAL U 
+		                                WHERE U.PAIS_COD_PAIS =  X.PAIS_COD_PAIS 
+		                                    AND U.PACO_COR_PARA_CONF = x.PACO_COR_PARA_CONF
+		                                    AND U.CORE_COR_CONS_REST = x.CORE_COR_CONS_REST),'')		                                    
+		                                    
+		            else ''
+		        end NUM_UNID_PROD,
+		        NVL((SELECT U.VAL_CONS_REST_1  
+		                            FROM MAV_PARAM_CORES_DETAL U 
+		                                WHERE U.PAIS_COD_PAIS =  X.PAIS_COD_PAIS 
+		                                    AND U.PACO_COR_PARA_CONF = x.PACO_COR_PARA_CONF
+		                                    AND U.CORE_COR_CONS_REST = x.CORE_COR_CONS_REST
+		                                    AND Z.IND_TIPO not IN('L','E')),'') VAL_CON1,
+		        NVL((SELECT U.VAL_CONS_REST_2  
+		                            FROM MAV_PARAM_CORES_DETAL U 
+		                                WHERE U.PAIS_COD_PAIS =  X.PAIS_COD_PAIS 
+		                                    AND U.PACO_COR_PARA_CONF = x.PACO_COR_PARA_CONF
+		                                    AND U.CORE_COR_CONS_REST = x.CORE_COR_CONS_REST
+		                                    AND Z.IND_TIPO not IN('L','E','U')),'') VAL_CON2,
+		        NVL((SELECT U.VAL_CONS_REST_3  
+		                            FROM MAV_PARAM_CORES_DETAL U 
+		                                WHERE U.PAIS_COD_PAIS =  X.PAIS_COD_PAIS 
+		                                    AND U.PACO_COR_PARA_CONF = x.PACO_COR_PARA_CONF
+		                                    AND U.CORE_COR_CONS_REST = x.CORE_COR_CONS_REST
+		                                    AND Z.IND_TIPO not IN('L','E','U','D')),'') VAL_CON3,					                                    					                                    					                                    
+		        NVL((SELECT U.VAL_CONS_REST_4  
+		                            FROM MAV_PARAM_CORES_DETAL U 
+		                                WHERE U.PAIS_COD_PAIS =  X.PAIS_COD_PAIS 
+		                                    AND U.PACO_COR_PARA_CONF = x.PACO_COR_PARA_CONF
+		                                    AND U.CORE_COR_CONS_REST = x.CORE_COR_CONS_REST
+		                                    AND Z.IND_TIPO not IN('L','E','U','D')),'') VAL_CON4,					                                    					                                    					                                    
+		        NVL((SELECT U.VAL_CONS_REST_5  
+		                            FROM MAV_PARAM_CORES_DETAL U 
+		                                WHERE U.PAIS_COD_PAIS =  X.PAIS_COD_PAIS 
+		                                    AND U.PACO_COR_PARA_CONF = x.PACO_COR_PARA_CONF
+		                                    AND U.CORE_COR_CONS_REST = x.CORE_COR_CONS_REST
+		                                    AND Z.IND_TIPO not IN('L','E','U','D')),'') VAL_CON5,					                                    					                                    					                                    
+		        '1' IND_ACCI,
+					case
+		            when Z.IND_TIPO = 'L' OR Z.IND_TIPO = 'E' then 'L'
+		            else                   
+		                ''
+		        end IND_LIST					        
+		 FROM MAV_PARAM_CORES_CABEC X, 
+		      MAV_CONSI_RESTR Z
+		WHERE X.PACO_COR_PARA_CONF = #correlativoMAV# 
+		  AND X.IND_CONS_REST = #tipoConsideracion#
+		  AND X.IND_ACTI ='1'
+		  AND X.EST_REGI = '1'
+		  
+		  <isNotEmpty property="indicadorTipo">
+		  	AND Z.IND_TIPO = #indicadorTipo#
+		  </isNotEmpty>
+		  
+		  <isNotEmpty property="abreviatura">
+		  	AND Z.ABR_CONS_REST = #abreviatura# 
+		  </isNotEmpty>
+		  
+		  AND Z.COR_CONS_REST = X.CORE_COR_CONS_REST
+		ORDER BY X.CORE_COR_CONS_REST   							
+	</select>
+	
+	<resultMap id="detalleConsRestResult" class="java.util.HashMap">
+	 	  <result property="codigoPais" 					column="PAIS_COD_PAIS"  />	      
+	      <result property="correlativoMAV" 			  	column="PACO_COR_PARA_CONF"  />
+	      <result property="codigoConsRest"				  	column="CORE_COR_CONS_REST"  />
+		  <result property="correlativoConsideracion"		column="COR_CONS_REST_DETA"  />	      
+	      <result property="codigoPeriodo"				  	column="CAM_PROC_MAV"  />
+	      <result property="indicadorTipo" 				    column="IND_CONS_REST"  />
+	      <result property="numeroUnidades" 			    column="NUM_UNID_PROD"  />
+	      <result property="valCondi1"		 				column="VAL_CONS_REST_1"  />
+	      <result property="valCondi2"			  			column="VAL_CONS_REST_2"  />	      	      
+	      <result property="valCondi3"	 				    column="VAL_CONS_REST_3"  />
+	      <result property="valCondi4"	 				    column="VAL_CONS_REST_4"  />
+	      <result property="valCondi5"	 				    column="VAL_CONS_REST_5"  />
+	      <result property="valCondi6"	 				    column="VAL_CONS_REST_6"  />
+	      <result property="valCondi7"	 				    column="VAL_CONS_REST_7"  />
+	      <result property="valCondi8"	 				    column="VAL_CONS_REST_8"  />
+	      <result property="valCondi9"	 				    column="VAL_CONS_REST_9"  />
+	      <result property="valCondi10"	 				    column="VAL_CONS_REST_10"  />
+ 		  <result property="indicadorAccion"			    column="IND_ACCI"  />	      
+	</resultMap>
+	
+	<select id="getDetalleConsRest"  parameterClass="java.util.Map" resultMap="detalleConsRestResult">
+		SELECT M.PAIS_COD_PAIS,
+			   M.PACO_COR_PARA_CONF, 
+			   M.CORE_COR_CONS_REST, 
+			   M.COR_CONS_REST_DETA, 
+			   M.CAM_PROC_MAV, 
+			   M.IND_CONS_REST,
+			   M.NUM_UNID_PROD, 
+			   M.VAL_CONS_REST_1, 
+			   M.VAL_CONS_REST_2, 
+			   M.VAL_CONS_REST_3, 
+			   M.VAL_CONS_REST_4, 
+			   M.VAL_CONS_REST_5,
+			   M.VAL_CONS_REST_6,
+			   M.VAL_CONS_REST_7,
+			   M.VAL_CONS_REST_8,
+			   M.VAL_CONS_REST_9,
+			   M.VAL_CONS_REST_10,
+			   '1' IND_ACCI
+		  FROM MAV_PARAM_CORES_DETAL M
+		 WHERE M.PAIS_COD_PAIS  = #codigoPais#
+		   AND PACO_COR_PARA_CONF =  #correlativoMAV#
+		   AND CORE_COR_CONS_REST = #codigoConsRest#
+		   AND M.IND_CONS_REST = #indicadorTipo#
+		   AND M.IND_ACTI ='1'
+		   AND M.EST_REGI = '1'
+  	     ORDER BY M.COR_CONS_REST_DETA 							
+	</select>
+	
+	<resultMap id="detalleConsRestEnvioResult" class="java.util.HashMap">
+	 	  <result property="codigoPais" 					column="PAIS_COD_PAIS"  />	      
+	      <result property="correlativoMAV" 			  	column="PACO_COR_PARA_CONF"  />
+	      <result property="codigoConsRest"				  	column="CORE_COR_CONS_REST"  />
+		  <result property="correlativoConsideracion"		column="COR_CONS_REST_DETA"  />	      
+	      <result property="numeroUnidades" 			    column="NUM_UNID_PROD"  />
+	      <result property="valCondi1"		 				column="VAL_CONS_REST_1"  />
+	      <result property="valCondi2"			  			column="VAL_CONS_REST_2"  />	      	      
+	      <result property="valCondi3"	 				    column="VAL_CONS_REST_3"  />
+	      <result property="codigoCliente"	 				column="COD_CLIE"  />
+	      <result property="indicadorEnvio"	 				column="IND_ENVI"  />
+	      <result property="oidEnvio"	 				    column="OID_ENVI"  />
+	</resultMap>
+	
+	<select id="getDetalleConsRestEnvio"  parameterClass="java.util.Map" resultMap="detalleConsRestEnvioResult">
+	
+        SELECT 
+               M.PAIS_COD_PAIS,
+               M.PACO_COR_PARA_CONF, 
+               M.CORE_COR_CONS_REST, 
+               M.COR_CONS_REST_DETA, 
+               M.NUM_UNID_PROD, 
+               M.VAL_CONS_REST_1, 
+               M.VAL_CONS_REST_2, 
+               M.VAL_CONS_REST_3 ,
+               (case 
+                    when (M.VAL_CONS_REST_1 IS NOT NULL AND M.VAL_CONS_REST_2 IS NULL AND M.VAL_CONS_REST_3 IS NULL)  then 
+                        (SELECT COD_CLIE FROM MAE_CLIEN WHERE OID_CLIE = (SELECT C.CLIE_OID_CLIE FROM  MAV_ENVIO_CONFI C WHERE  C.COR_PARA_CONF = M.PACO_COR_PARA_CONF AND C.COD_REGI = M.VAL_CONS_REST_1 AND (C.TIP_CONS_DESP = 'GR' OR C.TIP_CONS_DESP = 'AR')))  
+                    when (M.VAL_CONS_REST_1 IS NOT NULL AND M.VAL_CONS_REST_2 IS NOT NULL AND M.VAL_CONS_REST_3 IS NULL)  then 
+                        (SELECT COD_CLIE FROM MAE_CLIEN WHERE OID_CLIE = (SELECT C.CLIE_OID_CLIE FROM  MAV_ENVIO_CONFI C WHERE  C.COR_PARA_CONF = M.PACO_COR_PARA_CONF AND C.COD_REGI = M.VAL_CONS_REST_1 AND C.COD_ZONA = M.VAL_CONS_REST_2 AND (C.TIP_CONS_DESP = 'GZ' OR C.TIP_CONS_DESP = 'AZ')))                         
+                    when (M.VAL_CONS_REST_1 IS NULL AND M.VAL_CONS_REST_2 IS NULL AND M.VAL_CONS_REST_3 IS NOT NULL)  then 
+                        (SELECT COD_CLIE FROM MAE_CLIEN WHERE OID_CLIE = (SELECT C.CLIE_OID_CLIE FROM  MAV_ENVIO_CONFI C WHERE  C.COR_PARA_CONF = M.PACO_COR_PARA_CONF AND C.COD_REGI = M.VAL_CONS_REST_3 AND C.TIP_CONS_DESP = 'CA')) 
+               end) COD_CLIE,
+               (case 
+                    when (M.VAL_CONS_REST_1 IS NOT NULL AND M.VAL_CONS_REST_2 IS NULL AND M.VAL_CONS_REST_3 IS NULL)  then 
+                        (SELECT C.IND_ENVI FROM  MAV_ENVIO_CONFI C WHERE  COR_PARA_CONF = M.PACO_COR_PARA_CONF AND C.COD_REGI = M.VAL_CONS_REST_1 AND (C.TIP_CONS_DESP = 'GR' OR C.TIP_CONS_DESP = 'AR'))  
+                    when (M.VAL_CONS_REST_1 IS NOT NULL AND M.VAL_CONS_REST_2 IS NOT NULL AND M.VAL_CONS_REST_3 IS NULL)  then 
+                        (SELECT C.IND_ENVI FROM  MAV_ENVIO_CONFI C WHERE  COR_PARA_CONF = M.PACO_COR_PARA_CONF AND C.COD_REGI = M.VAL_CONS_REST_1 AND C.COD_ZONA = M.VAL_CONS_REST_2 AND (C.TIP_CONS_DESP = 'GZ' OR C.TIP_CONS_DESP = 'AZ'))                         
+                    when (M.VAL_CONS_REST_1 IS NULL AND M.VAL_CONS_REST_2 IS NULL AND M.VAL_CONS_REST_3 IS NOT NULL)  then 
+                        (SELECT C.IND_ENVI FROM  MAV_ENVIO_CONFI C WHERE  COR_PARA_CONF = M.PACO_COR_PARA_CONF AND C.COD_REGI = M.VAL_CONS_REST_3 AND C.TIP_CONS_DESP = 'CA') 
+               end) IND_ENVI,               
+               (case 
+                    when (M.VAL_CONS_REST_1 IS NOT NULL AND M.VAL_CONS_REST_2 IS NULL AND M.VAL_CONS_REST_3 IS NULL)  then 
+                        (SELECT C.OID_ENVI FROM  MAV_ENVIO_CONFI C WHERE  COR_PARA_CONF = M.PACO_COR_PARA_CONF AND C.COD_REGI = M.VAL_CONS_REST_1 AND (C.TIP_CONS_DESP = 'GR' OR C.TIP_CONS_DESP = 'AR'))  
+                    when (M.VAL_CONS_REST_1 IS NOT NULL AND M.VAL_CONS_REST_2 IS NOT NULL AND M.VAL_CONS_REST_3 IS NULL)  then 
+                        (SELECT C.OID_ENVI FROM  MAV_ENVIO_CONFI C WHERE  COR_PARA_CONF = M.PACO_COR_PARA_CONF AND C.COD_REGI = M.VAL_CONS_REST_1 AND C.COD_ZONA = M.VAL_CONS_REST_2 AND (C.TIP_CONS_DESP = 'GZ' OR C.TIP_CONS_DESP = 'AZ'))                         
+                    when (M.VAL_CONS_REST_1 IS NULL AND M.VAL_CONS_REST_2 IS NULL AND M.VAL_CONS_REST_3 IS NOT NULL)  then 
+                        (SELECT C.OID_ENVI FROM  MAV_ENVIO_CONFI C WHERE  COR_PARA_CONF = M.PACO_COR_PARA_CONF AND C.COD_REGI = M.VAL_CONS_REST_3 AND C.TIP_CONS_DESP = 'CA') 
+               end) OID_ENVI               
+          FROM MAV_PARAM_CORES_DETAL M
+         WHERE M.PAIS_COD_PAIS  = #codigoPais#
+           AND PACO_COR_PARA_CONF =  #correlativoMAV#
+           AND CORE_COR_CONS_REST = #codigoConsRest#
+           AND M.IND_CONS_REST = #indicadorTipo#
+           AND M.IND_ACTI ='1'
+           AND M.EST_REGI = '1'
+           ORDER BY M.COR_CONS_REST_DETA                      
+	
+	</select>
+
+	<resultMap id="detalleClientesConsRestResult" class="java.util.HashMap">
+	 	  <result property="codigoPais" 					column="PAIS_COD_PAIS"  />	      
+	      <result property="correlativoMAV" 			  	column="PACO_COR_PARA_CONF"  />
+	      <result property="codigoConsRest"				  	column="CORE_COR_CONS_REST"  />
+		  <result property="correlativoConsideracion"		column="COR_CONS_REST_DETA"  />	      
+	      <result property="codigoPeriodo"				  	column="CAM_PROC_MAV"  />
+	      <result property="indicadorTipo" 				    column="IND_CONS_REST"  />
+	      <result property="numeroUnidades" 			    column="NUM_UNID_PROD"  />
+	      <result property="valCondi1"		 				column="VAL_CONS_REST_1"  />
+	      <result property="valCondi2"			  			column="VAL_CONS_REST_2"  />	      	      
+	      <result property="valCondi3"	 				    column="VAL_CONS_REST_3"  />
+	      <result property="valCondi4"	 				    column="VAL_CONS_REST_4"  />
+	      <result property="valCondi5"	 				    column="VAL_CONS_REST_5"  />
+	      <result property="valCondi6"	 				    column="VAL_CONS_REST_6"  />
+	      <result property="valCondi7"	 				    column="VAL_CONS_REST_7"  />
+	      <result property="valCondi8"	 				    column="VAL_CONS_REST_8"  />
+	      <result property="valCondi9"	 				    column="VAL_CONS_REST_9"  />
+	      <result property="valCondi10"	 				    column="VAL_CONS_REST_10"  />
+	      <result property="nombreCliente"	 			    column="VAL_NOMB_CLIE"  />
+ 		  <result property="indicadorAccion"			    column="IND_ACCI"  />	      
+	</resultMap>
+	
+	<select id="getDetalleClientesConsRest"  parameterClass="java.util.Map" resultMap="detalleClientesConsRestResult">
+		SELECT M.PAIS_COD_PAIS,
+			   M.PACO_COR_PARA_CONF, 
+			   M.CORE_COR_CONS_REST, 
+			   M.COR_CONS_REST_DETA, 
+			   M.CAM_PROC_MAV, 
+			   M.IND_CONS_REST,
+			   M.NUM_UNID_PROD, 
+			   M.VAL_CONS_REST_1, 
+			   M.VAL_CONS_REST_2, 
+			   M.VAL_CONS_REST_3, 
+			   M.VAL_CONS_REST_4, 
+			   M.VAL_CONS_REST_5,
+			   M.VAL_CONS_REST_6,
+			   M.VAL_CONS_REST_7,
+			   M.VAL_CONS_REST_8,
+			   M.VAL_CONS_REST_9,
+			   M.VAL_CONS_REST_10,
+			   X.VAL_APE1 || ' ' || X.VAL_APE2 || ' ' || X.VAL_NOM1 || ' ' || X.VAL_NOM2 AS VAL_NOMB_CLIE,
+			   '1' IND_ACCI
+		  FROM MAV_PARAM_CORES_DETAL M, MAE_CLIEN X
+		 WHERE M.PAIS_COD_PAIS  = #codigoPais#
+		   AND PACO_COR_PARA_CONF =  #correlativoMAV#
+		   AND CORE_COR_CONS_REST = #codigoConsRest#
+		   AND M.IND_CONS_REST = #indicadorTipo#
+		   AND M.IND_ACTI ='1'
+		   AND M.EST_REGI = '1'
+		   AND M.VAL_CONS_REST_2 = X.COD_CLIE
+  	     ORDER BY M.COR_CONS_REST_DETA 							
+	</select>
+	
+	<select id="getEstados" parameterClass="java.util.Map"  resultMap="baseResult">
+    	SELECT OID_TIPO_ESTA_PROC CODIGO, 
+    	       DES_TIPO_ESTA_PROC DESCRIPCION
+  		  FROM MAV_TIPO_ESTAD_PROCE
+  		  
+         <![CDATA[ 
+         	WHERE OID_TIPO_ESTA_PROC <> 1
+ 			]]>          	  		  
+ 		 ORDER BY 2
+    </select>
+
+	<select id="getExisteRegion" parameterClass="string" resultClass="int">
+		SELECT COUNT(1) 
+		  FROM ZON_REGIO
+	   	 WHERE COD_REGI = #value#
+	   	   AND IND_ACTI = 1
+    </select>
+    
+    <select id="getExisteZona" parameterClass="string" resultClass="int">
+		SELECT COUNT(1) 
+		  FROM ZON_ZONA
+		 WHERE COD_ZONA = #value#
+		   AND IND_ACTI = 1
+    </select>
+    
+    <select id="getExisteRelacionRegionZona" parameterClass="java.util.Map" resultClass="int">
+    	SELECT COUNT(1)
+	      FROM ZON_REGIO reg, ZON_ZONA zon
+	     WHERE reg.OID_REGI = zon.ZORG_OID_REGI
+	       AND reg.COD_REGI = #codigoRegion#
+	       AND zon.COD_ZONA = #codigoZona#
+	       AND reg.IND_ACTI = 1
+	       AND zon.IND_ACTI = 1
+    </select>
+
+	<select id="getCatalogos" resultMap="baseResult">
+		SELECT OID_CATA as CODIGO,
+	  		   DES_CATA as DESCRIPCION 
+	  	  FROM PRE_CATAL     
+ 	     ORDER BY COD_CATA            
+ 	</select>
+
+	<select id="getActividadesGerente" parameterClass="java.util.Map"  resultMap="baseResult">
+    	SELECT A.OID_ACTI CODIGO, 
+    	       pq_apl_aux.Valor_Gen_I18n_Sicc(1, A.OID_ACTI, 'MAV_ACTIV') DESCRIPCION 
+		  FROM MAV_ACTIV A,
+		       MAE_TIPO_CLIEN T
+		 WHERE A.TICL_OID_TIPO_CLIE = T.OID_TIPO_CLIE
+           AND T.COD_TIPO_CLIE = '04'		       
+		 ORDER BY 2
+    </select>
+    
+    <select id="getTieneEnvioDespachado" parameterClass="java.util.Map"  resultClass="int">
+    	SELECT OID_ENVI
+		  FROM MAV_ENVIO_CONFI
+		 WHERE COR_PARA_CONF = #correlativo#
+		   AND IND_ENVI = 'E'
+		   AND ROWNUM = 1
+    </select>
+    
+	<update id="updateEnviosNoAtendidos" parameterClass="java.util.Map">
+    	UPDATE MAV_ENVIO_CONFI
+    	   SET IND_ENVI = 'D',
+    	       USU_MODI = #codigoUsuario#,
+			   FEC_MODI = SYSDATE
+		 WHERE COR_PARA_CONF = #correlativo#
+		 AND IND_ENVI = 'P'
+    </update>
+        
+	<update id="updateConRestDetalleUnidades" parameterClass="java.util.Map">
+		UPDATE MAV_PARAM_CORES_DETAL
+		SET NUM_UNID_PROD = #numeroUnidades#,
+		USU_MODI = #usuario#,
+		FEC_MODI = SYSDATE
+		WHERE PAIS_COD_PAIS = #codigoPais#            
+		AND PACO_COR_PARA_CONF = #correlativoMAV#             
+		AND CORE_COR_CONS_REST = #codigoConsRest#            
+		AND COR_CONS_REST_DETA = #correlativoConsideracion#            
+    </update>
+
+	<update id="updateEnvioUnidades" parameterClass="java.util.Map">
+		UPDATE MAV_ENVIO_CONFI
+		SET NUM_UNID = #numeroUnidades#,
+		USU_MODI = #usuario#,
+		FEC_MODI = SYSDATE, 
+		IND_ENVI = #indicadorEnvio#
+		WHERE OID_ENVI = #oidEnvio#
+    </update>
+	
+	<parameterMap id="paramExecuteInsertarEnvioGerente" class="map">
+		<parameter property="codigoPais" 	  		jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="correlativoMAV"  		jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoRegion"    		jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoZona"      		jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCapacitadora"    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroUnidades"   		jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="login"			   		jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeInsertarEnvioGerente" parameterMap="paramExecuteInsertarEnvioGerente" >
+		{call MAV_PKG_PROCE.MAV_PR_INSER_ENVIO_GEREN(?, ?, ?, ?, ?, ?, ? )}
+	</procedure>
+		
+	<resultMap id="detalleClientesConsRestResult" class="java.util.HashMap">
+	 	  <result property="codigoPais" 					column="PAIS_COD_PAIS"  />	      
+	      <result property="correlativoMAV" 			  	column="PACO_COR_PARA_CONF"  />
+	      <result property="codigoConsRest"				  	column="CORE_COR_CONS_REST"  />
+		  <result property="correlativoConsideracion"		column="COR_CONS_REST_DETA"  />	      
+	      <result property="codigoPeriodo"				  	column="CAM_PROC_MAV"  />
+	      <result property="indicadorTipo" 				    column="IND_CONS_REST"  />
+	      <result property="numeroUnidades" 			    column="NUM_UNID_PROD"  />
+	      <result property="valCondi1"		 				column="VAL_CONS_REST_1"  />
+	      <result property="valCondi2"			  			column="VAL_CONS_REST_2"  />	      	      
+	      <result property="nombreCliente"	 			    column="VAL_NOMB_CLIE"  />    
+ 		  <result property="indicadorEnvio"	 				column="IND_ENVI"  />
+	      <result property="oidEnvio"	 				    column="OID_ENVI"  />
+	</resultMap>
+	
+	<select id="getDetalleClientesConsRestEnvio"  parameterClass="java.util.Map" resultMap="detalleClientesConsRestResult">
+		SELECT M.PAIS_COD_PAIS,
+			   M.PACO_COR_PARA_CONF, 
+			   M.CORE_COR_CONS_REST, 
+			   M.COR_CONS_REST_DETA, 
+			   M.CAM_PROC_MAV, 
+			   M.IND_CONS_REST,
+			   M.NUM_UNID_PROD, 
+			   M.VAL_CONS_REST_1, 
+			   M.VAL_CONS_REST_2, 
+			   X.VAL_APE1 || ' ' || X.VAL_APE2 || ' ' || X.VAL_NOM1 || ' ' || X.VAL_NOM2 AS VAL_NOMB_CLIE,
+			   (SELECT C.IND_ENVI FROM  MAV_ENVIO_CONFI C WHERE  C.COR_PARA_CONF = M.PACO_COR_PARA_CONF 
+                        AND C.CLIE_OID_CLIE = X.OID_CLIE) IND_ENVI,
+               (SELECT C.OID_ENVI FROM  MAV_ENVIO_CONFI C WHERE  C.COR_PARA_CONF = M.PACO_COR_PARA_CONF 
+                        AND C.CLIE_OID_CLIE = X.OID_CLIE) OID_ENVI         
+		  FROM MAV_PARAM_CORES_DETAL M, MAE_CLIEN X
+		 WHERE M.PAIS_COD_PAIS  = #codigoPais#
+		   AND PACO_COR_PARA_CONF =  #correlativoMAV#
+		   AND CORE_COR_CONS_REST = #codigoConsRest#
+		   AND M.IND_CONS_REST = #indicadorTipo#
+		   AND M.IND_ACTI ='1'
+		   AND M.EST_REGI = '1'
+		   AND M.VAL_CONS_REST_2 = X.COD_CLIE
+  	     ORDER BY M.COR_CONS_REST_DETA 							
+	</select>
+	
+	<parameterMap id="paramExecuteInsertarEnvioConsultora" class="map">
+		<parameter property="codigoPais" 	  		jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="correlativoMAV"  		jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCliente"    		jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroUnidades"   		jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="login"			   		jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeInsertarEnvioConsultora" parameterMap="paramExecuteInsertarEnvioConsultora" >
+		{call MAV_PKG_PROCE.MAV_PR_INSER_ENVIO_CONSU(?, ?, ?, ?, ? )}
+	</procedure>
+		
+	
+	<resultMap id="obtieneActividadesTipoOfertaResult" class="actividadTipoOfertaMap">
+		  <result property="oidTipoOfer" 					column="OID"  />
+	      <result property="tipoActividad"				  	column="TIPOACTIVIDAD"  />
+		  <result property="actividad"		column="CODIGOACTIVIDAD"  />
+		  <result property="descripcionActividad"		column="ACTIVIDAD"  />	      
+	      <result property="codigoTOferta"				  	column="CODIGOOFERTA"  />
+	      <result property="tipoOferta" 				    column="OFERTA"  />
+	      <result property="estado" 			    column="ESTADO"  />
+	</resultMap>
+	
+	
+	<select id="getObtieneActividadesTipoOferta"  parameterClass="java.util.Map" resultMap="obtieneActividadesTipoOfertaResult">
+
+    SELECT ATO.OID_TIPO_OFER_ACTI OID,
+         NVL(ATO.FEC_CREA,'') FEC_CREA,
+         NVL(ATO.FEC_MODI,'') FEC_MODI,
+    AC.TICL_OID_TIPO_CLIE AS TIPOACTIVIDAD,
+    AC.OID_ACTI CODIGOACTIVIDAD,
+    AC.DES_DETA ACTIVIDAD,
+    OFE.COD_TIPO_OFER CODIGOOFERTA, 
+    ATO.TOFE_OID_TIPO_OFER OFERTA,
+    ATO.IND_ACTI ESTADO
+		FROM MAV_ACTIV_TIPO_OFERT ATO, MAV_ACTIV AC, PRE_TIPO_OFERT OFE
+		WHERE ATO.ACTI_OID_ACTI = AC.OID_ACTI AND 
+		      ATO.TOFE_OID_TIPO_OFER = OFE.OID_TIPO_OFER AND
+		 	  ATO.OID_TIPO_OFER_ACTI = #oidTipoOfer#
+	</select>
+	
+	<resultMap id="actividadesTipoOfertaResult" class="java.util.HashMap">
+		  <result property="OidActTipoOferta" 					column="OID"  />
+	 	  <result property="fecCreacion" 					column="FEC_CREA"  />	      
+	      <result property="fecModificacion" 			  	column="FEC_MODI"  />
+	      <result property="tipoActividad"				  	column="TIPOACTIVIDAD"  />
+		  <result property="codigoActividad"		column="CODIGOACTIVIDAD"  />
+		  <result property="actividad"		column="ACTIVIDAD"  />	      
+	      <result property="codigoOferta"				  	column="CODIGOOFERTA"  />
+	      <result property="oferta" 				    column="OFERTA"  />
+	      <result property="estado" 			    column="ESTADO"  />
+	</resultMap>
+	
+		
+	<select id="getActividadesTipoOferta"  parameterClass="java.util.Map" resultMap="actividadesTipoOfertaResult">
+		
+		SELECT ATO.OID_TIPO_OFER_ACTI OID,
+			   ATO.FEC_CREA,
+			   ATO.FEC_MODI,
+		(CASE WHEN AC.TICL_OID_TIPO_CLIE = 2  THEN 'Consultor(a)' ELSE 'Gerente' END) AS TIPOACTIVIDAD,
+		AC.OID_ACTI CODIGOACTIVIDAD,
+		pq_apl_aux.Valor_Gen_I18n_Sicc(1, AC.OID_ACTI, 'MAV_ACTIV') ACTIVIDAD,
+		OFE.COD_TIPO_OFER CODIGOOFERTA, 
+		pq_apl_aux.Valor_Gen_I18n_Sicc(1, ATO.TOFE_OID_TIPO_OFER, 'PRE_TIPO_OFERT') OFERTA,
+		DECODE(ATO.IND_ACTI, 1, 'ACTIVO', 'INACTIVO') ESTADO
+		FROM MAV_ACTIV_TIPO_OFERT ATO, MAV_ACTIV AC, PRE_TIPO_OFERT OFE
+		WHERE ATO.ACTI_OID_ACTI = AC.OID_ACTI AND 
+		      ATO.TOFE_OID_TIPO_OFER = OFE.OID_TIPO_OFER 
+		      <isNotEmpty property="oidTipoActividad"> 
+		      AND AC.TICL_OID_TIPO_CLIE = #oidTipoActividad# 
+		      </isNotEmpty>
+		      <isNotEmpty property="oidActi"> 
+		      AND ATO.ACTI_OID_ACTI = #oidActi# 
+		      </isNotEmpty>
+		      <isNotEmpty property="oidOferta">
+		      AND  ATO.TOFE_OID_TIPO_OFER = #oidOferta#
+		      </isNotEmpty>
+	</select>
+	
+	<insert id="insertActividadTipoOferta" parameterClass="java.util.Map">     
+		INSERT INTO MAV_ACTIV_TIPO_OFERT (OID_TIPO_OFER_ACTI,ACTI_OID_ACTI,TOFE_OID_TIPO_OFER,IND_ACTI,USU_CREA,FEC_CREA)
+		VALUES(#oidTipoOfer#,#oidActiv#,#oidOfer#,#estado#,#usuario#,sysdate)
+		
+	</insert>
+	
+	<select id="obtieneIdActividadTipoOferta" resultClass="string">
+		SELECT MAV_ATOF_SEQ.NEXTVAL FROM DUAL
+	</select>
+	
+	<select id="getValidaEditActividadesTipoOferta"  parameterClass="java.util.Map" resultClass="string">
+	
+	  SELECT count(*) 
+	  FROM MAV_PARAM_CONFI
+      WHERE ATOF_OID_TIPO_OFER_ACTI=#oidTipoOfer#
+      
+    </select>
+      
+	<update id="updateActividadTipoOferta" parameterClass="java.util.Map">  
+				
+		UPDATE MAV_ACTIV_TIPO_OFERT SET ACTI_OID_ACTI = #oidActiv#,
+		                                TOFE_OID_TIPO_OFER = #oidOfer#,
+		                                USU_MODI=#usuario#,
+		                                FEC_MODI=sysdate
+		WHERE OID_TIPO_OFER_ACTI =    #oidTipoOfer#            
+	</update>
+	
+	<select id="getDecripcionTipoActividad" parameterClass="java.util.Map" resultClass="string">
+		SELECT DISTINCT (CASE WHEN AC.TICL_OID_TIPO_CLIE = 2  THEN 'Consultor(a)' ELSE 'Gerente' END) AS TIPOACTIVIDAD
+		FROM MAV_ACTIV AC
+		WHERE AC.TICL_OID_TIPO_CLIE=#TipoActividad#
+	</select>
+	
+	<select id="getDescripcionActividad" parameterClass="java.util.Map" resultClass="string">	
+	    select VAL_I18N 
+	    from gen_i18n_sicc 
+	    where val_oid=#oidActiv#  
+	    and ATTR_ENTI='MAV_ACTIV'
+	</select>
+	
+	<select id="getDescripcionTipoOferta" parameterClass="java.util.Map" resultClass="string">
+		SELECT pq_apl_aux.Valor_Gen_I18n_Sicc(1, #oidOfer#, 'PRE_TIPO_OFERT') DESCRIPCION   
+		FROM DUAL 
+	</select>
+	
+	<select id="getCodigoTipoOferta" parameterClass="java.util.Map" resultClass="string">
+		SELECT COD_TIPO_OFER 
+		  FROM PRE_TIPO_OFERT ofe
+         WHERE OFE.OID_TIPO_OFER = #oidOfer# 
+	</select>
+	
+	<select id="getExisteActividadTipoOferta" parameterClass="java.util.Map" resultClass="string">
+		
+		 SELECT OID_TIPO_OFER_ACTI 
+		 FROM MAV_ACTIV_TIPO_OFERT
+      	 WHERE ACTI_OID_ACTI =#oidActiv#
+               AND TOFE_OID_TIPO_OFER = #oidOfer#
+	</select>
+	
+	<select id="getEstadoActividadTipoOferta" parameterClass="java.util.Map" resultClass="string">
+		SELECT IND_ACTI 
+		FROM MAV_ACTIV_TIPO_OFERT
+		WHERE OID_TIPO_OFER_ACTI = #oidTipoOfer#  
+	</select>
+	
+	<update id="DesactivarActividadTipoOferta" parameterClass="java.util.Map">  
+		UPDATE MAV_ACTIV_TIPO_OFERT 
+		SET IND_ACTI=#estado#,
+			USU_MODI=#usuario#,
+		    FEC_MODI=sysdate
+		WHERE OID_TIPO_OFER_ACTI = #oidTipoOfer#     
+	</update>
+	
+	 <insert id="insertExternaConsultora" parameterClass="java.util.Map">
+    	INSERT INTO MAV_TEMPO_EXTER_CONSUL(
+    		NUM_FILA,
+			COD_PAIS,
+			COD_CLI,
+			COD_USUA,
+			NUM_UNID)
+    	VALUES(
+    		#numeroFila#,
+    		#codigoPais#,
+    		#codigoCliente#,
+    		#codigoUsuario#,
+    		#numeroUnidades#
+    	)
+    </insert>
+    
+    <parameterMap id="validarCargaExternaConsultoraParams" class="map">
+		<parameter property="codigoUsuario"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <procedure id="executeValidarExternaConsultora"   parameterMap="validarCargaExternaConsultoraParams" >
+		{call MAV_PKG_PROCE.MAV_PR_VALIDAR_EXTER_CLIE(?)}     
+    </procedure>     
+    
+    <resultMap id="cargarExternaConsultoraMapResult" class="java.util.HashMap">
+		<result property="numeroFila" column="NUM_FILA" />
+		<result property="codigoPais" column="COD_PAIS" />
+		<result property="codigoCliente" column="COD_CLI" />
+		<result property="mensajeError" column="MEN_ERRO" />
+		<result property="numeroUnidades" column="NUM_UNID" />
+		<result property="indicadorAccion" column="IND_ACC" />
+		<result property="nombreCliente" column="DESC_CLI" />
+	</resultMap>    
+    <select id="getCargarExternaConsultora" parameterClass="string" resultMap="cargarExternaConsultoraMapResult">
+    	SELECT
+    		NUM_FILA,
+			COD_PAIS,
+			COD_CLI,
+			MEN_ERRO,
+			NUM_UNID,
+			IND_ACC,
+			DESC_CLI
+    	FROM MAV_TEMPO_EXTER_CONSUL
+    	WHERE COD_USUA = #value#
+    	ORDER BY NUM_FILA
+    </select> 
+	
+	<select id="getErroresTempoExterConsul" parameterClass="string" resultClass="int">
+    	SELECT 
+    		COUNT(1) 
+    	FROM MAV_TEMPO_EXTER_CONSUL 
+    	WHERE EST_REGI = '0'
+    </select> 
+    
+     <delete id="deleteExternaCultora" parameterClass="string">
+    	DELETE FROM MAV_TEMPO_EXTER_CONSUL WHERE COD_USUA = #value#
+    </delete>
+	
+</sqlMap>

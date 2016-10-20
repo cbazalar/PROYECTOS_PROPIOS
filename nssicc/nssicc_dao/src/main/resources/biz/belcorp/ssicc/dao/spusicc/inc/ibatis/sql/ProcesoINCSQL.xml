@@ -1,0 +1,1151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.incentivos.ProcesoINCSQL">
+ 
+   <typeAlias alias="baseInc" type="biz.belcorp.ssicc.dao.sisicc.model.Base"/>
+ 	
+   <resultMap id="baseResult" class="baseInc">
+      <result property="codigo" 		column="CODIGO" 	/>
+      <result property="descripcion" 	column="DESCRIPCION"/>
+   </resultMap> 
+
+   <typeAlias alias="cargaPuntajeConsultora" type="biz.belcorp.ssicc.dao.spusicc.inc.model.CargaPuntajeConsultora"/>		
+ 	
+ 
+     <insert id="insertCargaPuntajeConsultora" parameterClass="cargaPuntajeConsultora">
+
+			INSERT INTO INC_CARGA_PUNTA_CONSU (
+			   NUM_LOTE, COD_CLIE, NUM_CONC, 
+			   NUM_PUNT, COD_MOTI, MEN_ERRO, 
+			   IND_CARG, IND_APLI, FEC_PROC, 
+			   COD_USUR,COD_PERI) 
+			VALUES ( #numeroLote#,#codigoCliente# ,#numeroConcurso# ,
+			    TO_NUMBER(#numeroPuntaje#,'999999.9999'),#codigoMotivo# ,#mensajeError# ,
+			    #indicadorCarga#,#indicadorAplicacion#,SYSDATE ,#codigoUsuario#,
+			    TRUNC(TO_NUMBER(#codigoPeriodo#,'999999.99')))    
+    </insert>
+    
+     <update id="updateIndAplicacionCargaPuntajeConsultora" parameterClass="cargaPuntajeConsultora">
+				UPDATE INC_CARGA_PUNTA_CONSU
+				SET    IND_APLI = '1',
+					   FEC_PROC = SYSDATE
+				WHERE  NUM_LOTE = #numeroLote#
+						AND IND_CARG='1'        
+    </update>
+    
+    <insert id="executeInsercionCuentaCorrientePuntaje" parameterClass="java.util.Map">
+
+				INSERT INTO INC_CUENT_CORRI_PUNTO (
+				   OID_CUEN_CORR_PUNT, NUM_MOVI, NUM_PUNT, 
+				   NUM_PUNT_EXIG, FEC_MOVI,
+				   COPA_OID_PARA_GRAL,
+				   CLIE_OID_CLIE, PERD_OID_PERI, TMOV_OID_TIPO_MOVI, 
+				   FEC_ULTI_ACTU, VAL_DESC)
+				SELECT 
+				   INC_CUCP_SEQ.NEXTVAL,INC_CUCP_SEQ.NEXTVAL,A.NUM_PUNT,
+				   0, TO_DATE(SYSDATE),
+				   (SELECT X.OID_PARA_GRAL
+				    FROM INC_CONCU_PARAM_GENER X
+					WHERE X.NUM_CONC = A.NUM_CONC
+					 AND X.IND_ACTI='1') OID_PARA_GRAL,
+					GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CLIENTE(A.COD_CLIE),
+				 	GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO2(#codigoPeriodo#),
+				 	CASE WHEN <![CDATA[ A.NUM_PUNT >= 0 ]]> THEN '1' 
+					 ELSE '2'
+					 END AS OID_TIPO_MOVI,
+					 SYSDATE,
+					 (SELECT B.DES_MOTI_CARG_PUNT
+					  FROM INC_MOTIV_CARGA_PUNTA B
+					   WHERE B.COD_MOTI_CARG_PUNT = A.COD_MOTI) AS DES_MOTI
+				FROM INC_CARGA_PUNTA_CONSU A
+				WHERE A.NUM_LOTE =#numeroLote#
+				  AND A.IND_APLI ='1'
+			 	  AND A.IND_CARG='1'
+    </insert>
+    														
+     <parameterMap id="executeProcesoCuentaCorrientePuntajeParams" class="java.util.Map">														
+    	<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>														
+	  	<parameter property="numeroLote"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>	
+	 </parameterMap>
+  														
+  	<procedure id="executeProcesoCuentaCorrientePuntaje" parameterMap="executeProcesoCuentaCorrientePuntajeParams">														
+			{call INC_PKG_PROCE_INCEN.INC_PR_CARGA_CUENT_CORRI_PUNTA(?,?)}											
+	  </procedure>
+    
+    <select id="getNumeroLote" resultClass="string">
+		  SELECT TO_CHAR(SYSDATE, 'YYYYMMDD') || 
+		  		 LPAD(NVL(MAX(SUBSTR(A.NUM_LOTE, 9, 4)) + 1, 1), 4, '0') AS NUM_LOTE
+		  FROM INC_CARGA_PUNTA_CONSU A
+    </select>  
+    
+      <parameterMap id="executeGenerarReporteIncentivosParams" class="java.util.Map">														
+    	<parameter property="codigoPais"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoMarca"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>														
+	  	<parameter property="codigoCanal"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>	  	
+	  	<parameter property="tipoCierre"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="codigoPeriodo"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="fechaProceso"          jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="login"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="numeroLote"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+	 </parameterMap>
+  														
+  	<procedure id="executeGenerarReporteIncentivos" parameterMap="executeGenerarReporteIncentivosParams">														
+			{call INC_PKG_REPOR_INCEN.INC_PR_GENER_REPOR_INCEN(?,?,?,?,?,?,?,?)}											
+	</procedure>
+	
+	 <parameterMap id="paramCalculoMetas" class="java.util.Map" >
+		<parameter property="codigoPais"               jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="oidConcurso"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="indicadorEliminar"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	
+	 <procedure id="executeCalculoMetas" parameterMap="paramCalculoMetas" >
+		   {call INC_PKG_REPOR_INCEN.INC_PR_CALCU_VENTA(?, ?, ?, ?)}
+     </procedure>
+
+	<select id="getSizeEstadoPremioDespacho" parameterClass="java.util.Map" resultClass="int">
+		  SELECT COUNT(1) AS NUMREG
+		  FROM INC_REPOR_ESTAD_PREMI_DESPA A		  
+		  WHERE A.TIP_CIERR = #tipoCierre# 		     
+		    AND to_char(a.FEC_proc,'dd/MM/yyyy') = #fechaProceso#	 
+	</select>       
+   
+	<parameterMap id="paramExecuteRetenerSolicitudesPremiacion" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="indicadorProceso" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoRegion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="zonaListAux" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeRetenerSolicitudesPremiacion" parameterMap="paramExecuteRetenerSolicitudesPremiacion">
+		{call INC_PKG_PROCE_INCEN.INC_PR_RETEN_SOLIC_PREMI_ELECT(?, ?, ?, ?, ?, ?, ?, ?, ?) }
+	</procedure>
+
+	<procedure id="executeDespacharPremiosSolicitudesRetenidas" parameterMap="paramExecuteRetenerSolicitudesPremiacion">
+		{call INC_PKG_PROCE_INCEN.INC_PR_DESPA_PREMI_SOLIC_RETEN(?, ?, ?, ?, ?, ?, ?, ?, ?) }
+	</procedure>
+
+	<procedure id="executeCalcularRankingReconocimiento" parameterMap="paramExecuteRetenerSolicitudesPremiacion">
+		{call INC_PKG_PROCE_INCEN.INC_PR_CALCU_RANKI_CONCU_RECON(?, ?, ?, ?, ?, ?, ?, ?, ?) }
+	</procedure>
+	
+    <select id="getCargaOrdenesRetailProcesado" parameterClass="map" resultClass="string">
+		SELECT COUNT(1)
+		  FROM INC_CONTR_CARGA_ECM
+		 WHERE COD_PERI = #codigoPeriodo#
+		   AND IND_ESTA = '1'
+    </select>
+    	
+	<parameterMap id="paramExecuteCargaOrdenesRetail" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeCargaOrdenesRetail" parameterMap="paramExecuteCargaOrdenesRetail">
+		{call INC_PKG_PROCE_INCEN.INC_PR_CARGA_ORDEN_RETAI(?, ?, ?, ?, ?) }
+	</procedure>
+	    
+    <resultMap id="cargasEjecutadasECMResult"    class="java.util.HashMap">
+    	<result property="oid" 		        column="OID_CONT_CARG"/>    	    	    	
+    	<result property="codigoPeriodo"    column="COD_PERI"/>
+        <result property="fechaProceso" 	column="FEC_PROC"/>    	
+    	<result property="cantidadConsultoras" 	column="VAL_CANT_CONS_PROC"/>
+    	<result property="cantidadPosiciones" 	column="VAL_CANT_POSI_PROC"/>
+    	<result property="indicadorEstado" 		column="IND_ESTA"/>
+    	<result property="descripcionEstado" 	column="DES_ESTA"/>
+    </resultMap>
+	    
+    <select id="getCargasEjecutadasECM" parameterClass="java.util.Map" resultMap="cargasEjecutadasECMResult">
+		SELECT OID_CONT_CARG,
+		       COD_PERI,
+		       TO_CHAR(FEC_PROC,'DD/MM/YYYY') FEC_PROC,
+		       VAL_CANT_CONS_PROC,
+		       VAL_CANT_POSI_PROC,
+		       IND_ESTA,
+		       DECODE(IND_ESTA, '1', 'Procesado','2','Anulado') DES_ESTA
+		  FROM INC_CONTR_CARGA_ECM
+		 ORDER BY COD_PERI DESC, FEC_PROC DESC
+    </select>
+    	 
+	<parameterMap id="paramExecuteAnularCargaOrdenesRetail" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="oidControlCarga" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeAnularCargaOrdenesRetail" parameterMap="paramExecuteAnularCargaOrdenesRetail">
+		{call INC_PKG_PROCE_INCEN.INC_PR_ANULA_CARGA_ORDEN_RETAI(?, ?, ?) }
+	</procedure>
+    	 
+    <select id="getNumeroLoteBolsaAtendidos" resultClass="string">
+		  SELECT TO_CHAR(SYSDATE, 'YYYYMMDD') || 
+		  		 LPAD(NVL(MAX(SUBSTR(A.NUM_LOTE, 9, 4)) + 1, 1), 4, '0') AS NUM_LOTE
+		  FROM INC_BOLSA_ATEND A
+    </select>  
+    	 
+    <insert id="insertBolsaAtendido" parameterClass="java.util.Map">
+		INSERT INTO INC_BOLSA_ATEND ( 
+			   NUM_LOTE, COD_CLIE, NUM_CONC, 
+			   FEC_SOLU, COD_USUR, MEN_ERRO,  
+			   IND_CARG, VAL_OBSE) 
+		VALUES ( #numeroLote#,#codigoCliente# ,#numeroConcurso# ,
+			    SYSDATE, #codigoUsuario# ,#mensajeError# ,
+			    #indicadorCarga#,#observaciones#)    
+    </insert>
+    	 
+    <select id="getListConcursoVigentes" resultMap="baseResult">
+		SELECT DISTINCT con.OID_PARA_GRAL CODIGO,
+		       con.NUM_CONC || ' - ' || con.VAL_NOMB DESCRIPCION,
+               con.NUM_CONC
+		  FROM INC_BOLSA_FALTA bol,
+		       PED_SOLIC_POSIC pos,
+		       PED_SOLIC_CABEC cab,
+		       INC_CONCU_PARAM_GENER con
+		 WHERE bol.FEC_SOLU IS NULL
+		       AND bol.SOPO_OID_SOLI_POSI = pos.OID_SOLI_POSI
+		       AND pos.SOCA_OID_SOLI_CABE = cab.OID_SOLI_CABE
+		       AND cab.COPA_OID_PARA_GENE = con.OID_PARA_GRAL
+		 ORDER BY 2	
+	</select>
+	    
+    <select id="getPeriodosProductosNoAtendidos" parameterClass="java.util.Map" resultMap="baseResult">
+		 SELECT DISTINCT psc.PERD_OID_PERI as CODIGO, COR.COD_PERI as DESCRIPCION
+		  FROM INC_BOLSA_FALTA bol,
+		       PED_SOLIC_CABEC psc,
+		       PED_SOLIC_POSIC psp,
+		       PED_TIPO_SOLIC_PAIS tsp,
+		       PED_TIPO_SOLIC ts,
+		       CRA_PERIO cra,
+		       SEG_PERIO_CORPO cor
+		 WHERE psc.COPA_OID_PARA_GENE = #oidConcurso#
+		   AND psp.SOCA_OID_SOLI_CABE = psc.OID_SOLI_CABE
+		   AND psc.TSPA_OID_TIPO_SOLI_PAIS = tsp.OID_TIPO_SOLI_PAIS
+		   AND tsp.TSOL_OID_TIPO_SOLI = ts.OID_TIPO_SOLI
+		   AND ts.COD_TIPO_SOLI in ('SIFC', 'SINC', 'SIN')
+		   AND psp.OID_SOLI_POSI = bol.SOPO_OID_SOLI_POSI
+		   AND psc.PERD_OID_PERI = cra.OID_PERI
+		   AND cra.PERI_OID_PERI = cor.OID_PERI
+		   AND bol.FEC_SOLU IS NULL   
+         ORDER BY 2       
+	</select>
+	   	    	   
+    <select id="getProductosNoAtendidos" parameterClass="java.util.Map" resultMap="baseResult">
+		 SELECT DISTINCT psp.PROD_OID_PROD as CODIGO, pro.COD_SAP as DESCRIPCION
+		  FROM INC_BOLSA_FALTA bol,
+		       PED_SOLIC_CABEC psc,
+		       PED_SOLIC_POSIC psp,
+		       PED_TIPO_SOLIC_PAIS tsp,
+		       PED_TIPO_SOLIC ts, 
+		       MAE_PRODU pro
+		 WHERE psc.COPA_OID_PARA_GENE = #oidConcurso#
+		 
+		   <isNotEmpty prepend="AND" property="oidPeriodo">
+		   	 psc.PERD_OID_PERI = #oidPeriodo#
+		   </isNotEmpty>
+		 
+		   AND psp.SOCA_OID_SOLI_CABE = psc.OID_SOLI_CABE
+		   AND psc.TSPA_OID_TIPO_SOLI_PAIS = tsp.OID_TIPO_SOLI_PAIS
+		   AND tsp.TSOL_OID_TIPO_SOLI = ts.OID_TIPO_SOLI
+		   AND ts.COD_TIPO_SOLI in ('SIFC', 'SINC', 'SIN')
+		   AND psp.OID_SOLI_POSI = bol.SOPO_OID_SOLI_POSI
+		   AND psp.PROD_OID_PROD = pro.OID_PROD
+		   AND bol.FEC_SOLU IS NULL     
+		 ORDER BY 2     
+	</select>
+		 
+	<parameterMap id="paramExecuteActualizarBolsaFaltantes" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="indicadorConsultoras" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="numeroLote" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="oidConcurso" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="oidPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="oidProducto" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="observaciones" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />										
+	</parameterMap>
+
+	<procedure id="executeActualizarBolsaFaltantes" parameterMap="paramExecuteActualizarBolsaFaltantes">
+		{call INC_PKG_PROCE_INCEN.INC_PR_ACTUA_BOLSA_FALTA(?, ?, ?, ?, ?, ?, ?, ?) }
+	</procedure>
+			   	    	    	
+	<parameterMap id="paramExecuteRegularizarRegistroRecomendacion" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="indicadorProceso" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" /> 
+		<parameter property="nombreServidor"	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />										
+	</parameterMap>
+
+	<procedure id="executeRegularizarRegistroRecomendacion" parameterMap="paramExecuteRegularizarRegistroRecomendacion">
+		{call INC_PKG_PROCE_INCEN.INC_PR_REGUL_REGIS_RECOM(?, ?, ?, ?, ?) }
+	</procedure>
+				   	    	    	
+	<parameterMap id="paramExecuteCerrarConcursos" class="map">
+		<parameter property="codigoPais" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" /> 
+		<parameter property="nombreServidor"	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />										
+	</parameterMap>				   	    	
+	<procedure id="executeCerrarConcursos" parameterMap="paramExecuteCerrarConcursos">
+		{call INC_PKG_PROCE_INCEN.INC_PR_CERRA_CONCU(?, ?, ?, ?, ?, ?) }
+	</procedure>
+
+	<parameterMap id="paramExecuteRegularizarRegistroRecomendacionInicioCampana" class="map">
+		<parameter property="codigoPais"        jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoPeriodo"     jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="indicadorProceso"  jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" /> 
+		<parameter property="nombreServidor"	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />										
+	</parameterMap>
+
+	<procedure id="executeRegularizarRegistroRecomendacionInicioCampana" parameterMap="paramExecuteRegularizarRegistroRecomendacionInicioCampana">
+		{call INC_PKG_PROCE_INCEN.INC_PR_REGUL_REGIS_RECOM_INICI(?, ?, ?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteActivacionConcurso" class="map">
+		<parameter property="codigoPais"        jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	
+		<parameter property="codigoPeriodo"     jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" /> 
+		<parameter property="nombreServidor"	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />										
+	</parameterMap>
+	
+	<procedure id="executeActivacionConcurso" parameterMap="paramExecuteActivacionConcurso">
+		{call INC_PKG_PROCE_INCEN.INC_PR_ACTIV_CONCU(?, ?, ?, ?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteActualizaResumenPedido" class="map">
+		<parameter property="codigoPais"        jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	
+		<parameter property="codigoPeriodo"     jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+	<procedure id="executeActualizaResumenPedido" parameterMap="paramExecuteActualizaResumenPedido">
+		{call INC_PKG_PROCE_INCEN.INC_PR_ACTUA_RESUM_PEDID(?, ?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteActualizaResumenPedidoDiario" class="map">
+		<parameter property="codigoPais"        jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+	<procedure id="executeActualizaResumenPedidoDiario" parameterMap="paramExecuteActualizaResumenPedidoDiario">
+		{call INC_PKG_PROCE_INCEN.INC_PR_ACTUA_RESUM_PEDID_DIARI(?) }
+	</procedure>
+		
+	<parameterMap id="paramExecuteActualizaPedidosIncentivos" class="map">
+		<parameter property="codigoPais"        jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	
+		<parameter property="codigoPeriodo"     jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+	<procedure id="executeActualizaPedidosIncentivos" parameterMap="paramExecuteActualizaPedidosIncentivos">
+		{call INC_PKG_PROCE_INCEN.INC_PR_ACTUA_PEDID_INCEN(?, ?, ?, ?) }
+	</procedure>
+
+	<select id="getListConcursoCreadosVigentes" resultMap="baseResult">
+		SELECT  DISTINCT A.OID_PARA_GRAL CODIGO,
+				A.NUM_CONC ||' - ' || A.VAL_NOMB DESCRIPCION,
+		 		A.NUM_CONC
+		FROM INC_CONCU_PARAM_GENER A,INC_VERSI_CONCU B
+		WHERE A.OID_PARA_GRAL = B.COPA_OID_PARA_GRAL
+		  AND B.VICO_OID_VIGE_CONC IN (1,2)
+		ORDER BY 3	
+	</select>
+	
+	<select id="getValidaEntregaPremios" resultClass="String">
+		SELECT COUNT(1) AS CANTIDAD
+	 	  FROM inc_param_nivel_premi np, 
+		       inc_param_gener_premi gp, 
+		       inc_ganad             ga
+		 WHERE np.pagp_oid_para_gene_prem = gp.oid_para_gene_prem
+		   AND np.oid_para_nive_prem      = ga.panp_oid_para_nive_prem
+		   AND gp.copa_oid_para_gral      = #oidConcurso#
+	</select>
+	
+	<select id="getObtenerSecTempCargaPremios" resultClass="String">
+		SELECT INC_SECP_SEQ.NEXTVAL FROM DUAL
+	</select>
+	
+	<insert id="executeInsercionTempCargaPremios" parameterClass="java.util.Map">
+		INSERT INTO INC_TMP_CARGA_PREMI(OID_TMP_CARG_PREMI,
+		                                 COD_CONC,
+		                                 VAL_NIVE,
+		                                 NUM_PREM,
+		                                 COD_SAP,
+		                                 NUM_UNID,
+		                                 OID_SEC_CARG_PREMI)
+		                         VALUES(INC_TMCP_SEQ.nextval,
+		                                #codigoConcurso#,
+		                                TRUNC(TO_NUMBER(#numeroNivel#,'9999.99')),
+		                                TRUNC(TO_NUMBER(#numeroPremio#,'9999.99')),
+		                                #codigoSAP#,
+		                                TRUNC(TO_NUMBER(#numeroUnidad#,'999.99')),
+		                                #oidSecuencia#)
+	</insert>
+
+	<parameterMap id="paramExecuteProcesoValidaCargaPremios" class="map">
+		<parameter property="oidSecuencia" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="oidConcurso" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="numRegError" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT" />		
+		<parameter property="numNivFaltan" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT" />
+		<parameter property="numRegTotal" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT" />		
+	</parameterMap>
+					   	    	
+	<procedure id="executeProcesoValidaCargaPremios" parameterMap="paramExecuteProcesoValidaCargaPremios">
+		{call INC_PKG_PROCE_INCEN.INC_PR_PROCE_VALID_CARGA_PREMI(?, ?, ?, ?, ?) }
+	</procedure>
+
+	<resultMap id="listaErroresCargaPremiosResult"  class="java.util.HashMap"  >                                                                       
+    	<result property="codigoConcurso"		column="cod_conc"/>
+    	<result property="numNivel"				column="val_nive"/>
+    	<result property="numPremio"			column="num_premi"/>
+    	<result property="codigoProducto"		column="cod_sap"/>
+    	<result property="codigoError" 		    column="cod_erro"/>
+	</resultMap>
+		
+	<select id="getListarErroresCargaPremios" parameterClass="java.util.Map" resultMap="listaErroresCargaPremiosResult">
+		SELECT p.cod_conc, 
+			   TO_CHAR(p.val_nive) val_nive, 
+			   TO_CHAR(p.num_prem) num_premi, 
+			   p.cod_sap, 
+			   p.cod_erro
+		  FROM INC_TMP_CARGA_PREMI p
+		 WHERE p.oid_sec_carg_premi = #oidSecuencia#
+		   AND p.cod_erro IS NOT NULL
+		 ORDER BY p.val_nive	
+	</select>
+	
+	<select id="getValidaExistePremios" resultClass="String">
+		SELECT COUNT(1)
+		  FROM inc_param_gener_premi pgp,
+		       inc_param_nivel_premi pnp,
+		       inc_premi_artic       pa,
+		       inc_lote_premi_artic  lpa,
+		       inc_artic_lote        al
+		 WHERE pgp.oid_para_gene_prem = pnp.pagp_oid_para_gene_prem
+		   AND pnp.oid_para_nive_prem = pa.panp_oid_para_nive_prem
+		   AND pa.oid_prem_arti       = lpa.prar_oid_prem_arti
+		   AND lpa.oid_lote_prem_arti = al.lopa_oid_lote_prem_arti
+		   AND pgp.copa_oid_para_gral = #oidConcurso#
+	</select>
+	
+	<parameterMap id="paramExecuteProcesoCargaPremiosExcel" class="map">
+		<parameter property="codigoPais" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="oidConcurso" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="oidSecuencia" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+	  	
+	<procedure id="executeProcesoCargaPremiosExcel" parameterMap="paramExecuteProcesoCargaPremiosExcel">
+		{call INC_PKG_PROCE_INCEN.INC_PR_CARGA_PREMI_EXCEL(?, ?, ?) }
+	</procedure>
+	
+	<delete id="getEliminarRegTablaTempINCCargaPremios" parameterClass="java.util.Map">
+		TRUNCATE TABLE INC_TMP_CARGA_PREMI
+	</delete>
+
+	<select id="getListConcursoVigentesRxP" resultMap="baseResult">
+		SELECT DISTINCT A.OID_PARA_GRAL CODIGO,
+			   A.NUM_CONC ||' - ' || A.VAL_NOMB DESCRIPCION,
+		 	   A.NUM_CONC
+		  FROM INC_CONCU_PARAM_GENER A,INC_VERSI_CONCU B, INC_PLANT_CONCU C
+		 WHERE A.OID_PARA_GRAL = B.COPA_OID_PARA_GRAL
+		   AND A.IND_ACTI = 1
+		   AND B.VICO_OID_VIGE_CONC = 1
+           AND A.BCAL_OID_BASE_CALC IN (1,2)
+           AND A.PLC2_OID_PLAN_CONC = C.OID_PLAN_CONC
+           AND NVL(C.IND_PROD_EXIG, 0) = 1
+		ORDER BY 3	
+	</select>
+
+    <resultMap id="baseValidarCodigoVentaRxPResult"    class="java.util.HashMap">
+    	<result property="digitable"     column="IND_DIGI"/>    	    	    	
+    	<result property="imprimible"    column="IND_IMPR_GP"/>
+        <result property="estrategia"    column="COD_ESTR"/>    	
+    </resultMap>
+
+	<select id="getValidarCodigoVentaRxP" parameterClass="java.util.Map" resultMap="baseValidarCodigoVentaRxPResult">
+		SELECT c.IND_DIGI, 
+       		   c.IND_IMPR_GP, 
+       		   f.COD_ESTR
+		  FROM pre_matri_factu_cabec a,
+		       pre_ofert b,
+		       pre_ofert_detal c,
+		       mae_produ d,
+		       pre_matri_factu e,
+		       pre_estra f              
+		 WHERE a.oid_cabe = b.mfca_oid_cabe
+		   AND b.oid_ofer = c.ofer_oid_ofer
+		   AND c.prod_oid_prod = d.oid_prod
+		   AND c.oid_deta_ofer = e.ofde_oid_deta_ofer
+		   AND e.mfca_oid_cabe = a.oid_cabe
+		   AND b.coes_oid_estr = f.oid_estr
+		   AND a.perd_oid_peri = #oidPeriodo#
+		   AND c.val_codi_vent = #codigoVenta#	
+	</select>
+		
+    <insert id="insertDespachoConcursoRxP" parameterClass="java.util.Map">
+		INSERT INTO INC_DESPA_CORXP_CABEC ( 
+			   PAIS_OID_PAIS, PERD_OID_PERI, COPA_OID_PARA_GRAL, 
+			   IND_ACTI) 
+		VALUES ( #oidPais#, #oidPeriodo#, #oidConcurso#,
+			    '1')    
+    </insert>
+    			
+    <update id="updateDespachoConcursoRxP" parameterClass="java.util.Map">
+		UPDATE INC_DESPA_CORXP_CABEC
+		   SET COD_MENS = #codigoMensaje# 
+		 WHERE PAIS_OID_PAIS = #oidPais#
+		   AND PERD_OID_PERI = #oidPeriodo#
+		   AND COPA_OID_PARA_GRAL = #oidConcurso#     
+    </update>
+        			
+    <insert id="insertDespachoConcursoRxPDetalle" parameterClass="java.util.Map">
+		INSERT INTO INC_DESPA_CORXP_DETAL ( 
+			   PAIS_OID_PAIS, PERD_OID_PERI, 
+			   COPA_OID_PARA_GRAL, COD_VENT) 
+		VALUES ( #oidPais#, #oidPeriodo#, 
+				 #oidConcurso#, #codigoVenta# )    
+    </insert>
+    
+    <delete id="deleteDespachoConcursoRxPDetalle" parameterClass="java.util.Map">
+		DELETE FROM INC_DESPA_CORXP_DETAL  
+		 WHERE PAIS_OID_PAIS = #oidPais#
+		   AND PERD_OID_PERI = #oidPeriodo#
+		   AND COPA_OID_PARA_GRAL = #oidConcurso#     
+    </delete>
+         
+    <resultMap id="baseDespachoConcursoRxPDetalleResult"    class="java.util.HashMap">
+    	<result property="codigoVenta"     column="COD_VENT"/>    	    	    	
+    </resultMap>
+             
+    <select id="getDespachoConcursoRxPDetalle" parameterClass="java.util.Map" resultMap="baseDespachoConcursoRxPDetalleResult">
+		SELECT COD_VENT
+		  FROM INC_DESPA_CORXP_DETAL
+		 WHERE PAIS_OID_PAIS = #oidPais#
+		   AND PERD_OID_PERI = #oidPeriodo#
+		   AND COPA_OID_PARA_GRAL = #oidConcurso#
+		 ORDER BY 1      
+    </select>
+               
+    <select id="getDespachoConcursoRxP"  parameterClass="java.util.Map" resultClass="string">
+		SELECT IND_ACTI
+		  FROM INC_DESPA_CORXP_CABEC
+		 WHERE PAIS_OID_PAIS = #oidPais#
+		   AND PERD_OID_PERI = #oidPeriodo#
+		   AND COPA_OID_PARA_GRAL = #oidConcurso#
+    </select>
+         
+    <select id="getValidarDespachoConcursoRxP" parameterClass="java.util.Map" resultClass="string">
+		SELECT INC_PKG_PROCE_INCEN.INC_FN_VALID_DESPA_CORXP(#codigoPais#, #codigoPeriodo#, #oidConcurso#)
+		  FROM DUAL
+ 	</select>
+     
+   <parameterMap id="executeProcesoINCActualizaRecomendacionesParams" class="map">
+    	<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+    </parameterMap>        
+    
+    <procedure id="executeProcesoINCActualizaRecomendaciones" parameterMap="executeProcesoINCActualizaRecomendacionesParams">
+    	{call INC_PKG_PROCE_INCEN.INC_PR_ACTUA_RECTE_RECDO(?) }
+    </procedure>
+
+    <parameterMap id="executeReplicarConfiguracionConcursoParams" class="java.util.Map">														
+    	<parameter property="codigoPais"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="oidConcursoOrigen"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="nombreConcurso"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoPeriodoInicio"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="indicadorCopiarProducto"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="indicadorCopiarParticipantes"  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+	  	<parameter property="codigoUsuario"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="numeroConcurso"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+	</parameterMap>
+  														
+  	<procedure id="executeReplicarConfiguracionConcurso" parameterMap="executeReplicarConfiguracionConcursoParams">														
+			{call INC_PKG_PROCE_INCEN.INC_PR_REPLI_CONFI_CONCU(?,?,?,?,?,?,?,?)}																						
+	</procedure>
+    
+    <parameterMap id="executeEliminarNivelesPremiacionParams" class="java.util.Map">														
+    	<parameter property="oidPremiacion"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>														
+	<parameter property="numeroNiveles"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+  														
+  	<procedure id="executeEliminarNivelesPremiacion" parameterMap="executeEliminarNivelesPremiacionParams">														
+			{call INC_PKG_PROCE_INCEN.INC_PR_ELIMI_NIVEL_PREMI(?,?)}											
+	</procedure>
+	    
+	<parameterMap id="paramExecuteActualizaPuntajeRetail" class="map">
+		<parameter property="codigoPais"        jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	
+		<parameter property="codigoPeriodo"     jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="indicadorProceso"  jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" /> 
+	</parameterMap>
+	
+	<procedure id="executeActualizaPuntajeRetail" parameterMap="paramExecuteActualizaPuntajeRetail">
+		{call INC_PKG_PROCE_INCEN.INC_PR_ACTUA_DISPO_PUNTA_RETAI(?, ?, ?, ?, ?, ?) }
+	</procedure>
+		 
+	<parameterMap id="paramExecuteCargaPuntajeRetail" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="indicadorProceso"  jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeCargaPuntajeRetail" parameterMap="paramExecuteCargaPuntajeRetail">
+		{call INC_PKG_PROCE_INCEN.INC_PR_CARGA_PUNTA_RETAI(?, ?, ?, ?, ?, ?) }
+	</procedure>
+
+	<parameterMap id="paramExecuteCalculaPuntajeRetail" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="indicadorProceso"  jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeCalculaPuntajeRetail" parameterMap="paramExecuteCalculaPuntajeRetail">
+		{call INC_PKG_PROCE_INCEN.INC_PR_CALCU_PUNTA_RETAI(?, ?, ?, ?, ?, ?) }
+	</procedure>
+		
+	<parameterMap id="paramExecuteAplicarDescuentoAdicional" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="indicadorProceso" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoRegion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoZona" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+			
+	<procedure id="executeAplicarDescuentoAdicional" parameterMap="paramExecuteAplicarDescuentoAdicional">
+		{call INC_PKG_PROCE_INCEN.INC_PR_APLIC_DESCU_ADICI(?, ?, ?, ?, ?, ?, ?, ?, ?) }
+	</procedure>		
+
+	<parameterMap id="paramExecuteCalculaPuntajeMultiMarca" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeCalculaPuntajeMultiMarca" parameterMap="paramExecuteCalculaPuntajeMultiMarca">
+		{call INC_PKG_PROCE_INCEN.INC_PR_CALCU_PUNTA_MULTI_MARCA(?, ?, ?, ?, ?) }
+	</procedure>			    
+		
+	<parameterMap id="paramExecuteGenerarPedidosRecomendacion" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeGenerarPedidosRecomendacion" parameterMap="paramExecuteGenerarPedidosRecomendacion">
+		{call INC_PKG_PROCE_INCEN.INC_PR_GENER_PEDID_RECOM(?, ?, ?, ?, ?) }
+	</procedure>
+				    
+	<select id="getListConcursosFaltantes" resultMap="baseResult">
+		SELECT DISTINCT D.NUM_CONC CODIGO,
+		       D.NUM_CONC || ' - ' || D.VAL_NOMB DESCRIPCION
+		  FROM INC_BOLSA_FALTA A,
+		       INC_CONCU_PARAM_GENER D
+		 WHERE A.FEC_SOLU IS NULL
+		  AND A.COPA_OID_PARA_GENE = D.OID_PARA_GRAL
+		GROUP BY NUM_CONC, VAL_NOMB
+		ORDER BY NUM_CONC DESC   
+	</select>
+			
+	<select id="getListPremiosFaltantes" parameterClass="string" resultMap="baseResult">
+		SELECT DISTINCT
+		       A.VAL_CODI_VENT_FICT CODIGO,
+		       E.COD_SAP || ' - ' || A.VAL_CODI_VENT_FICT || ' - ' || DES.VAL_I18N DESCRIPCION
+		  FROM INC_BOLSA_FALTA A,
+		       INC_CONCU_PARAM_GENER D,
+		       MAE_PRODU E, 
+		       GEN_I18N_SICC_PAIS DES  
+		 WHERE A.FEC_SOLU IS NULL
+		   AND A.COPA_OID_PARA_GENE = D.OID_PARA_GRAL
+		   AND E.OID_PROD = A.PROD_OID_PROD
+		   AND DES.VAL_OID=A.PROD_OID_PROD
+		   AND DES.ATTR_ENTI = 'MAE_PRODU'
+		   AND D.NUM_CONC = #value#
+	</select>
+		
+	<select id="getListPremiosReemplazos" parameterClass="string" resultMap="baseResult">
+		SELECT ral.OID_REEM_ARTI_LOTE CODIGO,
+		       pro.COD_SAP || ' - ' || ral.COD_VENT_FICT || ' - ' || PQ_APL_AUX.Valor_Gen_I18n_Sicc(1, pro.OID_PROD, 'MAE_PRODU')
+		       || ' - ' || DECODE(NVL(COD_TIPO_AGRU, 'I'),'I','Individual','Compuesta') DESCRIPCION
+		  FROM INC_CONCU_PARAM_GENER cpg,
+		       INC_PARAM_GENER_PREMI pgp,
+		       INC_PARAM_NIVEL_PREMI pnp,
+		       INC_PREMI_ARTIC pa,
+		       INC_LOTE_PREMI_ARTIC lpa,
+		       INC_ARTIC_LOTE al,
+		       MAE_PRODU pro,
+		       INC_REEMP_ARTIC_LOTE ral  
+		 WHERE cpg.OID_PARA_GRAL = pgp.COPA_OID_PARA_GRAL
+		   AND pgp.OID_PARA_GENE_PREM = pnp.PAGP_OID_PARA_GENE_PREM
+		   AND pnp.OID_PARA_NIVE_PREM = pa.PANP_OID_PARA_NIVE_PREM
+		   AND pa.OID_PREM_ARTI = lpa.PRAR_OID_PREM_ARTI
+		   AND lpa.OID_LOTE_PREM_ARTI = al.LOPA_OID_LOTE_PREM_ARTI
+		   AND al.OID_ARTI_LOTE = ral.ARLO_OID_ARTI_LOTE
+		   AND ral.PROD_OID_PROD = pro.OID_PROD
+		   AND ral.IND_ACTI = 1
+           AND ral.COMP_OID_REEM_ARTI_LOTE is Null
+		   AND cpg.NUM_CONC = #value#
+		 ORDER BY 2   
+	</select>
+	
+	<parameterMap id="paramExecuteReemplazoPremioBolsaFaltantes" class="map">
+		<parameter property="codigoPais"        jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="numeroConcurso"    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoVentaPremio" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="oidReemplazo"      jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario"     jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeReemplazoPremioBolsaFaltantes" parameterMap="paramExecuteReemplazoPremioBolsaFaltantes">
+		{call INC_PKG_PROCE_INCEN.INC_PR_REEMP_PREMI_BOLSA_FALTA(?, ?, ?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteGenerarSolicitudBolsaFaltantes" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="zonaListAux" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeGenerarSolicitudBolsaFaltantes" parameterMap="paramExecuteGenerarSolicitudBolsaFaltantes">
+		{call INC_PKG_PROCE_INCEN.INC_PR_GENER_SOLIC_BOLSA_FALTA(?, ?, ?, ?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteEvaluacionNoPasoPedido" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeEvaluacionNoPasoPedido" parameterMap="paramExecuteEvaluacionNoPasoPedido">
+		{call INC_PKG_PROCE_INCEN.INC_PR_EVALU_NPASO_PEDID(?, ?, ?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteCalcularPuntajeConsultora" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeCalcularPuntajeConsultora" parameterMap="paramExecuteCalcularPuntajeConsultora">
+		{call INC_PKG_PROCE_INCEN.INC_PR_CALCU_PUNTA_OC(?, ?, ?, ?, ?) }
+	</procedure>
+		
+	<parameterMap id="paramExecuteGenerarCuponesElectronicos" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeGenerarCuponesElectronicos" parameterMap="paramExecuteGenerarCuponesElectronicos">
+		{call INC_PKG_PROCE_INCEN.INC_PR_GENER_CUPON_ELECT(?, ?, ?, ?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteReversionEntregaPremios" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeReversionEntregaPremios" parameterMap="paramExecuteReversionEntregaPremios">
+		{call INC_PKG_PROCE_INCEN.INC_PR_REVER_ENTRE_PREMI(?, ?, ?, ?, ?, ?) }
+	</procedure>
+		
+	<parameterMap id="paramReversionEntregaPremiosPorUltimoNivel" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeReversionEntregaPremiosPorUltimoNivel" parameterMap="paramReversionEntregaPremiosPorUltimoNivel">
+		{call INC_PKG_PROCE_INCEN.INC_PR_REVER_ENTRE_PREMI_ULTIM(?, ?, ?, ?, ?, ?) }
+	</procedure>
+			
+			
+	<parameterMap id="paramExecuteRegistroCierreZona" class="map">
+		<parameter property="codigoPais"       jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoSistema"    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoPaquete"    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo"    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="zonaListAux"      jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeRegistroCierreZona" parameterMap="paramExecuteRegistroCierreZona">
+		{call INT_PKG_GENER.INT_PR_GENER_REGIS_CIERR(?, ?, ?, ?, ?, ?, ?) }
+	</procedure>			
+		
+	<parameterMap id="paramExecuteDespachoPremiosParaTiParaMi" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeDespachoPremiosParaTiParaMi" parameterMap="paramExecuteDespachoPremiosParaTiParaMi">
+		{call INC_PKG_PROCE_INCEN.INC_PR_DESPA_PREMI_PTIMI(?, ?, ?, ?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteRegularizarParticipantesRecomendantes" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeRegularizarParticipantesRecomendantes" parameterMap="paramExecuteRegularizarParticipantesRecomendantes">
+		{call INC_PKG_PROCE_INCEN.INC_PR_REGUL_PARTI_RECOM(?, ?, ?, ?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteGenerarSolicitudBolsaFaltantesFact" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeGenerarSolicitudBolsaFaltantesFact" parameterMap="paramExecuteGenerarSolicitudBolsaFaltantesFact">
+		{call INC_PKG_PROCE_INCEN.INC_PR_GENER_SOLIC_BOLSA_FACTU(?, ?, ?, ?, ?, ?) }
+	</procedure>
+
+	<parameterMap id="paramExecuteValidacionPremiosElectivos" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeValidacionPremiosElectivos" parameterMap="paramExecuteValidacionPremiosElectivos">
+		{call INC_PKG_PROCE_INCEN.INC_PR_VALID_PREMI_ELEGI(?, ?, ?, ?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteMoverInformacionHistorica" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeMoverInformacionHistorica" parameterMap="paramExecuteMoverInformacionHistorica">
+		{call INC_PKG_PROCE_INCEN.INC_PR_MOVER_INFOR_HISTO(?, ?) }
+	</procedure>
+					
+	<parameterMap id="paramExecuteCalcularTotalesFacturacion" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeCalcularTotalesFacturacion" parameterMap="paramExecuteCalcularTotalesFacturacion">
+		{call INC_PKG_PROCE_INCEN.INC_PR_CALCU_TOTAL_FACTU(?, ?, ?, ?, ?) }
+	</procedure>
+						
+	<select id="getListConcursosMigracionPuntos" resultMap="baseResult">
+		SELECT DISTINCT A.NUM_CONC CODIGO,
+			   A.NUM_CONC ||' - ' || A.VAL_NOMB DESCRIPCION
+		  FROM INC_CONCU_PARAM_GENER A
+		 WHERE A.IND_ACTI = 1
+		   AND A.BCAL_OID_BASE_CALC IN (1,2)
+		ORDER BY 1 DESC	
+	</select>
+	
+	<insert id="insertMigracionPuntosConsultora" parameterClass="java.util.Map">
+		INSERT INTO INC_CARGA_MIGRA_PUNTO (
+		   NUM_CARG, NUM_FILA, COD_CLIE, FEC_CARG, COD_USUA) 
+		VALUES (#numeroCarga#, #numeroFila#, #codigoCliente#, SYSDATE, #codigoUsuario#)    
+    </insert>
+
+    <select id="getNumeroMigracionPuntosConsultora" resultClass="string">
+		  SELECT NVL(MAX(NUM_CARG) + 1, 1) AS NUM_CARGA
+		  FROM (SELECT NUM_CARG FROM INC_CARGA_MIGRA_PUNTO UNION SELECT NUM_CARG FROM INC_MIGRA_PUNTO_AMBIT) A
+    </select>  
+	    
+    <parameterMap id="paramExecuteValidarMigracionPuntosConsultora" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroCarga" jdbcType="NUMBER" mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeValidarMigracionPuntosConsultora" parameterMap="paramExecuteValidarMigracionPuntosConsultora" >
+		{call INC_PKG_PROCE_INCEN.INC_PR_VALID_MIGRA_PUNTO_CONSU( ?, ? )}
+	</procedure>
+	    
+	<resultMap id="getMigracionPuntosConsultoraResult"  class="java.util.HashMap">
+		<result property="numeroFila"	      column="NUM_FILA"/>
+		<result property="codigoCliente"	  column="COD_CLIE"/>
+		<result property="codigoMotivo"       column="COD_MOTI"/>
+		<result property="descripcionMotivo"  column="DES_MOTI"/>
+    </resultMap>
+
+    <select id="getMigracionPuntosConsultoraList" parameterClass="java.util.Map" resultMap="getMigracionPuntosConsultoraResult">
+		SELECT car.NUM_FILA, car.COD_CLIE, car.COD_MOTI, mot.DES_MOTI
+		  FROM INC_CARGA_MIGRA_PUNTO car, INC_MOTIV_MIGRA_PUNTO mot
+		 WHERE car.NUM_CARG = #numeroCarga#
+		   AND car.COD_MOTI = mot.COD_MOTI
+		 ORDER BY car.NUM_FILA 
+	</select>	    
+	
+    <parameterMap id="paramExecuteActualizarMigracionPuntosConsultora" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroCarga" jdbcType="NUMBER" mode="IN"/>
+		<parameter property="numeroConcursoOrigen" jdbcType="NUMBER" javaType="java.lang.String" mode="IN"/>
+		<parameter property="numeroConcursoDestino" jdbcType="NUMBER" javaType="java.lang.String" mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeActualizarMigracionPuntosConsultora" parameterMap="paramExecuteActualizarMigracionPuntosConsultora" >
+		{call INC_PKG_PROCE_INCEN.INC_PR_ACTUA_MIGRA_PUNTO_CONSU( ?, ?, ?, ?, ? )}
+	</procedure>	
+	
+	<insert id="insertMigracionPuntosAmbito" parameterClass="java.util.Map">
+ 		INSERT INTO INC_MIGRA_PUNTO_AMBIT
+		 (NUM_CARG,
+		  OID_REGI,
+		  OID_ZONA)
+		VALUES
+		 (#numeroCarga#,
+		  #oidRegion#,
+		  #oidZona#)
+ 	</insert>
+ 					
+ 	<parameterMap id="paramExecuteClasificarPagosConcurso" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeClasificarPagosConcurso" parameterMap="paramExecuteClasificarPagosConcurso">
+		{call INC_PKG_PROCE_INCEN.INC_PR_CLASI_PAGOS_CONSU(?, ?, ?, ?, ?) }
+	</procedure>
+ 					
+ 	<parameterMap id="paramExecuteGenerarAbonoCuentaCorriente" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeGenerarAbonoCuentaCorriente" parameterMap="paramExecuteGenerarAbonoCuentaCorriente">
+		{call INC_PKG_PROCE_INCEN.INC_PR_GENER_ABONO_DIREC(?, ?, ?, ?, ?, ?) }
+	</procedure>
+    
+    <select id="getListPagoConcurso" resultMap="baseResult">
+		SELECT A.COD_PAGO CODIGO,
+		       A.COD_PAGO || ' - ' || A.DES_PAGO DESCRIPCION
+		  FROM INC_CONCU_PAGOS_PARAM A
+		 WHERE A.EST_REGI = 1
+		 ORDER BY A.CAM_INIC DESC	
+	</select>
+	
+	<select id="getListMotivoPago" resultMap="baseResult">
+		SELECT A.COD_TIPO_ABON CODIGO,
+		       A.COD_TIPO_ABON || ' - ' || A.DES_TIPO_ABON DESCRIPCION
+		  FROM INC_CONCU_PAGOS_TIPO_ABONO A
+		 WHERE A.EST_REGI = 1
+		 ORDER BY 2	
+	</select>
+
+	<insert id="insertTransaccionPagoConcurso" parameterClass="java.util.Map">
+		INSERT INTO INC_RECEP_TRANS_PAGO_CONCU (
+		   NUM_CARG, NUM_FILA, NUM_CONC, NUM_DOCU, COD_CLIE, 
+		   VAL_MONT, FEC_ABON, EST_ABON, FEC_CARG, COD_USUA) 
+		VALUES (#numeroCarga#, #numeroFila#, #numeroConcurso#, #numeroDocumento#, #codigoCliente#,
+		        #montoAbono#, #fechaAbono#, #estadoAbono#, SYSDATE, #codigoUsuario#)    
+    </insert>
+
+    <select id="getNumeroTransaccionesPagoConcurso" resultClass="string">
+		  SELECT NVL(MAX(NUM_CARG) + 1, 1) AS NUM_CARGA
+		  FROM INC_RECEP_TRANS_PAGO_CONCU
+    </select>  
+	    
+    <parameterMap id="paramExecuteActualizarTransaccionesPagoConcurso" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroCarga" jdbcType="NUMBER" mode="IN"/>
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPago" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeActualizarTransaccionesPagoConcurso" parameterMap="paramExecuteActualizarTransaccionesPagoConcurso" >
+		{call INC_PKG_PROCE_INCEN.INC_PR_ACTUA_TRANS_PAGO_CONCU( ?, ?, ?, ?, ?, ? )}
+	</procedure>	
+			       				
+    <parameterMap id="executeAcumulacionPuntosProgramaPuntosParams" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeAcumulacionPuntosProgramaPuntos" parameterMap="executeAcumulacionPuntosProgramaPuntosParams" >
+		{call INC_PKG_PROCE_INCEN.INC_PR_ACUMU_PUNTO_PROGR_PUNTO( ?, ?, ? )}
+	</procedure>	
+			       				
+    <parameterMap id="executeCancelacionPuntosProgramaPuntosParams" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoRegion" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeCancelacionPuntosProgramaPuntos" parameterMap="executeCancelacionPuntosProgramaPuntosParams" >
+		{call INC_PKG_PROCE_INCEN.INC_PR_CANCE_PUNTO_PROGR_PUNTO( ?, ?, ?, ?, ? )}
+	</procedure>	
+		
+	<parameterMap id="paramExecuteAplicarRequisitosPremiacion" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>	
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeAplicarRequisitosPremiacion" parameterMap="paramExecuteAplicarRequisitosPremiacion">
+		{call INC_PKG_PROCE_PREMI.INC_PR_APLIC_PREMI_FACTU(?, ?, ?, ?, ?, ?) }
+	</procedure>
+	
+    <parameterMap id="paramExecuteAplicarRequisitosPremiacionZona" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="zonaListAux" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeAplicarRequisitosPremiacionZona" parameterMap="paramExecuteAplicarRequisitosPremiacionZona">
+		{call INC_PKG_PROCE_PREMI.INC_PR_APLIC_PREMI_CZONA(?, ?, ?, ?, ?, ?, ?) }
+	</procedure>
+	
+	 <parameterMap id="executeAcumulacionPuntosProgramaConstanciaParams" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeAcumulacionPuntosProgramaConstancia" parameterMap="executeAcumulacionPuntosProgramaConstanciaParams" >
+		{call INC_PKG_PROCE_INCEN.INC_PR_ACUMU_PUNTO_PROGR_CONST( ?, ?, ?, ? )}
+	</procedure>
+	
+	<parameterMap id="paramExecuteeDeterminarGanadorasRecomendacion" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>	
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeDeterminarGanadorasRecomendacion" parameterMap="paramExecuteeDeterminarGanadorasRecomendacion">
+		{call INC_PKG_PROCE_RECOM.INC_PR_DETER_GANAD_RECOM_FACTU(?, ?, ?, ?, ?, ?) }
+	</procedure>
+			       	
+    <parameterMap id="paramExecuteDeterminarGanadorasRecomendacionZona" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="zonaListAux" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+				       	
+	<procedure id="executeDeterminarGanadorasRecomendacionZona" parameterMap="paramExecuteDeterminarGanadorasRecomendacionZona">
+		{call INC_PKG_PROCE_RECOM.INC_PR_DETER_GANAD_RECOM_CZONA(?, ?, ?, ?, ?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteDeterminarGanadorasRecomendacionPeriodo" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+				       	
+	<procedure id="executeDeterminarGanadorasRecomendacionPeriodo" parameterMap="paramExecuteDeterminarGanadorasRecomendacionPeriodo">
+		{call INC_PKG_PROCE_RECOM.INC_PR_DETER_GANAD_RECOM_PERIO(?, ?, ?, ?, ?) }
+	</procedure>
+
+	<parameterMap id="paramExecuteCalcularVencimientoPuntos" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+				       	
+	<procedure id="executeCalcularVencimientoPuntos" parameterMap="paramExecuteCalcularVencimientoPuntos">
+		{call INC_PKG_PROCE_INCEN.INC_PR_CALCU_VENCI_PUNTO_CONCU(?, ?, ?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteProcesoVencimientoPuntos" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+				       	
+	<procedure id="executeProcesoVencimientoPuntos" parameterMap="paramExecuteProcesoVencimientoPuntos">
+		{call INC_PKG_PROCE_INCEN.INC_PR_PROCE_VENCI_PUNTO_CONCU(?, ?, ?) }
+	</procedure>
+	    		       				
+</sqlMap>

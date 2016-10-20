@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="ReporteINCRecomendacionesConcursoRegión"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Landscape"
+		 pageWidth="782"
+		 pageHeight="595"
+		 columnWidth="782"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 whenResourceMissingType="Empty">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="condicion" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="numeroConcurso" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("numeroConcurso")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[select 
+	numero_concurso,
+  descripcion,
+  	DES_REGI,
+  total_efectivas,
+	total_no_efectivas,
+  porc_efec /100 as porc_efec,
+  total_efectivas_reg,
+  total_no_efectivas_reg,  
+  (porc_efec_reg) /100 as   porc_efec_reg
+ from 
+(select
+	numero_concurso,
+	descripcion,
+	DES_REGI,
+	sum(efectiva) over (partition by numero_concurso) as total_efectivas,
+	sum(no_efectiva) over (partition by numero_concurso) as total_no_efectivas,
+	round((sum(efectiva) over (partition by numero_concurso) / (sum(efectiva) over (partition by numero_concurso) + sum(no_efectiva) over (partition by numero_concurso))),4) * 100 as porc_efec,
+	
+	sum(efectiva) over (partition by numero_concurso,DES_REGI) as total_efectivas_reg,
+	sum(no_efectiva) over (partition by numero_concurso,DES_REGI) as total_no_efectivas_reg,
+	round((sum(efectiva) over (partition by numero_concurso,DES_REGI) / (sum(efectiva) over (partition by numero_concurso,DES_REGI) + sum(no_efectiva) over (partition by numero_concurso,DES_REGI))),4) * 100 as porc_efec_reg
+
+from
+	(
+		select
+			NUM_CONC as numero_concurso,
+			VAL_NOMB as descripcion,
+			m_recte.oid_clie as oid_recte,		
+ 			DECODE(NVL(ind_efec,0),0,'No efectiva',1,'Efectiva') as Efectividad,
+			DECODE(NVL(ind_efec,0),0,0,1,1) as efectiva,
+			DECODE(NVL(ind_efec,0),0,1,1,0) as no_efectiva
+		from
+			INC_CONCU_PARAM_GENER,
+			INC_CLIEN_RECDO recda,			
+			INC_CLIEN_RECTE recte,
+			cra_perio,
+			mae_clien m_recte,
+			mae_clien m_recda
+		where
+			1=1
+			and INC_CONCU_PARAM_GENER.OID_PARA_GRAL = recte.COPA_OID_PARA_GRAL
+			and recte.COPA_OID_PARA_GRAL $P!{numeroConcurso} 
+			and recte.OID_CLIE_RETE = recda.CLR3_OID_CLIE_RETE
+			and perd_oid_peri = cra_perio.OID_PERI
+			and m_recte.oid_clie = recte.CLIE_OID_CLIE
+			and m_recda.oid_clie = recda.CLIE_OID_CLIE
+  	order by
+			NUM_CONC,
+			VAL_NOMB, 
+			cra_perio.VAL_NOMB_PERI ,	
+			m_recte.cod_clie ,
+			m_recda.cod_clie
+	) inc,
+	(
+		select
+			ZON_REGIO.DES_REGI,
+			ZON_ZONA.DES_ZONA,
+			oid_clie,
+			cod_clie
+		from
+			MAE_CLIEN,
+			MAE_CLIEN_UNIDA_ADMIN,
+			ZON_TERRI_ADMIN,
+			ZON_SECCI,
+			ZON_ZONA,	
+			ZON_REGIO,
+			ZON_SUB_GEREN_VENTA
+		where
+			1=1	
+			and MAE_CLIEN_UNIDA_ADMIN.CLIE_OID_CLIE = MAE_CLIEN.OID_CLIE
+			and MAE_CLIEN_UNIDA_ADMIN.ZTAD_OID_TERR_ADMI = ZON_TERRI_ADMIN.OID_TERR_ADMI
+			and ZON_TERRI_ADMIN.ZSCC_OID_SECC = ZON_SECCI.OID_SECC
+			and ZON_SECCI.ZZON_OID_ZONA = ZON_ZONA.OID_ZONA
+			and ZON_ZONA.ZORG_OID_REGI = ZON_REGIO.OID_REGI
+			and ZON_REGIO.ZSGV_OID_SUBG_VENT = ZON_SUB_GEREN_VENTA.OID_SUBG_VENT
+			and MAE_CLIEN_UNIDA_ADMIN.IND_ACTI = 1
+			$P!{condicion}	
+	) zon
+where
+	inc.oid_recte = zon.oid_clie
+order by
+	numero_concurso,
+	des_regi) totales
+ 
+   group by
+ 	totales.numero_concurso,
+  totales.descripcion,
+  	DES_REGI,
+  totales.total_efectivas,
+	totales.total_no_efectivas,
+  totales.porc_efec,
+  total_efectivas_reg,
+  total_no_efectivas_reg,  
+  porc_efec_reg]]></queryString>
+
+	<field name="NUMERO_CONCURSO" class="java.lang.String"/>
+	<field name="DESCRIPCION" class="java.lang.String"/>
+	<field name="DES_REGI" class="java.lang.String"/>
+	<field name="TOTAL_EFECTIVAS" class="java.math.BigDecimal"/>
+	<field name="TOTAL_NO_EFECTIVAS" class="java.math.BigDecimal"/>
+	<field name="PORC_EFEC" class="java.math.BigDecimal"/>
+	<field name="TOTAL_EFECTIVAS_REG" class="java.math.BigDecimal"/>
+	<field name="TOTAL_NO_EFECTIVAS_REG" class="java.math.BigDecimal"/>
+	<field name="PORC_EFEC_REG" class="java.math.BigDecimal"/>
+
+
+		<group  name="NUM_CONC" isStartNewPage="true" >
+			<groupExpression><![CDATA[$F{NUMERO_CONCURSO}]]></groupExpression>
+			<groupHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+			</groupHeader>
+			<groupFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+			</groupFooter>
+		</group>
+		<background>
+			<band height="1"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="59"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="121"
+						y="3"
+						width="63"
+						height="12"
+						key="textField-4"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{NUMERO_CONCURSO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="#,##0" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="121"
+						y="20"
+						width="67"
+						height="12"
+						key="textField-5"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{TOTAL_EFECTIVAS}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="8"
+						y="3"
+						width="109"
+						height="12"
+						key="textField-9"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font pdfFontName="Helvetica-Bold" size="9" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosPuntFaltantesForm.numeroConcurso}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="8"
+						y="20"
+						width="109"
+						height="12"
+						key="textField-10"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font pdfFontName="Helvetica-Bold" size="9" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCRecomendacionesConcursoForm.efectivas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="38"
+						width="220"
+						height="21"
+						backcolor="#EDEDED"
+						key="textField-11"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosBolsaFaltantesIncForm.region}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="220"
+						y="38"
+						width="78"
+						height="21"
+						backcolor="#EDEDED"
+						key="textField-13"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCRecomendacionesConcursoForm.efectivas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="298"
+						y="38"
+						width="74"
+						height="21"
+						backcolor="#EDEDED"
+						key="textField-15"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosBolsaFaltantesIncForm.noefectivas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="372"
+						y="38"
+						width="133"
+						height="21"
+						backcolor="#EDEDED"
+						key="textField-17"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosBolsaFaltantesIncForm.porcentajeEfectividad}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="252"
+						y="3"
+						width="109"
+						height="12"
+						key="textField-21"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font pdfFontName="Helvetica-Bold" size="9" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosPuntFaltantesForm.descripcion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="370"
+						y="3"
+						width="230"
+						height="12"
+						key="textField-22"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{DESCRIPCION}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="252"
+						y="20"
+						width="109"
+						height="12"
+						key="textField-23"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font pdfFontName="Helvetica-Bold" size="9" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosBolsaFaltantesIncForm.noefectivas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="#,##0" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="370"
+						y="20"
+						width="67"
+						height="12"
+						key="textField-24"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{TOTAL_NO_EFECTIVAS}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="495"
+						y="20"
+						width="109"
+						height="12"
+						key="textField-25"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font pdfFontName="Helvetica-Bold" size="9" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCPuntObtenidosBolsaFaltantesIncForm.porcentajeEfectividad}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="#,##0.00 %" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="613"
+						y="20"
+						width="67"
+						height="12"
+						key="textField-26"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{PORC_EFEC}]]></textFieldExpression>
+				</textField>
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="11"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="-1"
+						width="220"
+						height="12"
+						key="textField-12"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{DES_REGI}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="#,##0" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="220"
+						y="-1"
+						width="78"
+						height="12"
+						key="textField-14"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{TOTAL_EFECTIVAS_REG}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="#,##0" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="298"
+						y="-1"
+						width="74"
+						height="12"
+						key="textField-16"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{TOTAL_NO_EFECTIVAS_REG}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="#,##0.00 %" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="372"
+						y="-1"
+						width="133"
+						height="12"
+						key="textField-18"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="Thin" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{PORC_EFEC_REG}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

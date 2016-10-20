@@ -1,0 +1,1065 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="ReporteCOSCierreCostosDevolucionesXLS"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Portrait"
+		 pageWidth="2053"
+		 pageHeight="31580582"
+		 columnWidth="2053"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 whenResourceMissingType="Key"
+		 isIgnorePagination="true">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="codigoMesActual" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoMesActual")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[select mes,
+       cmpref,
+       FecNC,
+       Producto,
+       Descripcion,
+       Oper,
+       TOper,
+       COD_TIPO_PROG as CodigoTipoProg,
+       Origen,
+       Negocio as Nego,
+       Marca,
+	   Docu_Legal as DOCLEGAL, 
+       Serie as SERIE,
+       sum(Unidades) as Unidades,
+       Costo_Standard_Unitario as CostoStd,
+       sum(Costo_Standard_Total) as Importe,
+       Precio_Catalogo_Unitario as Catalogo,
+       sum(Importe_Sin_Impuesto_Total) as Importe_Sin_Impuesto_Total,
+       sum(Importe_Sin_Impuesto_Unit) / sum(Unidades) as Importe_Sin_Impuesto_Unit,
+       sum(Dscto_Volumen) as Dscto_Volumen,
+       sum(Dscto_Comercial) as Dscto_Comercial,
+       sum(Importe_NotaCredito_Total) as Importe_NotaCredito_Total,
+       sum(importe_bi_neta) as importe_bi_neta
+  from (select to_char(cab.fec_fact, 'yyyymm') as Mes,
+               (select val_nomb_peri
+                  from cra_perio
+                 where oid_peri =
+                       (select rcr.PERD_OID_PERI_DOCU_REFE
+                          from rec_solic_opera rso,
+                               rec_opera_recla ror,
+                               rec_cabec_recla rcr
+                         where rso.OPRE_OID_OPER_RECL = ror.OID_OPER_RECL
+                           and ror.CARE_OID_CABE_RECL = rcr.OID_CABE_RECL
+                           and sol.oid_soli_cabe = rso.soca_oid_soli_cabe
+                           and rownum = 1)) as CmpRef,
+               to_char(cab.fec_fact, 'yyyymmdd') as FecNC,
+               prd.cod_sap as Producto,
+               gen.val_i18n as Descripcion,
+               (select rop.COD_OPER
+                  from rec_solic_opera rso, rec_opera rop
+                 where rso.TSPA_OID_TIPO_SOLI_PAIS =
+                       rop.TSPA_OID_SOLI_PAIS_GENE
+                   and sol.oid_soli_cabe = rso.soca_oid_soli_cabe
+                   and rownum = 1) as Oper,
+               (select rto.VAL_TIPO_OPER
+                  from rec_solic_opera rso, REC_OPERA_RECLA ror, rec_tipos_opera rto
+                 where RSO.OPRE_OID_OPER_RECL = ROR.OID_OPER_RECL
+                   and ROR.TIOP_OID_TIPO_OPER = RTO.OID_TIPO_OPER
+                   and sol.oid_soli_cabe = rso.soca_oid_soli_cabe
+                   and rownum = 1) as TOper,
+               INC_CONCU_TIPO_PROG.COD_TIPO_PROG,
+               subac.cod_sbac as Origen,
+               neg.cod_nego as Negocio,
+               marc.cod_marc_prod as Marca,
+			   cab.num_docu_lega as Docu_Legal, 
+               cab.val_seri_docu_lega as Serie,
+               det.num_unid_aten as Unidades,
+               prd.val_cost_estd as Costo_Standard_Unitario,
+               det.num_unid_aten * prd.val_cost_estd as Costo_Standard_Total,
+               det.val_prec_cata_unit_loca as Precio_Catalogo_Unitario,
+               decode(det.val_prec_cata_unit_loca,
+                      0,
+                      det.val_prec_cont_tota_loca,
+                      det.VAL_PREC_SIN_IMPU_TOTA_LOCA) as Importe_Sin_Impuesto_Total,
+               decode(det.val_prec_cata_unit_loca,
+                      0,
+                      det.val_prec_cont_tota_loca,
+                      det.VAL_PREC_SIN_IMPU_TOTA_LOCA) as Importe_Sin_Impuesto_Unit,
+               det.IMP_DESC_SIN_IMPU_TOTA_LOCA as Dscto_Volumen,
+               det.VAL_PREC_CONT_TOTA_LOCA as Dscto_Comercial,
+               decode(det.val_prec_cata_unit_loca,
+                      0,
+                      0,
+                      det.val_prec_fact_tota_loca) as Importe_NotaCredito_Total,
+               case
+                 when INC_CONCU_TIPO_PROG.COD_TIPO_PROG in ('B', 'C', 'R') then
+                  0
+                 else
+                  det.val_prec_sin_impu_tota_loca -
+                  (decode(det.val_prec_cont_tota_loca,
+                          0,
+                          0,
+                          PED_SOLIC_POSIC.val_prec_sin_impu_tota_loca) +
+                  det.imp_desc_sin_impu_tota_loca)
+               end importe_bi_neta
+          from fac_docum_conta_cabec cab,
+               fac_docum_conta_linea det,
+               mae_produ prd,
+               mae_negoc neg,
+               ped_solic_cabec sol,
+               seg_marca_produ marc,
+               seg_subac subac,
+               gen_i18n_sicc_pais gen,
+               INC_CONCU_TIPO_PROG,
+               PED_SOLIC_POSIC
+         where cab.soca_oid_soli_cabe = sol.soca_oid_soli_cabe
+           and cab.fec_fact is not null 
+           and to_char(cab.fec_fact, 'yyyymm') = $P{codigoMesActual}
+           and cab.tido_oid_tipo_docu in (31, 32, 33)
+           and cab.oid_cabe = det.dcca_oid_cabe
+           and det.prod_oid_prod = prd.oid_prod
+           and prd.nego_oid_nego = neg.oid_nego
+           and prd.mapr_oid_marc_prod = marc.oid_marc_prod
+           and cab.sbac_oid_sbac = subac.oid_sbac
+           and gen.attr_enti = 'MAE_PRODU'
+           and gen.val_oid = det.prod_oid_prod
+           and cab.ICTP_OID_TIPO_PROG = INC_CONCU_TIPO_PROG.OID_TIPO_PROG(+)
+           and det.SOPO_OID_SOLI_POSI = PED_SOLIC_POSIC.OID_SOLI_POSI)
+ group by mes,
+          CmpRef,
+          Origen,
+          Oper,
+          TOper,
+          Producto,
+          FecNC,
+          Descripcion,
+          Costo_Standard_Unitario,
+          Precio_Catalogo_Unitario,
+          Negocio,
+          Marca,
+          COD_TIPO_PROG,
+		  Docu_Legal, 
+          Serie              
+having sum(Unidades) <> 0]]></queryString>
+
+	<field name="CMPREF" class="java.lang.String"/>
+	<field name="FECNC" class="java.lang.String"/>
+	<field name="PRODUCTO" class="java.lang.String"/>
+	<field name="DESCRIPCION" class="java.lang.String"/>
+	<field name="OPER" class="java.lang.String"/>
+	<field name="TOPER" class="java.lang.String"/>
+	<field name="ORIGEN" class="java.lang.String"/>
+	<field name="UNIDADES" class="java.math.BigDecimal"/>
+	<field name="COSTOSTD" class="java.math.BigDecimal"/>
+	<field name="IMPORTE" class="java.math.BigDecimal"/>
+	<field name="NEGO" class="java.lang.String"/>
+	<field name="MARCA" class="java.lang.String"/>
+	<field name="Catalogo" class="java.math.BigDecimal"/>
+	<field name="Mes" class="java.lang.String"/>
+	<field name="Importe_Sin_Impuesto_Total" class="java.math.BigDecimal"/>
+	<field name="Importe_Sin_Impuesto_Unit" class="java.math.BigDecimal"/>
+	<field name="Dscto_Volumen" class="java.math.BigDecimal"/>
+	<field name="Importe_NotaCredito_Total" class="java.math.BigDecimal"/>
+	<field name="Importe_Bi_Neta" class="java.math.BigDecimal"/>
+	<field name="Dscto_Comercial" class="java.math.BigDecimal"/>
+	<field name="CodigoTipoProg" class="java.lang.String"/>
+	<field name="DOCLEGAL" class="java.lang.String"/>
+	<field name="SERIE" class="java.lang.String"/>
+
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="16"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="59"
+						y="0"
+						width="86"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.cmpRef}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="145"
+						y="0"
+						width="73"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.fecNC}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="218"
+						y="0"
+						width="100"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.producto}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="318"
+						y="0"
+						width="220"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.descripción}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="538"
+						y="0"
+						width="44"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.oper}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="679"
+						y="0"
+						width="44"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.codtipoprg}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1059"
+						y="0"
+						width="55"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.unidades}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1114"
+						y="0"
+						width="115"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.costoStd}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1229"
+						y="0"
+						width="115"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.importe}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="787"
+						y="0"
+						width="44"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.nego}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="831"
+						y="0"
+						width="62"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.marca}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1749"
+						y="0"
+						width="88"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.valorNC}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1344"
+						y="0"
+						width="115"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-91"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.catalogo}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="59"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-92"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.mes}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1459"
+						y="0"
+						width="97"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-93"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.importeSinImpuestoTotal}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1556"
+						y="0"
+						width="105"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-94"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.importeSinImpuestoUnit}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1661"
+						y="0"
+						width="88"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-95"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.dsctoVolumen}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1837"
+						y="0"
+						width="98"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-96"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.importeNotaCreditoTotal}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1935"
+						y="0"
+						width="118"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-97"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.importeBiNeta}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="723"
+						y="0"
+						width="64"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-98"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.origen}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="893"
+						y="0"
+						width="83"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-99"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.docLegal}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="976"
+						y="0"
+						width="83"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-100"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.serie}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="582"
+						y="0"
+						width="97"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-101"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOSDevolucionesCierreCostosForm.toper}]]></textFieldExpression>
+				</textField>
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="15"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="145"
+						y="0"
+						width="73"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{FECNC}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="218"
+						y="0"
+						width="100"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{PRODUCTO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="318"
+						y="0"
+						width="220"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{DESCRIPCION}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="538"
+						y="0"
+						width="44"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{OPER}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="679"
+						y="0"
+						width="44"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{CodigoTipoProg}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="#,##0" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1059"
+						y="0"
+						width="55"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{UNIDADES}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="###0.00;-###0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1114"
+						y="0"
+						width="115"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{COSTOSTD}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="###0.00;-###0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1229"
+						y="0"
+						width="115"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{IMPORTE}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="787"
+						y="0"
+						width="44"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{NEGO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="831"
+						y="0"
+						width="62"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{MARCA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="###0.00;-###0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1749"
+						y="0"
+						width="88"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{Dscto_Comercial}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="###0.00;-###0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1344"
+						y="0"
+						width="115"
+						height="15"
+						key="textField-1"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{Catalogo}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="59"
+						height="15"
+						key="textField-2"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{Mes}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="###0.00;-###0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1459"
+						y="0"
+						width="97"
+						height="15"
+						key="textField-3"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{Importe_Sin_Impuesto_Total}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="###0.00;-###0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1556"
+						y="0"
+						width="105"
+						height="15"
+						key="textField-4"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{Importe_Sin_Impuesto_Unit}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="###0.00;-###0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1661"
+						y="0"
+						width="88"
+						height="15"
+						key="textField-5"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{Dscto_Volumen}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="###0.00;-###0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1837"
+						y="0"
+						width="98"
+						height="15"
+						key="textField-6"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{Importe_NotaCredito_Total}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="###0.00;-###0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1935"
+						y="0"
+						width="118"
+						height="15"
+						key="textField-7"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{Importe_Bi_Neta}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="723"
+						y="0"
+						width="64"
+						height="15"
+						key="textField-8"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{ORIGEN}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="59"
+						y="0"
+						width="86"
+						height="15"
+						key="textField-9"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{CMPREF}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="893"
+						y="0"
+						width="83"
+						height="15"
+						key="textField-10"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{DOCLEGAL}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="976"
+						y="0"
+						width="83"
+						height="15"
+						key="textField-11"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{SERIE}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="582"
+						y="0"
+						width="97"
+						height="15"
+						key="textField-12"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{TOPER}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

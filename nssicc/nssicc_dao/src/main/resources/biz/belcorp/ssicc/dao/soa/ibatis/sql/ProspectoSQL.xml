@@ -1,0 +1,493 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+<sqlMap namespace="soa.ProspectoSQL">
+
+	<typeAlias alias="validacionCrediticiaUsuario" type="biz.belcorp.www.soa.model.ValidacionCrediticiaUsuario"/>
+	    
+    <resultMap id="validacionCrediticiaUsuarioResult" 		class="java.util.HashMap">	
+		<result property="codigoCliente"			column ="COD_CLIE"/>		                     			
+		<result property="apellido1"				column ="VAL_APE1"/>
+		<result property="apellido2"				column ="VAL_APE2"/>		
+		<result property="nombre1"					column ="VAL_NOM1"/>
+		<result property="nombre2"					column ="VAL_NOM2"/>
+		<result property="codigoRegion"				column ="COD_REGI"/>		
+		<result property="codigoZona"				column ="COD_ZONA"/>
+		<result property="codigoSeccion"			column ="COD_SECC"/>
+		<result property="deudaBelcorp"				column ="SALD_DEUD_BELC"/>
+		<result property="deudaTerceros"			column ="SALT_DEUD_TERC"/>
+		<result property="deudaCastigada"			column ="SALD_DEUD_CASTI"/>
+		<result property="deudaCastigadaTmp"		column ="SALD_DEUD_CASTI_TMP"/>
+		<result property="estadoCliente"			column ="ESTA_OID_ESTA_CLIE"/>			                     			                     			
+		<result property="simboloMoneda"			column ="VAL_SIMB_MONE"/>
+		<result property="descripcionMoneda"		column ="DES_MONED"/>
+	</resultMap>
+	
+    <resultMap id="getMotivosBloqueoXConsultoraResult" 		class="java.util.HashMap">	
+		<result property="descripcionBloqueo"			column ="MOTI_BLOQ"/>		                     			
+		<result property="tipoBloqueo"					column ="TIPO_BLOQ"/>
+		<result property="observacionBloqueo"			column ="OBS_BLOQ"/>
+	</resultMap>
+	
+	<select id="getValidacionCrediticiaUsuario" parameterClass="java.util.Map" resultMap="validacionCrediticiaUsuarioResult">
+		SELECT NVL(X.COD_CLIE ,' ') COD_CLIE,
+		       X.VAL_APE1,
+		       X.VAL_APE2,
+		       X.VAL_NOM1,
+		       X.VAL_NOM2,
+              (SELECT nvl(zon_regio.cod_regi,'')     
+               FROM mae_clien,
+                    mae_clien_unida_admin,
+                    zon_terri_admin,
+                    zon_secci,
+                    zon_zona,
+                    zon_regio
+              WHERE ((zon_terri_admin.oid_terr_admi = mae_clien_unida_admin.ztad_oid_terr_admi) AND
+                    (zon_secci.oid_secc = zon_terri_admin.zscc_oid_secc) AND
+                    (zon_zona.oid_zona = zon_secci.zzon_oid_zona) AND
+                    (zon_regio.oid_regi = zon_zona.zorg_oid_regi) AND
+                    (mae_clien.oid_clie = mae_clien_unida_admin.clie_oid_clie) AND
+                    (mae_clien_unida_admin.ind_acti = '1') AND (mae_clien.cod_clie = X.COD_CLIE) AND
+                    (rownum = 1) 
+                    ) )      COD_REGI,      
+             ( SELECT nvl(zon_zona.cod_zona, '')
+               FROM mae_clien,
+                    mae_clien_unida_admin,
+                    zon_terri_admin,
+                    zon_secci,
+                    zon_zona,
+                    zon_regio
+              WHERE ((zon_terri_admin.oid_terr_admi = mae_clien_unida_admin.ztad_oid_terr_admi) AND
+                    (zon_secci.oid_secc = zon_terri_admin.zscc_oid_secc) AND
+                    (zon_zona.oid_zona = zon_secci.zzon_oid_zona) AND
+                    (zon_regio.oid_regi = zon_zona.zorg_oid_regi) AND
+                    (mae_clien.oid_clie = mae_clien_unida_admin.clie_oid_clie) AND
+                    (mae_clien_unida_admin.ind_acti = '1') AND (mae_clien.cod_clie = X.COD_CLIE) AND
+                    (rownum = 1)) ) COD_ZONA,
+              ( SELECT nvl(zon_secci.cod_secc,'')
+               FROM mae_clien,
+                    mae_clien_unida_admin,
+                    zon_terri_admin,
+                    zon_secci,
+                    zon_zona,
+                    zon_regio
+              WHERE ((zon_terri_admin.oid_terr_admi = mae_clien_unida_admin.ztad_oid_terr_admi) AND
+                    (zon_secci.oid_secc = zon_terri_admin.zscc_oid_secc) AND
+                    (zon_zona.oid_zona = zon_secci.zzon_oid_zona) AND
+                    (zon_regio.oid_regi = zon_zona.zorg_oid_regi) AND
+                    (mae_clien.oid_clie = mae_clien_unida_admin.clie_oid_clie) AND
+                    (mae_clien_unida_admin.ind_acti = '1') AND (mae_clien.cod_clie = X.COD_CLIE) AND
+                    (rownum = 1)))  COD_SECC,
+               NVL(X.SAL_DEUD_ANTE,0) SALD_DEUD_BELC,               
+		       0 SALT_DEUD_TERC,
+               NVL((SELECT SUM(CCC.IMP_DEUD_ACTU) FROM CCC_CLIEN_CASTI CCC WHERE CCC.OID_CLIE = X.OID_CLIE),0) + 
+			   NVL((SELECT SUM(ZZZ.IMP_DEUD_CAST) FROM CCC_CONSU_CASTI_CABEC ZZZ WHERE ZZZ.NUM_DOCU_IDEN = Z.NUM_DOCU_IDEN), 0)  SALD_DEUD_CASTI,
+               0 SALD_DEUD_CASTI_TMP,
+		       (SELECT COD_ESTA_CLIE FROM MAE_ESTAT_CLIEN WHERE OID_ESTA_CLIE = Y.ESTA_OID_ESTA_CLIE) ESTA_OID_ESTA_CLIE,
+		       B.VAL_SIMB_MONE,
+		       PQ_APL_AUX.VALOR_GEN_I18N_SICC(1, B.OID_MONE, 'SEG_MONED') DES_MONED  
+		FROM MAE_CLIEN X, 
+		     MAE_CLIEN_DATOS_ADICI Y,
+		     MAE_CLIEN_IDENT Z,
+		     MAE_TIPO_DOCUM W,  
+		     SEG_PAIS A,
+     		 SEG_MONED b
+		WHERE A.OID_PAIS = X.PAIS_OID_PAIS 
+			AND W.PAIS_OID_PAIS = A.OID_PAIS
+		  	AND A.COD_PAIS = #codigoPais#
+		  	AND B.OID_MONE = A.MONE_OID_MONE	
+			AND X.OID_CLIE= Y.CLIE_OID_CLIE 
+		  	AND Z.CLIE_OID_CLIE = X.OID_CLIE
+		  	AND Z.NUM_DOCU_IDEN = #numeroDocumento#
+		  	AND Z.TDOC_OID_TIPO_DOCU = W.OID_TIPO_DOCU
+		  	AND W.COD_TIPO_DOCU = #tipoDocumento#		  
+		  			
+		<isNotEmpty prepend="AND" property="indDocumentoPrincipal">
+			  Z.VAL_IDEN_DOCU_PRIN =  #indDocumentoPrincipal#
+		</isNotEmpty>
+		
+		<isNotEmpty property="indCrediHistorico">
+			<isEqual property="indCrediHistorico" compareValue="1">
+				<isEqual property="codigoPais" compareValue="PE">
+					UNION ALL	
+					SELECT NVL(X.COD_CLIE ,' ') COD_CLIE,
+					       X.VAL_APE1,
+					       X.VAL_APE2,
+					       X.VAL_NOM1,
+					       X.VAL_NOM2,
+                           (SELECT nvl(zon_regio.cod_regi,'')     
+                            FROM SSICC_PE_LB.mae_clien,
+                                 SSICC_PE_LB.mae_clien_unida_admin,
+                                 SSICC_PE_LB.zon_terri_admin,
+                                 SSICC_PE_LB.zon_secci,
+                                 SSICC_PE_LB.zon_zona,
+                                 SSICC_PE_LB.zon_regio
+                           WHERE ((zon_terri_admin.oid_terr_admi = mae_clien_unida_admin.ztad_oid_terr_admi) AND
+                                 (zon_secci.oid_secc = zon_terri_admin.zscc_oid_secc) AND
+                                 (zon_zona.oid_zona = zon_secci.zzon_oid_zona) AND
+                                 (zon_regio.oid_regi = zon_zona.zorg_oid_regi) AND
+                                 (mae_clien.oid_clie = mae_clien_unida_admin.clie_oid_clie) AND
+                                 (mae_clien_unida_admin.ind_acti = '1') AND (mae_clien.cod_clie = X.COD_CLIE) AND
+                                 (rownum = 1) 
+                                 ) )      COD_REGI,      
+                          ( SELECT nvl(zon_zona.cod_zona, '')
+                            FROM SSICC_PE_LB.mae_clien,
+                                 SSICC_PE_LB.mae_clien_unida_admin,
+                                 SSICC_PE_LB.zon_terri_admin,
+                                 SSICC_PE_LB.zon_secci,
+                                 SSICC_PE_LB.zon_zona,
+                                 SSICC_PE_LB.zon_regio
+                           WHERE ((zon_terri_admin.oid_terr_admi = mae_clien_unida_admin.ztad_oid_terr_admi) AND
+                                 (zon_secci.oid_secc = zon_terri_admin.zscc_oid_secc) AND
+                                 (zon_zona.oid_zona = zon_secci.zzon_oid_zona) AND
+                                 (zon_regio.oid_regi = zon_zona.zorg_oid_regi) AND
+                                 (mae_clien.oid_clie = mae_clien_unida_admin.clie_oid_clie) AND
+                                 (mae_clien_unida_admin.ind_acti = '1') AND (mae_clien.cod_clie = X.COD_CLIE) AND
+                                 (rownum = 1)) ) COD_ZONA,
+                           ( SELECT nvl(zon_secci.cod_secc,'')
+                            FROM SSICC_PE_LB.mae_clien,
+                                 SSICC_PE_LB.mae_clien_unida_admin,
+                                 SSICC_PE_LB.zon_terri_admin,
+                                 SSICC_PE_LB.zon_secci,
+                                 SSICC_PE_LB.zon_zona,
+                                 SSICC_PE_LB.zon_regio
+                           WHERE ((zon_terri_admin.oid_terr_admi = mae_clien_unida_admin.ztad_oid_terr_admi) AND
+                                 (zon_secci.oid_secc = zon_terri_admin.zscc_oid_secc) AND
+                                 (zon_zona.oid_zona = zon_secci.zzon_oid_zona) AND
+                                 (zon_regio.oid_regi = zon_zona.zorg_oid_regi) AND
+                                 (mae_clien.oid_clie = mae_clien_unida_admin.clie_oid_clie) AND
+                                 (mae_clien_unida_admin.ind_acti = '1') AND (mae_clien.cod_clie = X.COD_CLIE) AND
+                                 (rownum = 1)))  COD_SECC,
+               			   NVL(X.SAL_DEUD_ANTE,0) SALD_DEUD_BELC,               			   
+					       0 SALT_DEUD_TERC,
+                           NVL((SELECT SUM(CCC.IMP_DEUD_ACTU) FROM SSICC_PE_LB.CCC_CLIEN_CASTI CCC WHERE CCC.OID_CLIE = X.OID_CLIE),0) SALD_DEUD_CASTI,
+                           0 SALD_DEUD_CASTI_TMP,
+					       (SELECT COD_ESTA_CLIE FROM SSICC_PE_LB.MAE_ESTAT_CLIEN WHERE OID_ESTA_CLIE = Y.ESTA_OID_ESTA_CLIE) ESTA_OID_ESTA_CLIE,
+					       B.VAL_SIMB_MONE,
+					       PQ_APL_AUX.VALOR_GEN_I18N_SICC(1, B.OID_MONE, 'SEG_MONED') DES_MONED  
+					FROM SSICC_PE_LB.MAE_CLIEN X, 
+					     SSICC_PE_LB.MAE_CLIEN_DATOS_ADICI Y,
+					     SSICC_PE_LB.MAE_CLIEN_IDENT Z,
+					     SSICC_PE_LB.MAE_TIPO_DOCUM W,  
+					     SEG_PAIS A,
+			     		 SEG_MONED b
+					WHERE A.OID_PAIS = X.PAIS_OID_PAIS 
+						AND W.PAIS_OID_PAIS = A.OID_PAIS
+					  	AND B.OID_MONE = A.MONE_OID_MONE	
+						AND X.OID_CLIE= Y.CLIE_OID_CLIE 
+					  	AND Z.CLIE_OID_CLIE = X.OID_CLIE
+					  	AND Z.NUM_DOCU_IDEN = #numeroDocumento#
+					  	AND Z.TDOC_OID_TIPO_DOCU = W.OID_TIPO_DOCU
+					  	AND W.COD_TIPO_DOCU = #tipoDocumento#		  
+					  			
+					<isNotEmpty prepend="AND" property="indDocumentoPrincipal">
+						  Z.VAL_IDEN_DOCU_PRIN =  #indDocumentoPrincipal#
+					</isNotEmpty>
+				</isEqual>
+				<isEqual property="codigoPais" compareValue="ECL">
+					UNION ALL	
+					SELECT NVL(X.COD_CLIE ,' ') COD_CLIE,
+					       X.VAL_APE1,
+					       X.VAL_APE2,
+					       X.VAL_NOM1,
+					       X.VAL_NOM2,
+                           (SELECT nvl(zon_regio.cod_regi,'')     
+                            FROM mae_clien@DBL_SICCECE_EXEC,
+                                 mae_clien_unida_admin@DBL_SICCECE_EXEC,
+                                 zon_terri_admin@DBL_SICCECE_EXEC,
+                                 zon_secci@DBL_SICCECE_EXEC,
+                                 zon_zona@DBL_SICCECE_EXEC,
+                                 zon_regio@DBL_SICCECE_EXEC
+                           WHERE ((zon_terri_admin.oid_terr_admi = mae_clien_unida_admin.ztad_oid_terr_admi) AND
+                                 (zon_secci.oid_secc = zon_terri_admin.zscc_oid_secc) AND
+                                 (zon_zona.oid_zona = zon_secci.zzon_oid_zona) AND
+                                 (zon_regio.oid_regi = zon_zona.zorg_oid_regi) AND
+                                 (mae_clien.oid_clie = mae_clien_unida_admin.clie_oid_clie) AND
+                                 (mae_clien_unida_admin.ind_acti = '1') AND (mae_clien.cod_clie = X.COD_CLIE) AND
+                                 (rownum = 1) 
+                                 ) )      COD_REGI,      
+                          ( SELECT nvl(zon_zona.cod_zona, '')
+                            FROM mae_clien@DBL_SICCECE_EXEC,
+                                 mae_clien_unida_admin@DBL_SICCECE_EXEC,
+                                 zon_terri_admin@DBL_SICCECE_EXEC,
+                                 zon_secci@DBL_SICCECE_EXEC,
+                                 zon_zona@DBL_SICCECE_EXEC,
+                                 zon_regio@DBL_SICCECE_EXEC
+                           WHERE ((zon_terri_admin.oid_terr_admi = mae_clien_unida_admin.ztad_oid_terr_admi) AND
+                                 (zon_secci.oid_secc = zon_terri_admin.zscc_oid_secc) AND
+                                 (zon_zona.oid_zona = zon_secci.zzon_oid_zona) AND
+                                 (zon_regio.oid_regi = zon_zona.zorg_oid_regi) AND
+                                 (mae_clien.oid_clie = mae_clien_unida_admin.clie_oid_clie) AND
+                                 (mae_clien_unida_admin.ind_acti = '1') AND (mae_clien.cod_clie = X.COD_CLIE) AND
+                                 (rownum = 1)) ) COD_ZONA,
+                           ( SELECT nvl(zon_secci.cod_secc,'')
+                            FROM mae_clien@DBL_SICCECE_EXEC,
+                                 mae_clien_unida_admin@DBL_SICCECE_EXEC,
+                                 zon_terri_admin@DBL_SICCECE_EXEC,
+                                 zon_secci@DBL_SICCECE_EXEC,
+                                 zon_zona@DBL_SICCECE_EXEC,
+                                 zon_regio@DBL_SICCECE_EXEC
+                           WHERE ((zon_terri_admin.oid_terr_admi = mae_clien_unida_admin.ztad_oid_terr_admi) AND
+                                 (zon_secci.oid_secc = zon_terri_admin.zscc_oid_secc) AND
+                                 (zon_zona.oid_zona = zon_secci.zzon_oid_zona) AND
+                                 (zon_regio.oid_regi = zon_zona.zorg_oid_regi) AND
+                                 (mae_clien.oid_clie = mae_clien_unida_admin.clie_oid_clie) AND
+                                 (mae_clien_unida_admin.ind_acti = '1') AND (mae_clien.cod_clie = X.COD_CLIE) AND
+                                 (rownum = 1)))  COD_SECC,
+               			   NVL(X.SAL_DEUD_ANTE,0) SALD_DEUD_BELC,               			   
+					       0 SALT_DEUD_TERC,
+                           NVL((SELECT SUM(CCC.IMP_DEUD_ACTU) FROM CCC_CLIEN_CASTI@DBL_SICCECE_EXEC CCC WHERE CCC.OID_CLIE = X.OID_CLIE),0) +
+                           NVL((SELECT SUM(ZZZ.IMP_DEUD_CAST) FROM CCC_CONSU_CASTI_CABEC@DBL_SICCECE_EXEC ZZZ WHERE ZZZ.NUM_DOCU_IDEN = Z.NUM_DOCU_IDEN), 0) SALD_DEUD_CASTI,
+                           0 SALD_DEUD_CASTI_TMP,
+					       (SELECT COD_ESTA_CLIE FROM MAE_ESTAT_CLIEN@DBL_SICCECE_EXEC WHERE OID_ESTA_CLIE = Y.ESTA_OID_ESTA_CLIE) ESTA_OID_ESTA_CLIE,
+					       B.VAL_SIMB_MONE,
+					       PQ_APL_AUX.VALOR_GEN_I18N_SICC(1, B.OID_MONE, 'SEG_MONED') DES_MONED  
+					FROM MAE_CLIEN@DBL_SICCECE_EXEC X, 
+					     MAE_CLIEN_DATOS_ADICI@DBL_SICCECE_EXEC Y,
+					     MAE_CLIEN_IDENT@DBL_SICCECE_EXEC Z,
+					     MAE_TIPO_DOCUM@DBL_SICCECE_EXEC W,  
+					     SEG_PAIS A,
+			     		 SEG_MONED b
+					WHERE A.OID_PAIS = X.PAIS_OID_PAIS 
+						AND W.PAIS_OID_PAIS = A.OID_PAIS
+					  	AND B.OID_MONE = A.MONE_OID_MONE	
+						AND X.OID_CLIE= Y.CLIE_OID_CLIE 
+					  	AND Z.CLIE_OID_CLIE = X.OID_CLIE
+					  	AND Z.NUM_DOCU_IDEN = #numeroDocumento#
+					  	AND Z.TDOC_OID_TIPO_DOCU = W.OID_TIPO_DOCU
+					  	AND W.COD_TIPO_DOCU = #tipoDocumento#		  
+					  			
+					<isNotEmpty prepend="AND" property="indDocumentoPrincipal">
+						  Z.VAL_IDEN_DOCU_PRIN =  #indDocumentoPrincipal#
+					</isNotEmpty>
+				</isEqual>
+				<isEqual property="codigoPais" compareValue="VEL">
+					UNION ALL						
+					SELECT NVL(X.COD_CLIE ,' ') COD_CLIE,
+                           X.VAL_APE1,
+                           X.VAL_APE2,
+                           X.VAL_NOM1,
+                           X.VAL_NOM2,
+                  (SELECT nvl(zon_regio.cod_regi,'')     
+                   FROM ssicc_ve_es.mae_clien@dbl_siccvee,
+                        ssicc_ve_es.mae_clien_unida_admin@dbl_siccvee,
+                        ssicc_ve_es.zon_terri_admin@dbl_siccvee,
+                        ssicc_ve_es.zon_secci@dbl_siccvee,
+                        ssicc_ve_es.zon_zona@dbl_siccvee,
+                        ssicc_ve_es.zon_regio@dbl_siccvee
+                  WHERE ((zon_terri_admin.oid_terr_admi = mae_clien_unida_admin.ztad_oid_terr_admi) AND
+                        (zon_secci.oid_secc = zon_terri_admin.zscc_oid_secc) AND
+                        (zon_zona.oid_zona = zon_secci.zzon_oid_zona) AND
+                        (zon_regio.oid_regi = zon_zona.zorg_oid_regi) AND
+                        (mae_clien.oid_clie = mae_clien_unida_admin.clie_oid_clie) AND
+                        (mae_clien_unida_admin.ind_acti = '1') AND (mae_clien.cod_clie = X.COD_CLIE) AND
+                        (rownum = 1) 
+                        ) )      COD_REGI,      
+                 ( SELECT nvl(zon_zona.cod_zona, '')
+                   FROM ssicc_ve_es.mae_clien@dbl_siccvee,
+                        ssicc_ve_es.mae_clien_unida_admin@dbl_siccvee,
+                        ssicc_ve_es.zon_terri_admin@dbl_siccvee,
+                        ssicc_ve_es.zon_secci@dbl_siccvee,
+                        ssicc_ve_es.zon_zona@dbl_siccvee,
+                        ssicc_ve_es.zon_regio@dbl_siccvee
+                  WHERE ((zon_terri_admin.oid_terr_admi = mae_clien_unida_admin.ztad_oid_terr_admi) AND
+                        (zon_secci.oid_secc = zon_terri_admin.zscc_oid_secc) AND
+                        (zon_zona.oid_zona = zon_secci.zzon_oid_zona) AND
+                        (zon_regio.oid_regi = zon_zona.zorg_oid_regi) AND
+                        (mae_clien.oid_clie = mae_clien_unida_admin.clie_oid_clie) AND
+                        (mae_clien_unida_admin.ind_acti = '1') AND (mae_clien.cod_clie = X.COD_CLIE) AND
+                        (rownum = 1)) ) COD_ZONA,
+                  ( SELECT nvl(zon_secci.cod_secc,'')
+                   FROM ssicc_ve_es.mae_clien@dbl_siccvee,
+                        ssicc_ve_es.mae_clien_unida_admin@dbl_siccvee,
+                        ssicc_ve_es.zon_terri_admin@dbl_siccvee,
+                        ssicc_ve_es.zon_secci@dbl_siccvee,
+                        ssicc_ve_es.zon_zona@dbl_siccvee,
+                        ssicc_ve_es.zon_regio@dbl_siccvee
+                  WHERE ((zon_terri_admin.oid_terr_admi = mae_clien_unida_admin.ztad_oid_terr_admi) AND
+                        (zon_secci.oid_secc = zon_terri_admin.zscc_oid_secc) AND
+                        (zon_zona.oid_zona = zon_secci.zzon_oid_zona) AND
+                        (zon_regio.oid_regi = zon_zona.zorg_oid_regi) AND
+                        (mae_clien.oid_clie = mae_clien_unida_admin.clie_oid_clie) AND
+                        (mae_clien_unida_admin.ind_acti = '1') AND (mae_clien.cod_clie = X.COD_CLIE) AND
+                        (rownum = 1)))  COD_SECC,
+                          NVL(X.SAL_DEUD_ANTE,0) SALD_DEUD_BELC,               			   
+                       0 SALT_DEUD_TERC,
+                       NVL((SELECT SUM(CCC.IMP_DEUD_ACTU) FROM ssicc_ve_es.CCC_CLIEN_CASTI@dbl_siccvee CCC WHERE CCC.OID_CLIE = X.OID_CLIE),0) +
+                       NVL((SELECT SUM(ZZZ.IMP_DEUD_CAST) FROM ssicc_ve_es.CCC_CONSU_CASTI_CABEC@dbl_siccvee ZZZ WHERE ZZZ.NUM_DOCU_IDEN = Z.NUM_DOCU_IDEN), 0)  SALD_DEUD_CASTI,
+                       0 SALD_DEUD_CASTI_TMP,
+                       (SELECT COD_ESTA_CLIE FROM ssicc_ve_es.MAE_ESTAT_CLIEN@dbl_siccvee WHERE OID_ESTA_CLIE = Y.ESTA_OID_ESTA_CLIE) ESTA_OID_ESTA_CLIE,
+                       B.VAL_SIMB_MONE,
+                       PQ_APL_AUX.VALOR_GEN_I18N_SICC(1, B.OID_MONE, 'SEG_MONED') DES_MONED  
+                    FROM ssicc_ve_es.MAE_CLIEN@dbl_siccvee X, 
+                         ssicc_ve_es.MAE_CLIEN_DATOS_ADICI@dbl_siccvee Y,
+                         ssicc_ve_es.MAE_CLIEN_IDENT@dbl_siccvee Z,
+                         ssicc_ve_es.MAE_TIPO_DOCUM@dbl_siccvee W,  
+                         SEG_PAIS A,
+                          SEG_MONED b
+                    WHERE A.OID_PAIS = X.PAIS_OID_PAIS 
+                        AND W.PAIS_OID_PAIS = A.OID_PAIS
+                          AND B.OID_MONE = A.MONE_OID_MONE    
+                        AND X.OID_CLIE= Y.CLIE_OID_CLIE 
+                          AND Z.CLIE_OID_CLIE = X.OID_CLIE
+                          AND Z.NUM_DOCU_IDEN = #numeroDocumento#
+                          AND Z.TDOC_OID_TIPO_DOCU = W.OID_TIPO_DOCU
+                          AND W.COD_TIPO_DOCU = #tipoDocumento#  	  
+					  			
+					<isNotEmpty prepend="AND" property="indDocumentoPrincipal">
+						  Z.VAL_IDEN_DOCU_PRIN =  #indDocumentoPrincipal#
+					</isNotEmpty>
+				
+				</isEqual>
+			</isEqual>
+		</isNotEmpty>
+		
+	</select>
+	
+	<select id="getValidacionCrediticiaUsuarioSecundario" parameterClass="java.util.Map" resultMap="validacionCrediticiaUsuarioResult">
+			SELECT NVL(C.COD_CLIE,' ') COD_CLIE,
+                   C.VAL_APE1,
+                   C.VAL_APE2,
+                   C.VAL_NOM1,
+                   C.VAL_NOM2,
+                   C.COD_REGI,
+                   C.COD_ZONA,
+                   NVL( U.COD_SECC, '') COD_SECC,
+                   0 SALD_DEUD_BELC,
+                   0 SALT_DEUD_TERC,
+                   C.IMP_DEUD_CAST SALD_DEUD_CASTI,
+                   0 SALD_DEUD_CASTI_TMP,
+                   U.ESTA_OID_ESTA_CLIE ESTA_OID_ESTA_CLIE,
+                   B.VAL_SIMB_MONE,
+                   PQ_APL_AUX.VALOR_GEN_I18N_SICC(1, B.OID_MONE, 'SEG_MONED') DES_MONED
+              FROM CCC_CONSU_CASTI_CABEC  C,
+                   V_MAE_CLIE_UNIDA_ADMIN U,
+                   SEG_PAIS  A,
+                   SEG_MONED B
+            WHERE NUM_DOCU_IDEN = #numeroDocumento#
+               AND C.COD_CLIE = U.COD_CLIE(+)
+               AND A.COD_PAIS = #codigoPais#
+               AND A.MONE_OID_MONE = B.OID_MONE
+	</select>
+	
+	<select id="getLengthDocumento" parameterClass="java.util.Map" resultClass="int">
+				
+				SELECT CASE WHEN NOT EXISTS (
+							SELECT  *  FROM  MAE_CLIEN_MODUL 
+								WHERE COD_PAIS = #codigoPais# 
+									  AND TIP_VALI = 'VAL_IDENTVAR' 
+									  AND  MOD_VALI ='NOC00' 
+									  AND IND_ACTI = 1
+							)
+					    THEN 
+					        (SELECT  val_long  FROM MAE_TIPO_DOCUM WHERE cod_tipo_docu = #tipoDocumento#)
+					    ELSE
+					        (SELECT 0  FROM DUAL)
+					    END 
+					    val FROM DUAL
+								
+	</select>
+	
+	<select id="getMotivosBloqueoXConsultora" parameterClass="java.util.Map" resultMap="getMotivosBloqueoXConsultoraResult">
+								
+		<isNotEmpty property="indCrediHistorico">
+			<isEqual property="indCrediHistorico" compareValue="1">
+					SELECT MOTI_BLOQ,
+	                       TIPO_BLOQ,
+	                       OBS_BLOQ
+                    FROM (	
+			</isEqual>
+		</isNotEmpty>
+			
+				SELECT C.VAL_MOTI_BLOQ MOTI_BLOQ,
+					   X.VAL_I18N TIPO_BLOQ,
+                       C.OBS_BLOQ,
+                       NUM_NIVE_GRAV_BLOQ
+				FROM  MAE_TIPO_BLOQU B, 
+			          GEN_I18N_SICC_COMUN X, 
+			          MAE_CLIEN_BLOQU C,
+                      MAE_CLIEN Z,
+                      MAE_CLIEN_IDENT W  
+				WHERE 
+					C.CLIE_OID_CLIE = Z.OID_CLIE
+					AND B.OID_TIPO_BLOQ = C.TIBQ_OID_TIPO_BLOQ
+					AND X.VAL_OID = B.OID_TIPO_BLOQ
+					AND X.ATTR_ENTI = 'MAE_TIPO_BLOQU'
+					AND C.FEC_DESB IS NULL
+                    AND W.CLIE_OID_CLIE = Z.OID_CLIE
+                    AND W.NUM_DOCU_IDEN =#numeroDocumento# 
+					
+			<isNotEmpty property="indCrediHistorico">
+			<isEqual property="indCrediHistorico" compareValue="1">
+				<isEqual property="codigoPais" compareValue="PE">
+					UNION ALL	
+					SELECT C.VAL_MOTI_BLOQ MOTI_BLOQ,
+                       X.VAL_I18N TIPO_BLOQ,
+                       C.OBS_BLOQ,
+                       NUM_NIVE_GRAV_BLOQ
+                FROM  SSICC_PE_LB.MAE_TIPO_BLOQU B, 
+                      SSICC_PE_LB.GEN_I18N_SICC_COMUN X, 
+                      SSICC_PE_LB.MAE_CLIEN_BLOQU C,
+                      SSICC_PE_LB.MAE_CLIEN Z,
+                      SSICC_PE_LB.MAE_CLIEN_IDENT W  
+                WHERE 
+                    C.CLIE_OID_CLIE = Z.OID_CLIE
+                    AND B.OID_TIPO_BLOQ = C.TIBQ_OID_TIPO_BLOQ
+                    AND X.VAL_OID = B.OID_TIPO_BLOQ
+                    AND X.ATTR_ENTI = 'MAE_TIPO_BLOQU'
+                    AND C.FEC_DESB IS NULL  
+                    AND W.CLIE_OID_CLIE = Z.OID_CLIE
+                    AND W.NUM_DOCU_IDEN =#numeroDocumento# 
+                    ) RESULTADO
+                    ORDER BY NUM_NIVE_GRAV_BLOQ                    
+				</isEqual>
+				<isEqual property="codigoPais" compareValue="ECL">
+					UNION ALL
+					SELECT C.VAL_MOTI_BLOQ MOTI_BLOQ,
+                       X.VAL_I18N TIPO_BLOQ,
+                       C.OBS_BLOQ,
+                       NUM_NIVE_GRAV_BLOQ
+                FROM  MAE_TIPO_BLOQU@DBL_SICCECE_EXEC B, 
+                      GEN_I18N_SICC_COMUN@DBL_SICCECE_EXEC X, 
+                      MAE_CLIEN_BLOQU@DBL_SICCECE_EXEC C,
+                      MAE_CLIEN@DBL_SICCECE_EXEC Z,
+                      MAE_CLIEN_IDENT@DBL_SICCECE_EXEC W  
+                WHERE 
+                    C.CLIE_OID_CLIE = Z.OID_CLIE
+                    AND B.OID_TIPO_BLOQ = C.TIBQ_OID_TIPO_BLOQ
+                    AND X.VAL_OID = B.OID_TIPO_BLOQ
+                    AND X.ATTR_ENTI = 'MAE_TIPO_BLOQU'
+                    AND C.FEC_DESB IS NULL  
+                    AND W.CLIE_OID_CLIE = Z.OID_CLIE
+                    AND W.NUM_DOCU_IDEN =#numeroDocumento# 
+                    ) RESULTADO
+					ORDER BY NUM_NIVE_GRAV_BLOQ
+				</isEqual>
+				<isEqual property="codigoPais" compareValue="VEL">
+					UNION ALL	
+					SELECT C.VAL_MOTI_BLOQ MOTI_BLOQ,
+                       X.VAL_I18N TIPO_BLOQ,
+                       C.OBS_BLOQ,
+                       NUM_NIVE_GRAV_BLOQ
+                FROM  ssicc_ve_es.MAE_TIPO_BLOQU@dbl_siccvee B, 
+                      ssicc_ve_es.GEN_I18N_SICC_COMUN@dbl_siccvee X, 
+                      ssicc_ve_es.MAE_CLIEN_BLOQU@dbl_siccvee C,
+                      ssicc_ve_es.MAE_CLIEN@dbl_siccvee Z,
+                      ssicc_ve_es.MAE_CLIEN_IDENT@dbl_siccvee W  
+                WHERE 
+                    C.CLIE_OID_CLIE = Z.OID_CLIE
+                    AND B.OID_TIPO_BLOQ = C.TIBQ_OID_TIPO_BLOQ
+                    AND X.VAL_OID = B.OID_TIPO_BLOQ
+                    AND X.ATTR_ENTI = 'MAE_TIPO_BLOQU'
+                    AND C.FEC_DESB IS NULL  
+                    AND W.CLIE_OID_CLIE = Z.OID_CLIE
+                    AND W.NUM_DOCU_IDEN =#numeroDocumento# 
+                    ) RESULTADO
+                    ORDER BY NUM_NIVE_GRAV_BLOQ  
+				</isEqual>
+			</isEqual>
+		</isNotEmpty>		
+								
+	</select>
+</sqlMap>

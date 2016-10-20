@@ -1,0 +1,1566 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.facturacion.MantenimientoFACSQL">
+ 
+	 <resultMap id="cierreFacturacionResult" class="java.util.HashMap">
+	      <result property="corrrelativo" 			    column="COR_PROG_CIER" 	/>
+	      <result property="campanhaProceso" 		    column="CAM_PROC" 	/>
+	      <result property="fechaCierre"		        column="FEC_CIER" 	/>
+	      <result property="tipoCierre" 			    column="TIP_CIER" 	/>
+	      <result property="codigoRegion"			    column="COD_REGI" 	/>
+	      <result property="codigoZona"					column="COD_ZONA" 	/>	      
+	      <result property="codigoCampanha" 		    column="COD_CAMP" 	/>
+	      <result property="estadoCierre" 		    	column="EST_CIER" 	/>	      	      
+	      <result property="estadoRegistro"		        column="EST_REGI" 	/>
+	      <result property="descripcionRegion"		    column="DES_REGI" 	/>
+	      <result property="descripcionZona"		    column="DES_ZONA" 	/>	      	      
+	      <result property="indicadorAccion"		    column="IND_ACCI" 	/>
+	 </resultMap>
+        
+     <select id="getCierreFacturacion"  parameterClass="java.util.Map" resultMap="cierreFacturacionResult">
+			SELECT A.COR_PROG_CIER,    
+					A.CAM_PROC,		 		 
+					TO_CHAR(A.FEC_CIER,'dd/MM/yyyy') FEC_CIER,				 
+					A.TIP_CIER,				 
+					A.COD_REGI,				 
+					A.COD_ZONA,				 
+					A.COD_CAMP,				 
+					A.EST_CIER,				 
+					A.EST_REGI,		
+					NVL((SELECT Y.DES_REGI				   
+						 FROM ZON_REGIO Y
+						 WHERE Y.COD_REGI=A.COD_REGI ),'')DES_REGI,
+					NVL((SELECT Y.DES_ZONA				   
+						 FROM ZON_ZONA Y
+				         WHERE Y.COD_ZONA=A.COD_ZONA),'')DES_ZONA,
+					'1' IND_ACCI		 
+		    FROM FAC_PROGR_CIERR A 	
+		    WHERE A.EST_REGI ='1'		
+  		 <isNotEmpty prepend="AND" property="codigoRegion">			 	   
+			 	   A.COD_REGI = #codigoRegion#
+		 </isNotEmpty>
+  		 <isNotEmpty prepend="AND" property="campanhaProceso">			 	   
+			 	   A.CAM_PROC = #campanhaProceso#
+		 </isNotEmpty>
+  		 <isNotEmpty prepend="AND" property="fechaCierre">			 	   
+			 	   TO_CHAR(A.FEC_CIER,'dd/MM/yyyy') = #fechaCierre#
+		 </isNotEmpty>	
+ 		<isNotEmpty prepend="AND" property="tipoCierre">			 	   
+			 	   a.TIP_CIER = #tipoCierre#
+		 </isNotEmpty>			 	 	
+ 		<isNotEmpty prepend="AND" property="estadoCierre">			 	   
+			 	   a.EST_CIER = #estadoCierre#
+		 </isNotEmpty>			 	 			 
+		 ORDER BY  	A.CAM_PROC,A.FEC_CIER,A.COD_REGI,A.COD_ZONA	 	 							 						    		 							
+	</select>
+	
+	<select id="getExisteCierreFacturacionRegion"  parameterClass="java.util.Map" resultClass="int">
+		SELECT count(1)
+			FROM FAC_PROGR_CIERR A   
+			WHERE A.EST_REGI ='1' 
+			  AND A.CAM_PROC = #campanhaProceso#
+			 <![CDATA[			 	   
+			  AND A.FEC_CIER <> TO_DATE(#fechaCierre#,'DD/MM/YYYY')
+			  ]]>	   
+			  AND A.TIP_CIER = 'R'
+			  AND A.COD_REGI IN (
+				SELECT DISTINCT 
+				COD_REGI FROM FAC_PROGR_CIERR X     
+				WHERE X.EST_REGI ='1'            
+				     AND X.CAM_PROC = #campanhaProceso#
+				     AND X.FEC_CIER = TO_DATE(#fechaCierre#,'DD/MM/YYYY')
+			  )
+	 </select>
+	
+		<resultMap id="consolidadoCierreFacturacionResult" class="java.util.HashMap">
+	      <result property="campanhaProceso" 		    column="CAM_PROC" 	/>
+	      <result property="fechaCierre"		        column="FEC_CIER" 	/>	      
+	 </resultMap>
+        
+     <select id="getConsolidadoCierreFacturacion"  parameterClass="java.util.Map" resultMap="consolidadoCierreFacturacionResult">
+		 
+                     SELECT X.CAM_PROC,
+                            TO_CHAR(X.FEC_CIER,'dd/MM/yyyy') FEC_CIER
+                     FROM FAC_PROGR_CIERR X     
+                     WHERE X.EST_REGI ='1'			 	   
+				  		 <isNotEmpty prepend="AND" property="campanhaProceso">			 	   
+							 	   X.CAM_PROC = #campanhaProceso#
+						 </isNotEmpty>
+				  		 <isNotEmpty prepend="AND" property="fechaCierre">			 	   
+							 	   TO_CHAR(X.FEC_CIER,'dd/MM/yyyy') = #fechaCierre#
+						 </isNotEmpty>                     
+                     GROUP BY X.CAM_PROC,x.FEC_CIER
+                     ORDER BY X.CAM_PROC DESC, x.FEC_CIER DESC				
+	</select>
+	
+	<resultMap id="agruparConsolidadoCierreFacturacionResult" class="java.util.HashMap">
+	      <result property="campanhaProceso" 		    column="CAM_PROC" 	/>
+	      <result property="fechaCierre"		        column="FEC_CIER" 	/>
+	      <result property="estadoCierre" 		    	column="EST_CIER" 	/>	      
+	      <result property="cantidadRegion" 			column="CAN_REGI" 	/>
+	      <result property="cantidadZona"			    column="CAN_ZONA" 	/>
+	      <result property="cantidadCampanha"			column="CAN_CAMP" 	/>	      
+	 </resultMap>
+        
+     <select id="getAgruparConsolidadoCierreFacturacion"  parameterClass="java.util.Map" resultMap="agruparConsolidadoCierreFacturacionResult">
+		 
+                     SELECT X.CAM_PROC,
+                            TO_CHAR(X.FEC_CIER,'dd/MM/yyyy') FEC_CIER,
+                            X.EST_CIER,
+                            (SELECT COUNT(1) 
+                              FROM(
+                                SELECT COD_REGI            
+                                 FROM FAC_PROGR_CIERR A     
+                                 WHERE A.EST_REGI ='1'
+                                   AND A.CAM_PROC =#campanhaProceso#
+                                   AND TO_CHAR(TRUNC(A.FEC_CIER),'dd/MM/yyyy') = #fechaCierre#
+                                   AND A.TIP_CIER='R'
+                                   AND A.COD_REGI IS NOT NULL
+                                GROUP BY  CAM_PROC,FEC_CIER,COD_REGI)) CAN_REGI,
+                            ( SELECT COUNT(1)
+                               FROM(SELECT COD_ZONA            
+                                  FROM FAC_PROGR_CIERR A     
+                                  WHERE A.EST_REGI ='1'
+                                   AND A.CAM_PROC =#campanhaProceso#
+                                   AND TO_CHAR(TRUNC(A.FEC_CIER),'dd/MM/yyyy') = #fechaCierre#
+                                   AND A.TIP_CIER='Z'
+                                   AND COD_ZONA IS NOT NULL
+                                GROUP BY  CAM_PROC,FEC_CIER,COD_REGI,COD_ZONA ))CAN_ZONA,
+                              (SELECT COUNT(1)
+                                FROM FAC_PROGR_CIERR Z
+                                WHERE Z.EST_REGI ='1'
+                                    AND Z.CAM_PROC = #campanhaProceso#		 	   
+									AND TO_CHAR(Z.FEC_CIER,'dd/MM/yyyy') = #fechaCierre#
+									AND TIP_CIER='C') CAN_CAMP                              
+                     FROM FAC_PROGR_CIERR X     
+                     WHERE X.EST_REGI ='1'			 	   
+				 	    AND X.CAM_PROC = #campanhaProceso#		 	   
+						AND  TO_CHAR(X.FEC_CIER,'dd/MM/yyyy') = #fechaCierre#                     
+                     GROUP BY X.CAM_PROC,FEC_CIER,X.EST_CIER
+                     ORDER BY X.CAM_PROC ,X.FEC_CIER 		 	 	 							 						    		 							
+	</select>  
+	
+	<update id="deleteCierreFacturacion" parameterClass="java.util.Map">
+			UPDATE FAC_PROGR_CIERR 
+			SET    EST_REGI = '9',
+			       USU_MODI = #login#,
+			       FEC_MODI = SYSDATE
+			WHERE  CAM_PROC = #campanhaProceso#
+			 AND TO_CHAR(FEC_CIER,'dd/MM/yyyy') = #fechaCierre#
+			 AND EST_REGI = '1'
+			   
+    </update>
+  
+
+    
+    <insert id="saveCierreFacturacion" parameterClass="java.util.Map">	
+			INSERT INTO FAC_PROGR_CIERR (
+			   COR_PROG_CIER, 
+			   COD_PAIS, 
+			   TIP_CIER, 
+			   CAM_PROC, 
+			   FEC_CIER, 
+			   COD_ZONA, 
+			   COD_REGI, 
+			   COD_CAMP, 
+			   EST_CIER, 
+			   EST_REGI,
+			   USU_MODI,
+			   FEC_MODI) 
+			VALUES ( FAC_SEQ_PRCI.nextval, 
+					 #codigoPais#,
+					 #tipoCierre#,
+			    	 #campanhaProceso#, 
+			    	 TO_DATE(#fechaCierre#,'dd/MM/yyyy'),
+			    	 #codigoZona#, 
+			    	 #codigoRegion#, 			    	 
+			    	 #codigoCampanha#,
+			    	 'E',
+			    	 '1',
+			    	  #login#,
+			    	  SYSDATE)
+    </insert>
+    
+
+    <update id="updateCierreFacturacion" parameterClass="java.util.Map">			
+				UPDATE FAC_PROGR_CIERR
+				SET    EST_REGI      = #estadoRegistro#,
+					  <isNotEmpty property="estadoCierre">			 	   
+						EST_CIER=#estadoCierre#,
+					  </isNotEmpty>				
+				        USU_MODI =#login#,
+				        FEC_MODI=SYSDATE
+				WHERE  CAM_PROC = #campanhaProceso#
+				   AND TO_CHAR(FEC_CIER,'dd/MM/yyyy')=#fechaCierre#
+				   AND EST_REGI ='1'
+ 					<isNotEmpty prepend="AND" property="tipoCierre">			 	   
+						TIP_CIER=#tipoCierre#
+					 </isNotEmpty>
+ 					<isNotEmpty prepend="AND" property="codigoZona">			 	   
+						COD_ZONA=#codigoZona#
+					 </isNotEmpty>
+ 					<isNotEmpty prepend="AND" property="codigoRegion">			 	   
+						COD_REGI =#codigoRegion#
+					 </isNotEmpty>					 				 
+ 				 				  				  				  			    	  	
+    </update>
+
+    
+     <resultMap id="baseResult" class="java.util.HashMap">
+	      <result property="value" 			column="CODIGO" 	/>
+	      <result property="label" 		    column="DESCRIPCION" 	/>
+	 </resultMap>
+        
+     <select id="getRegionesPorCerrar"  parameterClass="java.util.Map" resultMap="baseResult">
+				SELECT Z.COD_REGI CODIGO, 
+				       Z.COD_REGI|| ' - '||Z.DES_REGI DESCRIPCION
+				FROM ZON_REGIO Z
+				WHERE Z.IND_ACTI=1
+				 AND Z.IND_BORR=0
+				 AND Z.IND_CIER=1
+				 AND NOT EXISTS(
+				       SELECT NULL
+				       FROM FAC_PROGR_CIERR R
+				       WHERE R.COD_REGI=Z.COD_REGI
+				        AND R.CAM_PROC=#campanhaProceso#
+				        AND R.TIP_CIER='R'
+				        AND EST_REGI='1')
+				  AND NOT EXISTS(
+				       SELECT NULL
+				       FROM FAC_TMP_CIERR_REGIO w
+				       WHERE w.COD_REGI=Z.COD_REGI
+				        AND w.CAM_PROC=#campanhaProceso#)	
+ 				 <isNotEmpty property="flagEliminarRegion">			 	   
+						UNION 
+					      SELECT  R.cod_regi codigo, 
+					      		  (SELECT Y.cod_regi || ' - ' || Y.DES_REGI				   
+									FROM   ZON_REGIO Y
+									WHERE Y.COD_REGI=R.COD_REGI ) descripcion
+					        FROM fac_progr_cierr r
+					         WHERE  r.cam_proc = #campanhaProceso#
+					            AND r.tip_cier = 'R'        
+					            AND EST_REGI='1'				
+				 </isNotEmpty>								        				
+    			 ORDER BY CODIGO     		  							 						    		 							
+	</select>
+	
+        
+     <select id="getZonasPorCerrar"  parameterClass="java.util.Map" resultMap="baseResult">
+				SELECT X.COD_ZONA CODIGO,
+				       X.COD_ZONA || ' - ' || X.DES_ZONA DESCRIPCION
+				FROM ZON_ZONA X, 
+				     ZON_REGIO Y
+				WHERE X.ZORG_OID_REGI = Y.OID_REGI				  
+				<iterate prepend="AND" property="codigoRegion" open="(" close=")" conjunction="OR">
+      	 			 Y.COD_REGI=#codigoRegion[]#
+            	</iterate>				 
+				 AND X.IND_ACTI=1
+				 AND X.IND_BORR=0 
+				 AND X.IND_CIER=1
+				  <isEmpty property="indicadorEdit">	
+					  AND NOT EXISTS(
+					       SELECT NULL
+					       FROM FAC_PROGR_CIERR R
+					       WHERE R.COD_ZONA=X.COD_ZONA
+					        AND R.CAM_PROC=#campanhaProceso# 
+					        AND R.EST_REGI='1'
+					        AND R.TIP_CIER='Z')
+				 </isEmpty>					        
+				  AND NOT EXISTS(
+				       SELECT NULL
+				       FROM FAC_TMP_CIERR_ZONA w
+				       WHERE w.COD_ZONA=X.COD_ZONA
+				        AND w.CAM_PROC=#campanhaProceso#)				        
+				 ORDER BY COD_ZONA      		  							 						    		 							
+	</select>	
+
+
+     <select id="getCodigoRegion"  parameterClass="string" resultClass="string">
+				SELECT Y.COD_REGI				   
+				FROM ZON_ZONA X, 
+				     ZON_REGIO Y
+				WHERE X.ZORG_OID_REGI = Y.OID_REGI
+				 AND x.COD_ZONA=#value# 
+	</select>
+	
+     <select id="getDescripcionRegion"  parameterClass="string" resultClass="string">
+				SELECT Y.DES_REGI				   
+				FROM   ZON_REGIO Y
+				WHERE Y.COD_REGI=#value# 
+	</select>
+
+    <select id="getDescripcionZona"  parameterClass="string" resultClass="string">
+				SELECT Y.DES_ZONA				   
+				FROM   ZON_ZONA Y
+				WHERE Y.COD_ZONA=#value# 
+	</select>		
+	
+    <resultMap id="cierreFacturacionRegionResult" class="java.util.HashMap">
+	      <result property="campanhaProceso" 		    column="CAM_PROC" 	/>
+	      <result property="fechaCierre"		        column="FEC_CIER" 	/>
+	      <result property="codigoRegion"			    column="COD_REGI" 	/>
+	      <result property="descripcionRegion"			        column="DES_REGI" 	/>
+	      <result property="indicadorAccion"			column="IND_ACCI" 	/>
+	 </resultMap>
+        
+     <select id="getCierreFacturacionRegion"  parameterClass="java.util.Map" resultMap="cierreFacturacionRegionResult">
+		 	SELECT     
+                    A.CAM_PROC,                  
+                    TO_CHAR(A.FEC_CIER,'dd/MM/yyyy') FEC_CIER,                                  
+                    A.COD_REGI,
+                    (SELECT Y.DES_REGI				   
+				     FROM   ZON_REGIO Y
+				      WHERE Y.COD_REGI=A.COD_REGI) DES_REGI,
+				      '1' IND_ACCI                 
+            FROM FAC_PROGR_CIERR A     
+            WHERE A.EST_REGI ='1'
+	  		 <isNotEmpty prepend="AND" property="campanhaProceso">			 	   
+				 	   A.CAM_PROC = #campanhaProceso#
+			 </isNotEmpty>
+	  		 <isNotEmpty prepend="AND" property="fechaCierre">			 	   
+				 	   TO_CHAR(A.FEC_CIER,'dd/MM/yyyy') = #fechaCierre#
+			 </isNotEmpty>     
+			 AND TIP_CIER='R'       
+            GROUP BY    
+                    A.CAM_PROC,                  
+                     FEC_CIER,                                  
+                    A.COD_REGI        
+           ORDER BY   A.CAM_PROC,A.FEC_CIER, a.cod_regi
+	</select>
+	
+	    <resultMap id="cierreFacturacionZonaResult" class="java.util.HashMap">
+	      <result property="campanhaProceso" 		    column="CAM_PROC" 	/>
+	      <result property="fechaCierre"		        column="FEC_CIER" 	/>
+	      <result property="codigoRegion"			    column="COD_REGI" 	/>
+	       <result property="codigoZona"			    column="COD_ZONA" 	/>	      
+	      <result property="descripcionZona"			        column="DES_ZONA" 	/>
+	      <result property="indicadorAccion"			column="IND_ACCI" 	/>	      
+	 </resultMap>
+        
+     <select id="getCierreFacturacionZona"  parameterClass="java.util.Map" resultMap="cierreFacturacionZonaResult">           
+     		SELECT     
+                    A.CAM_PROC,                  
+                    TO_CHAR(A.FEC_CIER,'dd/MM/yyyy') FEC_CIER,                                  
+                    A.COD_REGI,
+                    A.COD_ZONA,
+                    (SELECT Y.DES_ZONA				   
+				     FROM   ZON_ZONA Y
+				      WHERE Y.COD_ZONA=A.COD_ZONA) DES_ZONA,
+				       '1' IND_ACCI                  
+            FROM FAC_PROGR_CIERR A     
+            WHERE A.EST_REGI ='1'
+	  		 <isNotEmpty prepend="AND" property="campanhaProceso">			 	   
+				 	   A.CAM_PROC = #campanhaProceso#
+			 </isNotEmpty>
+	  		 <isNotEmpty prepend="AND" property="fechaCierre">			 	   
+				 	   TO_CHAR(A.FEC_CIER,'dd/MM/yyyy') = #fechaCierre#
+			 </isNotEmpty>
+			 AND TIP_CIER='Z'                        
+            GROUP BY    
+                    A.CAM_PROC,                  
+                     FEC_CIER,                                  
+                    A.COD_REGI,
+                    A.COD_ZONA        
+           ORDER BY    A.CAM_PROC,A.FEC_CIER, a.cod_regi,A.COD_ZONA                        
+	</select>
+   
+   	<delete id="deleteTempRegion" >
+			DELETE FROM FAC_TMP_CIERR_REGIO			   
+    </delete>
+    
+    <delete id="deleteTempZona" >
+			DELETE FROM FAC_TMP_CIERR_ZONA			   
+    </delete>
+
+   	<delete id="deleteTemporalRegion" parameterClass="java.util.Map">
+			DELETE FROM FAC_TMP_CIERR_REGIO	
+			WHERE  CAM_PROC = #campanhaProceso#
+			 AND COD_REGI =#codigoRegion#
+			   
+    </delete>
+    
+     <delete id="deleteTemporalZona" parameterClass="java.util.Map">
+			DELETE FROM FAC_TMP_CIERR_ZONA	
+			WHERE  CAM_PROC = #campanhaProceso#
+			 AND COD_REGI =#codigoRegion#
+			 AND COD_ZONA=#codigoZona#			   
+    </delete>    
+    
+    
+    <insert id="saveTemporalRegion" parameterClass="java.util.Map">
+			INSERT INTO FAC_TMP_CIERR_REGIO (
+			   CAM_PROC, 		 
+			   COD_REGI) 
+			VALUES ( #campanhaProceso#, 
+			    	 #codigoRegion#)
+			   
+    </insert>
+    
+     <insert id="saveTemporalZona" parameterClass="java.util.Map">
+			INSERT INTO FAC_TMP_CIERR_ZONA (
+			   CAM_PROC, 
+			   COD_ZONA, 
+			   COD_REGI) 
+			VALUES ( #campanhaProceso#, 
+			    	 #codigoZona#, 
+			    	 #codigoRegion#)			 			   
+    </insert>  
+    
+
+	    
+     <select id="getAprobadasAnteriores"  parameterClass="java.util.Map" resultMap="cierreFacturacionResult">
+			SELECT A.COR_PROG_CIER,    
+					A.CAM_PROC,		 		 
+					TO_CHAR(A.FEC_CIER,'dd/MM/yyyy') FEC_CIER,				 
+					A.TIP_CIER,				 
+					A.COD_REGI,				 
+					A.COD_ZONA,				 
+					A.COD_CAMP,				 
+					A.EST_CIER,				 
+					A.EST_REGI,		
+					NVL((SELECT Y.DES_REGI				   
+						 FROM ZON_REGIO Y
+						 WHERE Y.COD_REGI=A.COD_REGI ),'')DES_REGI,
+					NVL((SELECT Y.DES_ZONA				   
+						 FROM ZON_ZONA Y
+				         WHERE Y.COD_ZONA=A.COD_ZONA),'')DES_ZONA,
+					'1' IND_ACCI		 
+		    FROM FAC_PROGR_CIERR A 	
+		    WHERE A.EST_REGI ='1'		
+  		 <isNotEmpty prepend="AND" property="campanhaProceso">			 	   
+			 	   A.CAM_PROC = #campanhaProceso#
+		 </isNotEmpty>
+  		 <isNotEmpty prepend="AND" property="fechaCierre">
+  		 	<![CDATA[			 	   
+			 	   A.FEC_CIER <  TO_DATE(#fechaCierre#,'dd/MM/yyyy')
+			 	]]>	   
+		 </isNotEmpty>	
+ 		<isNotEmpty prepend="AND" property="tipoCierre">			 	   
+			 	   a.TIP_CIER = #tipoCierre#
+		 </isNotEmpty>			 	 	
+ 		<isNotEmpty prepend="AND" property="estadoCierre">			 	   
+			 	   a.EST_CIER = #estadoCierre#
+		 </isNotEmpty>			 	 			 
+			 							 						    		 							
+	</select>
+   
+        <select id="getCanceladasPosterior"  parameterClass="java.util.Map" resultMap="cierreFacturacionResult">
+			SELECT A.COR_PROG_CIER,    
+					A.CAM_PROC,		 		 
+					TO_CHAR(A.FEC_CIER,'dd/MM/yyyy') FEC_CIER,				 
+					A.TIP_CIER,				 
+					A.COD_REGI,				 
+					A.COD_ZONA,				 
+					A.COD_CAMP,				 
+					A.EST_CIER,				 
+					A.EST_REGI,		
+					NVL((SELECT Y.DES_REGI				   
+						 FROM ZON_REGIO Y
+						 WHERE Y.COD_REGI=A.COD_REGI ),'')DES_REGI,
+					NVL((SELECT Y.DES_ZONA				   
+						 FROM ZON_ZONA Y
+				         WHERE Y.COD_ZONA=A.COD_ZONA),'')DES_ZONA,
+					'1' IND_ACCI		 
+		    FROM FAC_PROGR_CIERR A 	
+		    WHERE A.EST_REGI ='1'		
+  		 <isNotEmpty prepend="AND" property="campanhaProceso">			 	   
+			 	   A.CAM_PROC = #campanhaProceso#
+		 </isNotEmpty>
+  		 <isNotEmpty prepend="AND" property="fechaCierre">
+  		 	<![CDATA[			 	   
+			 	   A.FEC_CIER >  TO_DATE(#fechaCierre#,'dd/MM/yyyy')
+			 	]]>	   
+		 </isNotEmpty>	
+ 		<isNotEmpty prepend="AND" property="tipoCierre">			 	   
+			 	   a.TIP_CIER = #tipoCierre#
+		 </isNotEmpty>			 	 	
+ 		<isNotEmpty prepend="AND" property="estadoCierre">			 	   
+			 	   a.EST_CIER = #estadoCierre#
+		 </isNotEmpty>			 	 			 
+			 							 						    		 							
+	</select>
+   
+	<select id="getZonasACerrar"  parameterClass="java.util.Map" resultMap="baseResult">
+		SELECT DISTINCT Z.OID_ZONA CODIGO, 
+			   Z.DES_ZONA DESCRIPCION
+		  FROM ZON_ZONA Z, 
+		       FAC_PROGR_CIERR PRO, 
+		       CRA_PERIO CRA, 
+		       SEG_PERIO_CORPO cor
+		 WHERE z.ind_acti = 1 
+		   AND z.ind_borr = 0 
+		   AND z.Cod_Zona = pro.Cod_Zona 
+		   AND pro.Fec_Cier = TO_DATE(#fechaFacturacion# ,'dd/MM/yyyy') 
+		   AND pro.tip_cier = 'Z' 
+		   AND pro.est_cier = 'A' 
+		   AND cra.peri_oid_peri = cor.oid_peri 
+		   AND pro.CAM_PROC = cor.cod_peri
+		   AND cor.COD_PERI = #codigoPeriodo#		   
+		   
+		   <isNotEmpty prepend="AND" property="codigoRegion">
+		       Z.ZORG_OID_REGI = #codigoRegion#
+		   </isNotEmpty>
+		  
+		 ORDER BY 2
+	</select>
+
+	<select id="getRegionesACerrar"  parameterClass="java.util.Map" resultMap="baseResult">
+		SELECT DISTINCT R.OID_REGI CODIGO, 
+			   R.COD_REGI || ' - '|| R.DES_REGI DESCRIPCION
+		  FROM ZON_REGIO R, 
+		       FAC_PROGR_CIERR PRO, 
+		       CRA_PERIO CRA, 
+		       SEG_PERIO_CORPO cor 
+		 WHERE r.ind_acti = 1 
+		   AND r.ind_borr = 0 
+		   AND r.Cod_Regi = pro.Cod_Regi 
+		   AND pro.Fec_Cier = TO_DATE(#fechaFacturacion# ,'dd/MM/yyyy') 
+		   AND pro.tip_cier = #tipoCierre# 
+		   AND pro.est_cier = 'A' 
+		   AND cra.peri_oid_peri = cor.oid_peri 
+		   AND pro.CAM_PROC = cor.cod_peri
+		   AND cor.COD_PERI = #codigoPeriodo# 
+		 ORDER BY 2
+	</select>
+
+	<select id="getProcesosCierreZona"  parameterClass="java.util.Map" resultMap="baseResult">
+		SELECT ' ' CODIGO, 
+		       TRA.VAL_PROG_EJEC DESCRIPCION
+		  FROM FAC_PROCE_CIERR PC, CRA_TRANS TRA, SEG_PAIS SP
+		 WHERE PC.PAIS_OID_PAIS = SP.OID_PAIS
+		   AND SP.COD_PAIS = #codigoPais#
+		   AND PC.TCIE_OID_TIPO_CIER = 2
+		   AND PC.TRAN_OID_TRAN = TRA.OID_TRAN
+		 ORDER BY PC.PRCI_OID_PROC_CIER ASC NULLS FIRST	
+	</select>
+
+	<select id="getProcesosCierreRegion"  parameterClass="java.util.Map" resultMap="baseResult">
+       SELECT ' ' CODIGO, 
+              TRA.VAL_PROG_EJEC DESCRIPCION
+         FROM FAC_PROCE_CIERR PC, CRA_TRANS TRA, SEG_PAIS SP
+        WHERE PC.PAIS_OID_PAIS = SP.OID_PAIS
+          AND SP.COD_PAIS = #codigoPais#
+          AND PC.TCIE_OID_TIPO_CIER = 1
+          AND PC.TRAN_OID_TRAN = TRA.OID_TRAN
+        ORDER BY PC.NUM_ORDE_EJEC ASC	
+    </select>
+
+	<select id="getZonasxRegionSinProcesar"  parameterClass="java.util.Map" resultClass="string">
+        SELECT COUNT(1)
+		  FROM FAC_PROGR_CIERR PRO, ZON_REGIO reg
+		 WHERE pro.tip_cier = 'Z'
+		   
+		 <![CDATA[   
+		   AND pro.est_cier <> 'P'
+		   AND pro.est_regi <> '9'
+		 	]]>		   
+		    
+		   AND pro.CAM_PROC = #codigoPeriodo#
+		   AND pro.COD_REGI = reg.COD_REGI 
+		   AND reg.OID_REGI = #oidRegion#
+    </select>
+
+	<select id="getValidaCierreZona"  parameterClass="java.util.Map" resultClass="string">
+        SELECT INC_PKG_PROCE_INCEN.INC_FN_VALID_CIERR_ZONA(#codigoPais#, #codigoPeriodo#, #oidZona#) FROM DUAL		    
+    </select>
+
+	<select id="getValidaCierreRegion"  parameterClass="java.util.Map" resultClass="string">
+        SELECT INC_PKG_PROCE_INCEN.INC_FN_VALID_CIERR_REGIO(#codigoPais#, #codigoPeriodo#, #oidRegion#) FROM DUAL		    
+    </select>
+
+	<select id="getValidaCierrePeriodo"  parameterClass="java.util.Map" resultClass="string">
+        SELECT INC_PKG_PROCE_INCEN.INC_FN_VALID_CIERR_PERIO(#codigoPais#, #codigoPeriodo#) FROM DUAL		    
+    </select>
+    
+    <typeAlias alias="base" type="biz.belcorp.ssicc.dao.sisicc.model.Base"/>
+            
+    <resultMap id="baseResult2" class="base">														
+    	<result property="codigo" 		column="CODIGO" 	/>											
+    	<result property="descripcion" 	column="DESCRIPCION"/>													
+  	</resultMap>
+    
+	<select id="getProcesosCierrePeriodo"  parameterClass="java.util.Map" resultMap="baseResult2">
+		SELECT ' ' CODIGO, 
+		       TRA.VAL_PROG_EJEC DESCRIPCION
+		  FROM FAC_PROCE_CIERR PC, CRA_TRANS TRA, SEG_PAIS SP
+		 WHERE PC.PAIS_OID_PAIS = SP.OID_PAIS
+		   AND SP.COD_PAIS = #codigoPais#
+		   AND PC.TCIE_OID_TIPO_CIER = 3
+		   AND PC.TRAN_OID_TRAN = TRA.OID_TRAN
+		 ORDER BY PC.PRCI_OID_PROC_CIER ASC NULLS FIRST	
+	</select>
+    
+    <select id="getPeriodoACerrar"  parameterClass="java.util.Map" resultClass="string">
+		SELECT COUNT(1)
+		  FROM FAC_PROGR_CIERR PRO 
+		 WHERE pro.tip_cier = 'C' 
+		   AND pro.est_cier = 'A' 
+		   AND pro.CAM_PROC = #codigoPeriodo#
+		   
+		 <![CDATA[   
+		  		 AND pro.est_regi <> '9'
+		 	]]>		   
+		    
+	</select>
+	
+	<select id="getRegionesSinProcesar"  parameterClass="java.util.Map" resultClass="string">
+        SELECT COUNT(1)
+		  FROM FAC_PROGR_CIERR PRO
+		 WHERE pro.tip_cier = 'R'
+		   
+		 <![CDATA[   
+		   AND pro.est_cier <> 'P'
+		   AND pro.est_regi <> '9'
+		 	]]>		   
+		    
+		   AND pro.CAM_PROC = #codigoPeriodo#
+    </select>	
+    
+    <select id="getIndicadorModEducacion" parameterClass="string" resultClass="string">
+    	select VAL_PARA
+		from bas_param_pais
+		where cod_pais = #value#
+		and cod_sist = 'EDU'
+		and cod_para = '002'
+	</select>
+    
+    <select id="getCodigoZonaByOidZona"  parameterClass="integer" resultClass="string">
+		SELECT Y.COD_ZONA				   
+		FROM   ZON_ZONA Y
+		WHERE Y.OID_ZONA=#value# 
+	</select>
+	
+	<select id="getCodigoRegionByOidRegion"  parameterClass="integer" resultClass="string">
+		SELECT Y.COD_REGI				   
+		FROM   ZON_REGIO Y
+		WHERE Y.OID_REGI=#value# 
+	</select>
+	
+	<update id="updateAutorizacionFacturacionElectronica" parameterClass="java.util.Map">			
+				UPDATE MAE_CLIEN_DATOS_ADICI 
+				SET IND_IMPR_DOCU = '0', USU_CARG =#usurioCarga#, FEC_CARG =SYSDATE, TIP_CARG =#tipoCarga# 
+				WHERE  CLIE_OID_CLIE = #oidCliente#		  			    	  	
+    </update>
+	
+    <resultMap id="listaEstadoFacturacionDetalladoResult" class="java.util.HashMap">
+	      <result property="tipoDocumento" 					column="DES_TIPO_DOCU" 	/>
+	      <result property="serieDocumento"		        	column="VAL_SERI_DOCU_LEGA" 	/>
+	      <result property="numeroDocumento"			column="NUM_DOCU_CONT_INTE" 	/>
+	      <result property="estadoDocumento"				column="IND_PROC_FACT_ELEC" 	/>
+	      <result property="fechaFacturacion"				column="FEC_FACT" 	/>
+	      <result property="enviadoFE"							column="ENV_FE" 	/>
+	      <result property="fechaProcFacturacion"		column="FEC_PROC_FACT_ELECT" 	/>
+	 </resultMap>
+	 
+	 <!-- Consulta detallada para documentos: Factura (001), Boleta Venta (011), Boleta Venta Premio (012) -->
+     <select id="getListaEstadoFacturacionDetalladoBF"  parameterClass="java.util.Map" resultMap="listaEstadoFacturacionDetalladoResult">
+		SELECT ftd.des_tipo_docu, cab.val_seri_docu_lega, cab.num_docu_cont_inte, 
+		       (case cab.ind_proc_fact_elec when '0' then 'NO PROCESADO' else 'PROCESADO' end) ind_proc_fact_elec, 
+		       TO_CHAR (cab.fec_fact, 'DD/MM/YYYY') fec_fact, 
+              (
+                SELECT (CASE COUNT (*) WHEN 0 THEN 'N' ELSE 'S' END)
+                FROM imp_tmp_felec_cabec a
+                WHERE a.tip_doc = (SELECT   cod_tipo_docu
+                                                  FROM fac_docum_elect_homol b
+                                                  WHERE b.tido_oid_tipo_docu = cab.tido_oid_tipo_docu
+                                                  GROUP BY cod_tipo_docu)
+                AND a.num_seri = cab.val_seri_docu_lega
+                AND a.num_docu_inte = cab.num_docu_cont_inte
+                ) env_fe, 
+                TO_CHAR (cab.fec_proc_fact_elect, 'DD/MM/YYYY') AS fec_proc_fact_elect 
+		  FROM fac_docum_conta_cabec cab, fac_tipo_docum ftd
+		 WHERE cab.tido_oid_tipo_docu = ftd.oid_tipo_docu
+		 <isNotEmpty prepend="AND" property="fechaInicio">
+			<![CDATA[
+				TRUNC(cab.fec_fact) >= TO_DATE (#fechaInicio#, 'DD/MM/YYYY')
+			]]>
+		 </isNotEmpty>  
+		 <isNotEmpty prepend="AND" property="fechaFin">
+			<![CDATA[
+				TRUNC(cab.fec_fact) <= TO_DATE (#fechaFin#, 'DD/MM/YYYY')
+			]]>
+		 </isNotEmpty>
+		   AND ftd.cod_tipo_docu = #tipoDocumento#
+  		 <isNotEmpty prepend="AND" property="serieDocumento">
+			 cab.val_seri_docu_lega = #serieDocumento#
+		 </isNotEmpty>	
+  		 <isNotEmpty prepend="AND" property="estadoDocumento">   
+			 cab.ind_proc_fact_elec = #estadoDocumento#
+		 </isNotEmpty>	
+		   AND EXISTS (
+		          SELECT NULL
+		            FROM fac_docum_conta_linea det,
+		                 ped_solic_posic psp,
+		                 pre_ofert_detal pod
+		           WHERE det.sopo_oid_soli_posi = psp.oid_soli_posi
+		             AND psp.ofde_oid_deta_ofer = pod.oid_deta_ofer(+)
+					 AND det.num_unid_aten > 0
+		             AND det.dcca_oid_cabe = cab.oid_cabe
+		             AND NOT EXISTS (
+		                         SELECT NULL
+		                           FROM fac_tipo_ofert_exclu toe
+		                          WHERE toe.tofe_oid_tipo_ofer = pod.tofe_oid_tipo_ofer))
+	</select>
+	 
+	 <!-- Consulta detallada para documentos: Nota de Credito Contra Boleta de Venta (020), Nota de Credito Contra Factura (021), Nota de Debito (023) -->
+    <select id="getListaEstadoFacturacionDetalladoNCND"  parameterClass="java.util.Map" resultMap="listaEstadoFacturacionDetalladoResult">
+		SELECT ftd.des_tipo_docu, cab.val_seri_docu_lega, cab.num_docu_cont_inte, 
+		       (case cab.ind_proc_fact_elec when '0' then 'NO PROCESADO' else 'PROCESADO' end) ind_proc_fact_elec, 
+		       to_char(cab.fec_fact, 'DD/MM/YYYY') fec_fact, 
+              (
+                SELECT (CASE COUNT (*) WHEN 0 THEN 'N' ELSE 'S' END)
+                FROM imp_tmp_felec_cabec a
+                WHERE a.tip_doc = (SELECT   cod_tipo_docu
+                                                  FROM fac_docum_elect_homol b
+                                                  WHERE b.tido_oid_tipo_docu = cab.tido_oid_tipo_docu
+                                                  GROUP BY cod_tipo_docu)
+                AND a.num_seri = cab.val_seri_docu_lega
+                AND a.num_docu_inte = cab.num_docu_cont_inte
+                ) env_fe, 
+                TO_CHAR (cab.fec_proc_fact_elect, 'DD/MM/YYYY') AS fec_proc_fact_elect 
+		FROM fac_docum_conta_cabec 	cab,
+			       fac_tipo_docum        		ftd,
+			       mae_clien             				mc,
+			       mae_clien_datos_adici 		mcda,
+			       ped_solic_cabec       		con,
+			       ped_tasa_impue        		pti,
+			       zon_regio             				reg,
+			       zon_zona              			zon,
+			       zon_secci             				sec,
+			       zon_terri             				ter,
+			       seg_pais              				sp,
+			       cra_perio 							cp,
+			       seg_perio_corpo 				spc,
+			       ped_solic_cabec 				conref,
+			       cra_perio  						cpr,
+			       seg_perio_corpo 				spcr,
+			       fac_docum_conta_cabec cabref
+		WHERE sp.oid_pais = mc.pais_oid_pais
+		   AND mc.oid_clie = con.clie_oid_clie
+		   AND mc.oid_clie = mcda.clie_oid_clie
+		   AND con.oid_soli_cabe = cab.soca_oid_soli_cabe
+		   AND con.soca_oid_docu_refe=conref.oid_soli_cabe
+		   AND conref.perd_oid_peri=cpr.oid_peri
+		   AND cpr.peri_oid_peri=spcr.oid_peri
+		   AND conref.oid_soli_cabe=cabref.soca_oid_soli_cabe
+		   AND EXISTS (SELECT 1 FROM fac_docum_conta_linea x, fac_docum_conta_linea y WHERE x.prod_oid_prod=y.prod_oid_prod AND x.dcca_oid_cabe=cab.oid_cabe AND y.dcca_oid_cabe=cabref.oid_cabe)
+		   AND con.taim_oid_tasa_impu = pti.oid_tasa_impu
+		   AND cab.tido_oid_tipo_docu = ftd.oid_tipo_docu
+		   AND cab.zorg_oid_regi = reg.oid_regi
+		   AND cab.zzon_oid_zona = zon.oid_zona
+		   AND cab.zscc_oid_secc = sec.oid_secc
+		   AND cab.terr_oid_terr = ter.oid_terr
+		   AND cp.peri_oid_peri = spc.oid_peri
+		   AND cp.oid_peri = cab.perd_oid_peri
+		   AND cab.perd_oid_peri >= (
+				SELECT MIN(a.oid_peri) FROM cra_perio a WHERE 1 = 1 
+				<isNotEmpty prepend="AND" property="fechaInicio">
+					<![CDATA[
+						TRUNC(a.fec_inic) < TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+					]]>
+				</isNotEmpty>  
+				<isNotEmpty prepend="AND" property="fechaFin">
+					<![CDATA[
+						TRUNC(a.fec_fina) > TO_DATE (#fechaFin#, 'DD/MM/YYYY') 
+					]]>
+				</isNotEmpty>
+		   )
+		   <isNotEmpty prepend="AND" property="fechaInicio">
+				<![CDATA[
+					TRUNC(cab.fec_fact) >= TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+				]]>
+		   </isNotEmpty>  
+		   <isNotEmpty prepend="AND" property="fechaFin">
+				<![CDATA[
+					TRUNC(cab.fec_fact) <= TO_DATE (#fechaFin#, 'DD/MM/YYYY') 
+				]]>
+		   </isNotEmpty>
+		   AND ftd.cod_tipo_docu = #tipoDocumento# 
+  		   <isNotEmpty prepend="AND" property="serieDocumento">
+  		   		cab.val_seri_docu_lega = #serieDocumento# 
+		   </isNotEmpty>	
+  		   <isNotEmpty prepend="AND" property="estadoDocumento">   
+  		   		cab.ind_proc_fact_elec = #estadoDocumento# 
+		   </isNotEmpty>	
+		   AND EXISTS (
+		          SELECT NULL
+		            FROM fac_docum_conta_linea det,
+		                 ped_solic_posic psp,
+		                 pre_ofert_detal pod
+		           WHERE det.sopo_oid_soli_posi = psp.oid_soli_posi
+		             AND psp.ofde_oid_deta_ofer = pod.oid_deta_ofer(+)
+					<isEqual property="credito" compareValue="0"> 
+						<![CDATA[
+							AND det.num_unid_aten <> 0 
+						 ]]>
+					</isEqual>
+					<isEqual property="credito" compareValue="1"> 
+						<![CDATA[
+							AND det.num_unid_aten > 0 
+						 ]]>
+					</isEqual>
+		             AND det.dcca_oid_cabe = cab.oid_cabe
+		             AND NOT EXISTS (
+		                         SELECT NULL
+		                           FROM fac_tipo_ofert_exclu toe
+		                          WHERE toe.tofe_oid_tipo_ofer = pod.tofe_oid_tipo_ofer))
+	</select>
+	
+	<!-- Consulta detallada para documentos: Nota de Credito Retail Contra Boleta de Venta (BR), Nota de Credito Retail Contra Factura (FR) -->
+    <select id="getListaEstadoFacturacionDetalladoNCRetailBF"  parameterClass="java.util.Map" resultMap="listaEstadoFacturacionDetalladoResult">
+		SELECT 
+                (CASE substr(num_seri, 0, 2)
+                   WHEN 'BR'
+                      THEN 'Nota Crédito Retail Boleta'
+                   WHEN 'FR'
+                      THEN 'Nota Crédito Retail Factura'
+                END
+               ) AS des_tipo_docu,
+		       num_seri AS val_seri_docu_lega, 
+		       num_docu_inte AS num_docu_cont_inte, 
+		       (CASE ind_proc_fe 
+		           WHEN '0' 
+		              THEN 'NO PROCESADO' 
+		           ELSE 'PROCESADO' 
+		        END 
+		       ) ind_proc_fact_elec, 
+		       TO_CHAR (fec_fact, 'DD/MM/YYYY') AS fec_fact, 
+		       'S' AS env_fe, 
+		       TO_CHAR (fec_proc_fact_elect, 'DD/MM/YYYY') AS fec_proc_fact_elect 
+		  FROM imp_tmp_felec_nc_retail_cabec 
+		 WHERE num_seri LIKE #tipoDocumento#||'%' 
+		 <isNotEmpty prepend="AND" property="serieDocumento">
+  		 		num_seri = #serieDocumento#
+		 </isNotEmpty>	
+		 <isNotEmpty prepend="AND" property="fechaInicio">
+			<![CDATA[
+				TRUNC (fec_fact) >= TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+			]]>
+		 </isNotEmpty>  
+		 <isNotEmpty prepend="AND" property="fechaFin">
+			<![CDATA[
+				TRUNC (fec_fact) <= TO_DATE (#fechaFin#, 'DD/MM/YYYY') 
+			]]>
+		 </isNotEmpty>
+		 <isNotEmpty prepend="AND" property="fechaDesde">
+			<![CDATA[
+				TRUNC (fec_proc_fact_elect) >= TO_DATE (#fechaDesde#, 'DD/MM/YYYY') 
+			]]>
+		 </isNotEmpty>  
+		 <isNotEmpty prepend="AND" property="fechaHasta">
+			<![CDATA[
+				TRUNC (fec_proc_fact_elect) <= TO_DATE (#fechaHasta#, 'DD/MM/YYYY') 
+			]]>
+		 </isNotEmpty>
+  		   <isNotEmpty prepend="AND" property="estadoDocumento">   
+  		   		ind_proc_fe = #estadoDocumento# 
+		   </isNotEmpty>	
+	</select>
+	
+	<!-- Consulta detallada para todos los documentos de facturacion -->
+    <select id="getListaEstadoFacturacionDetalladoTodos"  parameterClass="java.util.Map" resultMap="listaEstadoFacturacionDetalladoResult">
+		SELECT *
+			FROM (
+			SELECT 
+				  ftd.des_tipo_docu, 
+				  cab.val_seri_docu_lega, 
+				  cab.num_docu_cont_inte, 
+			      (case cab.ind_proc_fact_elec when '0' then 'NO PROCESADO' else 'PROCESADO' end) ind_proc_fact_elec, 
+			      to_char(cab.fec_fact, 'DD/MM/YYYY') fec_fact, 
+	              ( SELECT (CASE COUNT (*) WHEN 0 THEN 'N' ELSE 'S' END) 
+	                FROM imp_tmp_felec_cabec a 
+	                WHERE a.tip_doc = (SELECT   cod_tipo_docu 
+	                                                  FROM fac_docum_elect_homol b 
+	                                                  WHERE b.tido_oid_tipo_docu = cab.tido_oid_tipo_docu 
+	                                                  GROUP BY cod_tipo_docu) 
+	                AND a.num_seri = cab.val_seri_docu_lega 
+	                AND a.num_docu_inte = cab.num_docu_cont_inte ) env_fe,  
+	              TO_CHAR (cab.fec_proc_fact_elect, 'DD/MM/YYYY') AS fec_proc_fact_elect  
+			FROM fac_docum_conta_cabec 	cab,
+				       fac_tipo_docum        		ftd,
+				       mae_clien             				mc,
+				       mae_clien_datos_adici 		mcda,
+				       ped_solic_cabec       		con,
+				       ped_tasa_impue        		pti,
+				       zon_regio             				reg,
+				       zon_zona              			zon,
+				       zon_secci             				sec,
+				       zon_terri             				ter,
+				       seg_pais              				sp,
+				       cra_perio 							cp,
+				       seg_perio_corpo 				spc,
+				       ped_solic_cabec 				conref,
+				       cra_perio  						cpr,
+				       seg_perio_corpo 				spcr,
+				       fac_docum_conta_cabec cabref
+			WHERE sp.oid_pais = mc.pais_oid_pais
+			   AND mc.oid_clie = con.clie_oid_clie
+			   AND mc.oid_clie = mcda.clie_oid_clie
+			   AND con.oid_soli_cabe = cab.soca_oid_soli_cabe
+			   AND con.soca_oid_docu_refe=conref.oid_soli_cabe
+			   AND conref.perd_oid_peri=cpr.oid_peri
+			   AND cpr.peri_oid_peri=spcr.oid_peri
+			   AND conref.oid_soli_cabe=cabref.soca_oid_soli_cabe
+			   AND EXISTS (SELECT 1 
+			   						   FROM fac_docum_conta_linea x, fac_docum_conta_linea y 
+			   						 WHERE x.prod_oid_prod=y.prod_oid_prod 
+			   						      AND x.dcca_oid_cabe=cab.oid_cabe 
+			   						      AND y.dcca_oid_cabe=cabref.oid_cabe)
+			   AND con.taim_oid_tasa_impu = pti.oid_tasa_impu
+			   AND cab.tido_oid_tipo_docu = ftd.oid_tipo_docu
+			   AND cab.zorg_oid_regi = reg.oid_regi
+			   AND cab.zzon_oid_zona = zon.oid_zona
+			   AND cab.zscc_oid_secc = sec.oid_secc
+			   AND cab.terr_oid_terr = ter.oid_terr
+			   AND cp.peri_oid_peri = spc.oid_peri
+			   AND cp.oid_peri = cab.perd_oid_peri
+			   AND cab.perd_oid_peri >= (
+					SELECT MIN(a.oid_peri) FROM cra_perio a WHERE 1 = 1 
+					<isNotEmpty prepend="AND" property="fechaInicio">
+						<![CDATA[
+							TRUNC(a.fec_inic) < TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+						]]>
+					</isNotEmpty>
+					<isNotEmpty prepend="AND" property="fechaFin">
+						<![CDATA[
+							TRUNC(a.fec_fina) > TO_DATE (#fechaFin#, 'DD/MM/YYYY')
+						]]>
+					</isNotEmpty>
+			   )
+			   <isNotEmpty prepend="AND" property="fechaInicio">
+					<![CDATA[
+						TRUNC(cab.fec_fact) >= TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+					]]>
+			   </isNotEmpty>  
+			   <isNotEmpty prepend="AND" property="fechaFin">
+					<![CDATA[
+						TRUNC(cab.fec_fact) <= TO_DATE (#fechaFin#, 'DD/MM/YYYY') 
+					]]>
+			   </isNotEmpty>
+	  		   <isNotEmpty prepend="AND" property="serieDocumento">
+	  		   		cab.val_seri_docu_lega = #serieDocumento# 
+			   </isNotEmpty>	
+	  		   <isNotEmpty prepend="AND" property="estadoDocumento">   
+	  		   		cab.ind_proc_fact_elec = #estadoDocumento# 
+			   </isNotEmpty>	
+			   AND EXISTS (
+			          SELECT NULL
+			            FROM fac_docum_conta_linea det,
+			                 	   ped_solic_posic psp,
+			                 	   pre_ofert_detal pod
+			          WHERE det.sopo_oid_soli_posi = psp.oid_soli_posi
+			               AND psp.ofde_oid_deta_ofer = pod.oid_deta_ofer(+)
+						<isEqual property="credito" compareValue="0"> 
+							<![CDATA[
+								AND det.num_unid_aten <> 0 
+							 ]]>
+						</isEqual>
+						<isEqual property="credito" compareValue="1"> 
+							<![CDATA[
+								AND det.num_unid_aten > 0 
+							 ]]>
+						</isEqual>
+			             AND det.dcca_oid_cabe = cab.oid_cabe
+			             AND NOT EXISTS (
+			                         SELECT NULL
+			                           FROM fac_tipo_ofert_exclu toe
+			                         WHERE toe.tofe_oid_tipo_ofer = pod.tofe_oid_tipo_ofer)) 
+			UNION ALL
+			SELECT 
+				  ftd.des_tipo_docu, 
+				  cab.val_seri_docu_lega, 
+				  cab.num_docu_cont_inte,
+				  (case cab.ind_proc_fact_elec when '0' then 'NO PROCESADO' else 'PROCESADO' end) ind_proc_fact_elec,
+				  to_char(cab.fec_fact, 'DD/MM/YYYY') fec_fact, 
+	              (SELECT (CASE COUNT (*) WHEN 0 THEN 'N' ELSE 'S' END)
+	                 FROM imp_tmp_felec_cabec a
+	               WHERE a.tip_doc = (SELECT   cod_tipo_docu
+	                                                 FROM fac_docum_elect_homol b
+	                                                 WHERE b.tido_oid_tipo_docu = cab.tido_oid_tipo_docu
+	                                                 GROUP BY cod_tipo_docu)
+	                AND a.num_seri = cab.val_seri_docu_lega
+	                AND a.num_docu_inte = cab.num_docu_cont_inte) env_fe,
+	              TO_CHAR (cab.fec_proc_fact_elect, 'DD/MM/YYYY') AS fec_proc_fact_elect 
+			  FROM fac_docum_conta_cabec cab, fac_tipo_docum ftd
+			 WHERE cab.tido_oid_tipo_docu = ftd.oid_tipo_docu 
+			 <isNotEmpty prepend="AND" property="fechaInicio">
+				<![CDATA[
+					TRUNC(cab.fec_fact) >= TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>
+			 <isNotEmpty prepend="AND" property="fechaFin">
+				<![CDATA[
+					TRUNC(cab.fec_fact) <= TO_DATE (#fechaFin#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>
+	  		 <isNotEmpty prepend="AND" property="serieDocumento">
+				 cab.val_seri_docu_lega = #serieDocumento# 
+			 </isNotEmpty>
+	  		 <isNotEmpty prepend="AND" property="estadoDocumento">   
+				 cab.ind_proc_fact_elec = #estadoDocumento# 
+			 </isNotEmpty>	
+			   AND EXISTS (
+			          SELECT NULL
+			            FROM fac_docum_conta_linea det,
+			                 ped_solic_posic psp,
+			                 pre_ofert_detal pod
+			           WHERE det.sopo_oid_soli_posi = psp.oid_soli_posi
+			             AND psp.ofde_oid_deta_ofer = pod.oid_deta_ofer(+)
+						 AND det.num_unid_aten > 0
+			             AND det.dcca_oid_cabe = cab.oid_cabe
+			             AND NOT EXISTS (
+			                         SELECT NULL
+			                           FROM fac_tipo_ofert_exclu toe
+			                          WHERE toe.tofe_oid_tipo_ofer = pod.tofe_oid_tipo_ofer)) 
+			UNION ALL
+			SELECT 
+	                (CASE substr(num_seri, 0, 2)
+	                   WHEN 'BR'
+	                      THEN 'Nota Crédito Retail Boleta'
+	                   WHEN 'FR'
+	                      THEN 'Nota Crédito Retail Factura'
+	                END
+	               ) AS des_tipo_docu, 
+			       num_seri AS val_seri_docu_lega, 
+			       num_docu_inte AS num_docu_cont_inte, 
+			       (CASE ind_proc_fe 
+			           WHEN '0' 
+			              THEN 'NO PROCESADO' 
+			           ELSE 'PROCESADO' 
+			        END 
+			       ) ind_proc_fact_elec, 
+			       TO_CHAR (fec_fact, 'DD/MM/YYYY') AS fec_fact, 
+			       'S' AS env_fe, 
+			       TO_CHAR (fec_proc_fact_elect, 'DD/MM/YYYY') AS fec_proc_fact_elect 
+			  FROM imp_tmp_felec_nc_retail_cabec 
+			 WHERE 1 = 1  
+			 <isNotEmpty prepend="AND" property="serieDocumento">
+	  		 		num_seri = #serieDocumento#
+			 </isNotEmpty>	
+			 <isNotEmpty prepend="AND" property="fechaInicio">
+				<![CDATA[
+					TRUNC (fec_fact) >= TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>  
+			 <isNotEmpty prepend="AND" property="fechaFin">
+				<![CDATA[
+					TRUNC (fec_fact) <= TO_DATE (#fechaFin#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>
+			 <isNotEmpty prepend="AND" property="fechaDesde">
+				<![CDATA[
+					TRUNC (fec_proc_fact_elect) >= TO_DATE (#fechaDesde#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>  
+			 <isNotEmpty prepend="AND" property="fechaHasta">
+				<![CDATA[
+					TRUNC (fec_proc_fact_elect) <= TO_DATE (#fechaHasta#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>
+	  		 <isNotEmpty prepend="AND" property="estadoDocumento">   
+	  		  		ind_proc_fe = #estadoDocumento# 
+			 </isNotEmpty>
+			)
+	</select>
+	
+    <resultMap id="listaEstadoFacturacionConsolidadoResult" class="java.util.HashMap">
+	      <result property="tipoDocumento" 		column="DES_TIPO_DOCU" 	/>
+	      <result property="serieDocumento"		column="VAL_SERI_DOCU_LEGA"  />
+	      <result property="valorTotal"	  			column="VAL_TOTAL"  />
+	 </resultMap>
+	 
+	 <!-- Consulta consolidada para documentos: Factura (001), Boleta Venta (011), Boleta Venta Premio (012) -->
+     <select id="getListaEstadoFacturacionConsolidadoBF"  parameterClass="java.util.Map" resultMap="listaEstadoFacturacionConsolidadoResult">
+		SELECT ftd.des_tipo_docu, cab.val_seri_docu_lega, COUNT (*) AS val_total 
+		    FROM fac_docum_conta_cabec cab, fac_tipo_docum ftd 
+		   WHERE cab.tido_oid_tipo_docu = ftd.oid_tipo_docu 
+		     AND cab.perd_oid_peri IN (
+		            SELECT a.oid_peri 
+		              FROM cra_perio a 
+		             WHERE (1 = 1 
+						 <isNotEmpty prepend="AND" property="fechaInicio">
+							<![CDATA[
+								TRUNC (a.fec_fina) >= TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+							]]>
+						 </isNotEmpty>
+						 <isNotEmpty prepend="OR" property="fechaDesde">
+							<![CDATA[
+								TRUNC (a.fec_fina) >= TO_DATE (#fechaDesde#, 'DD/MM/YYYY') 
+							]]>
+						 </isNotEmpty>
+						 ) AND (1 = 1 
+						 <isNotEmpty prepend="AND" property="fechaFin">
+							<![CDATA[
+								TRUNC (a.fec_inic) <= TO_DATE (#fechaFin#, 'DD/MM/YYYY') 
+							]]>
+						 </isNotEmpty>
+						 <isNotEmpty prepend="OR" property="fechaHasta">
+							<![CDATA[
+								TRUNC (a.fec_inic) <= TO_DATE (#fechaHasta#, 'DD/MM/YYYY') 
+							]]>
+						 </isNotEmpty>
+						 ) ) 
+		     AND ftd.cod_tipo_docu = #tipoDocumento# 
+			 <isNotEmpty prepend="AND" property="fechaInicio">
+				<![CDATA[
+					TRUNC (cab.fec_fact) >= TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>  
+			 <isNotEmpty prepend="AND" property="fechaFin">
+				<![CDATA[
+					TRUNC (cab.fec_fact) <= TO_DATE (#fechaFin#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>
+			 <isNotEmpty prepend="AND" property="fechaDesde">
+				<![CDATA[
+					TRUNC (cab.fec_proc_fact_elect) >= TO_DATE (#fechaDesde#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>  
+			 <isNotEmpty prepend="AND" property="fechaHasta">
+				<![CDATA[
+					TRUNC (cab.fec_proc_fact_elect) <= TO_DATE (#fechaHasta#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>
+	  		 <isNotEmpty prepend="AND" property="estadoDocumento">
+	  		  		cab.ind_proc_fact_elec = #estadoDocumento# 
+			 </isNotEmpty>
+			 <isNotEmpty prepend="AND" property="serieDocumento">
+	  		 		cab.val_seri_docu_lega = #serieDocumento# 
+			 </isNotEmpty>
+		     AND EXISTS (
+		            SELECT NULL
+		              FROM fac_docum_conta_linea det,
+		                   ped_solic_posic psp,
+		                   pre_ofert_detal pod
+		             WHERE det.sopo_oid_soli_posi = psp.oid_soli_posi
+		               AND psp.ofde_oid_deta_ofer = pod.oid_deta_ofer(+)
+		               AND det.num_unid_aten > 0
+		               AND det.dcca_oid_cabe = cab.oid_cabe
+		               AND NOT EXISTS (SELECT NULL
+		                                               FROM fac_tipo_ofert_exclu toe
+		                                              WHERE toe.tofe_oid_tipo_ofer = pod.tofe_oid_tipo_ofer)) 
+		GROUP BY ftd.des_tipo_docu, cab.val_seri_docu_lega
+	</select>
+	
+	<!-- Consulta consolidada para documentos: Nota de Credito Contra Boleta de Venta (020), Nota de Credito Contra Factura (021), Nota de Debito (023) -->
+    <select id="getListaEstadoFacturacionConsolidadoNCND"  parameterClass="java.util.Map" resultMap="listaEstadoFacturacionConsolidadoResult">
+		SELECT ftd.des_tipo_docu, cab.val_seri_docu_lega, COUNT (*) AS val_total
+		    FROM fac_docum_conta_cabec cab, fac_tipo_docum ftd
+		   WHERE cab.tido_oid_tipo_docu = ftd.oid_tipo_docu
+			 <![CDATA[
+				AND cab.perd_oid_peri >= 
+			 ]]>
+		            (SELECT MIN (a.oid_peri)
+		               FROM cra_perio a
+		             WHERE (1 = 1 
+						 <isNotEmpty prepend="AND" property="fechaInicio">
+							<![CDATA[
+								TRUNC (a.fec_fina) >= TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+							]]>
+						 </isNotEmpty>
+						 <isNotEmpty prepend="OR" property="fechaDesde">
+							<![CDATA[
+								TRUNC (a.fec_fina) >= TO_DATE (#fechaDesde#, 'DD/MM/YYYY') 
+							]]>
+						 </isNotEmpty>
+						 ) AND (1 = 1 
+						 <isNotEmpty prepend="AND" property="fechaFin">
+							<![CDATA[
+								TRUNC (a.fec_inic) <= TO_DATE (#fechaFin#, 'DD/MM/YYYY') 
+							]]>
+						 </isNotEmpty>
+						 <isNotEmpty prepend="OR" property="fechaHasta">
+							<![CDATA[
+								TRUNC (a.fec_inic) <= TO_DATE (#fechaHasta#, 'DD/MM/YYYY') 
+							]]>
+						 </isNotEmpty>
+						 ) ) 
+		     AND ftd.cod_tipo_docu = #tipoDocumento# 
+			 <isNotEmpty prepend="AND" property="fechaInicio">
+				<![CDATA[
+					TRUNC (cab.fec_fact) >= TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>  
+			 <isNotEmpty prepend="AND" property="fechaFin">
+				<![CDATA[
+					TRUNC (cab.fec_fact) <= TO_DATE (#fechaFin#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>
+			 <isNotEmpty prepend="AND" property="fechaDesde">
+				<![CDATA[
+					TRUNC (cab.fec_proc_fact_elect) >= TO_DATE (#fechaDesde#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>  
+			 <isNotEmpty prepend="AND" property="fechaHasta">
+				<![CDATA[
+					TRUNC (cab.fec_proc_fact_elect) <= TO_DATE (#fechaHasta#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>
+	  		 <isNotEmpty prepend="AND" property="estadoDocumento">
+	  		  		cab.ind_proc_fact_elec = #estadoDocumento# 
+			 </isNotEmpty>
+			 <isNotEmpty prepend="AND" property="serieDocumento">
+	  		 		cab.val_seri_docu_lega = #serieDocumento# 
+			 </isNotEmpty>
+		     AND EXISTS (
+		            SELECT NULL
+		              FROM fac_docum_conta_linea det,
+		                   ped_solic_posic psp,
+		                   pre_ofert_detal pod
+		             WHERE det.sopo_oid_soli_posi = psp.oid_soli_posi
+		               AND psp.ofde_oid_deta_ofer = pod.oid_deta_ofer(+)
+					 <![CDATA[
+					   AND det.num_unid_aten <> 0 
+					 ]]>
+		               AND det.dcca_oid_cabe = cab.oid_cabe
+		               AND NOT EXISTS (SELECT NULL
+		                                               FROM fac_tipo_ofert_exclu toe
+		                                             WHERE toe.tofe_oid_tipo_ofer = pod.tofe_oid_tipo_ofer))
+		GROUP BY ftd.des_tipo_docu, cab.val_seri_docu_lega
+	</select>
+	
+	<!-- Consulta consolidada para documentos: Nota de Credito Retail Contra Boleta de Venta (BR), Nota de Credito Retail Contra Factura (FR) -->
+    <select id="getListaEstadoFacturacionConsolidadoNCRetailBF"  parameterClass="java.util.Map" resultMap="listaEstadoFacturacionConsolidadoResult">
+		SELECT   
+	             (CASE substr(num_seri, 0, 2)
+	                 WHEN 'BR'
+	                    THEN 'Nota Crédito Retail Boleta'
+	                 WHEN 'FR'
+	                    THEN 'Nota Crédito Retail Factura'
+	              END
+	             ) AS des_tipo_docu,
+		         num_seri AS val_seri_docu_lega, 
+		         COUNT (*) AS val_total
+		    FROM imp_tmp_felec_nc_retail_cabec
+		 WHERE num_seri LIKE #tipoDocumento#||'%' 
+		 <isNotEmpty prepend="AND" property="serieDocumento">
+  		 		num_seri = #serieDocumento#
+		 </isNotEmpty>	
+		 <isNotEmpty prepend="AND" property="fechaInicio">
+			<![CDATA[
+				TRUNC (fec_fact) >= TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+			]]>
+		 </isNotEmpty>  
+		 <isNotEmpty prepend="AND" property="fechaFin">
+			<![CDATA[
+				TRUNC (fec_fact) <= TO_DATE (#fechaFin#, 'DD/MM/YYYY') 
+			]]>
+		 </isNotEmpty>
+		 <isNotEmpty prepend="AND" property="fechaDesde">
+			<![CDATA[
+				TRUNC (fec_proc_fact_elect) >= TO_DATE (#fechaDesde#, 'DD/MM/YYYY') 
+			]]>
+		 </isNotEmpty>  
+		 <isNotEmpty prepend="AND" property="fechaHasta">
+			<![CDATA[
+				TRUNC (fec_proc_fact_elect) <= TO_DATE (#fechaHasta#, 'DD/MM/YYYY') 
+			]]>
+		 </isNotEmpty>
+  		   <isNotEmpty prepend="AND" property="estadoDocumento">   
+  		   		ind_proc_fe = #estadoDocumento# 
+		   </isNotEmpty>	
+		GROUP BY num_seri
+	</select>
+	
+	<!-- Consulta consolidada para todos los documentos de facturacion-->
+    <select id="getListaEstadoFacturacionConsolidadoTodos"  parameterClass="java.util.Map" resultMap="listaEstadoFacturacionConsolidadoResult">
+		SELECT *
+			FROM (
+			SELECT ftd.des_tipo_docu, cab.val_seri_docu_lega, COUNT (*) AS val_total 
+			    FROM fac_docum_conta_cabec cab, fac_tipo_docum ftd 
+			   WHERE cab.tido_oid_tipo_docu = ftd.oid_tipo_docu 
+			     AND cab.perd_oid_peri IN (
+			            SELECT a.oid_peri 
+			              FROM cra_perio a 
+			             WHERE (1 = 1 
+							 <isNotEmpty prepend="AND" property="fechaInicio">
+								<![CDATA[
+									TRUNC (a.fec_fina) >= TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+								]]>
+							 </isNotEmpty>
+							 <isNotEmpty prepend="OR" property="fechaDesde">
+								<![CDATA[
+									TRUNC (a.fec_fina) >= TO_DATE (#fechaDesde#, 'DD/MM/YYYY') 
+								]]>
+							 </isNotEmpty>
+							 ) AND (1 = 1 
+							 <isNotEmpty prepend="AND" property="fechaFin">
+								<![CDATA[
+									TRUNC (a.fec_inic) <= TO_DATE (#fechaFin#, 'DD/MM/YYYY') 
+								]]>
+							 </isNotEmpty>
+							 <isNotEmpty prepend="OR" property="fechaHasta">
+								<![CDATA[
+									TRUNC (a.fec_inic) <= TO_DATE (#fechaHasta#, 'DD/MM/YYYY') 
+								]]>
+							 </isNotEmpty>
+							 ) ) 
+				 <isNotEmpty prepend="AND" property="fechaInicio">
+					<![CDATA[
+						TRUNC (cab.fec_fact) >= TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+					]]>
+				 </isNotEmpty>  
+				 <isNotEmpty prepend="AND" property="fechaFin">
+					<![CDATA[
+						TRUNC (cab.fec_fact) <= TO_DATE (#fechaFin#, 'DD/MM/YYYY') 
+					]]>
+				 </isNotEmpty>
+				 <isNotEmpty prepend="AND" property="fechaDesde">
+					<![CDATA[
+						TRUNC (cab.fec_proc_fact_elect) >= TO_DATE (#fechaDesde#, 'DD/MM/YYYY') 
+					]]>
+				 </isNotEmpty>  
+				 <isNotEmpty prepend="AND" property="fechaHasta">
+					<![CDATA[
+						TRUNC (cab.fec_proc_fact_elect) <= TO_DATE (#fechaHasta#, 'DD/MM/YYYY') 
+					]]>
+				 </isNotEmpty>
+		  		 <isNotEmpty prepend="AND" property="estadoDocumento">
+		  		  		cab.ind_proc_fact_elec = #estadoDocumento# 
+				 </isNotEmpty>
+				 <isNotEmpty prepend="AND" property="serieDocumento">
+		  		 		cab.val_seri_docu_lega = #serieDocumento# 
+				 </isNotEmpty>
+			     AND EXISTS (
+			            SELECT NULL
+			              FROM fac_docum_conta_linea det,
+			                   ped_solic_posic psp,
+			                   pre_ofert_detal pod
+			             WHERE det.sopo_oid_soli_posi = psp.oid_soli_posi
+			               AND psp.ofde_oid_deta_ofer = pod.oid_deta_ofer(+)
+			               AND det.num_unid_aten > 0
+			               AND det.dcca_oid_cabe = cab.oid_cabe
+			               AND NOT EXISTS (SELECT NULL
+			                                               FROM fac_tipo_ofert_exclu toe
+			                                              WHERE toe.tofe_oid_tipo_ofer = pod.tofe_oid_tipo_ofer)) 
+			GROUP BY ftd.des_tipo_docu, cab.val_seri_docu_lega 
+			UNION ALL 
+			SELECT ftd.des_tipo_docu, cab.val_seri_docu_lega, COUNT (*) AS val_total
+			    FROM fac_docum_conta_cabec cab, fac_tipo_docum ftd
+			   WHERE cab.tido_oid_tipo_docu = ftd.oid_tipo_docu
+				 <![CDATA[
+					AND cab.perd_oid_peri >= 
+				 ]]>
+			            (SELECT MIN (a.oid_peri)
+			               FROM cra_perio a
+			             WHERE (1 = 1 
+							 <isNotEmpty prepend="AND" property="fechaInicio">
+								<![CDATA[
+									TRUNC (a.fec_fina) >= TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+								]]>
+							 </isNotEmpty>
+							 <isNotEmpty prepend="OR" property="fechaDesde">
+								<![CDATA[
+									TRUNC (a.fec_fina) >= TO_DATE (#fechaDesde#, 'DD/MM/YYYY') 
+								]]>
+							 </isNotEmpty>
+							 ) AND (1 = 1 
+							 <isNotEmpty prepend="AND" property="fechaFin">
+								<![CDATA[
+									TRUNC (a.fec_inic) <= TO_DATE (#fechaFin#, 'DD/MM/YYYY') 
+								]]>
+							 </isNotEmpty>
+							 <isNotEmpty prepend="OR" property="fechaHasta">
+								<![CDATA[
+									TRUNC (a.fec_inic) <= TO_DATE (#fechaHasta#, 'DD/MM/YYYY') 
+								]]>
+							 </isNotEmpty>
+							 ) ) 
+				 <isNotEmpty prepend="AND" property="fechaInicio">
+					<![CDATA[
+						TRUNC (cab.fec_fact) >= TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+					]]>
+				 </isNotEmpty>  
+				 <isNotEmpty prepend="AND" property="fechaFin">
+					<![CDATA[
+						TRUNC (cab.fec_fact) <= TO_DATE (#fechaFin#, 'DD/MM/YYYY') 
+					]]>
+				 </isNotEmpty>
+				 <isNotEmpty prepend="AND" property="fechaDesde">
+					<![CDATA[
+						TRUNC (cab.fec_proc_fact_elect) >= TO_DATE (#fechaDesde#, 'DD/MM/YYYY') 
+					]]>
+				 </isNotEmpty>  
+				 <isNotEmpty prepend="AND" property="fechaHasta">
+					<![CDATA[
+						TRUNC (cab.fec_proc_fact_elect) <= TO_DATE (#fechaHasta#, 'DD/MM/YYYY') 
+					]]>
+				 </isNotEmpty>
+		  		 <isNotEmpty prepend="AND" property="estadoDocumento">
+		  		  		cab.ind_proc_fact_elec = #estadoDocumento# 
+				 </isNotEmpty>
+				 <isNotEmpty prepend="AND" property="serieDocumento">
+		  		 		cab.val_seri_docu_lega = #serieDocumento# 
+				 </isNotEmpty>
+			     AND EXISTS (
+			            SELECT NULL
+			              FROM fac_docum_conta_linea det,
+			                   ped_solic_posic psp,
+			                   pre_ofert_detal pod
+			             WHERE det.sopo_oid_soli_posi = psp.oid_soli_posi
+			               AND psp.ofde_oid_deta_ofer = pod.oid_deta_ofer(+)
+			               AND det.dcca_oid_cabe = cab.oid_cabe
+			               AND NOT EXISTS (SELECT NULL
+			                                               FROM fac_tipo_ofert_exclu toe
+			                                             WHERE toe.tofe_oid_tipo_ofer = pod.tofe_oid_tipo_ofer))
+			GROUP BY ftd.des_tipo_docu, cab.val_seri_docu_lega 
+			UNION ALL 
+			SELECT   
+	                  (CASE substr(num_seri, 0, 2)
+	                     WHEN 'BR'
+	                        THEN 'Nota Crédito Retail Boleta'
+	                     WHEN 'FR'
+	                        THEN 'Nota Crédito Retail Factura'
+	                  END
+	                 ) AS des_tipo_docu,
+			         num_seri AS val_seri_docu_lega, 
+			         COUNT (*) AS val_total
+			    FROM imp_tmp_felec_nc_retail_cabec
+			 WHERE 1 = 1 
+			 <isNotEmpty prepend="AND" property="serieDocumento">
+	  		 		num_seri = #serieDocumento#
+			 </isNotEmpty>	
+			 <isNotEmpty prepend="AND" property="fechaInicio">
+				<![CDATA[
+					TRUNC (fec_fact) >= TO_DATE (#fechaInicio#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>  
+			 <isNotEmpty prepend="AND" property="fechaFin">
+				<![CDATA[
+					TRUNC (fec_fact) <= TO_DATE (#fechaFin#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>
+			 <isNotEmpty prepend="AND" property="fechaDesde">
+				<![CDATA[
+					TRUNC (fec_proc_fact_elect) >= TO_DATE (#fechaDesde#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>  
+			 <isNotEmpty prepend="AND" property="fechaHasta">
+				<![CDATA[
+					TRUNC (fec_proc_fact_elect) <= TO_DATE (#fechaHasta#, 'DD/MM/YYYY') 
+				]]>
+			 </isNotEmpty>
+	  		   <isNotEmpty prepend="AND" property="estadoDocumento">
+	  		   		ind_proc_fe = #estadoDocumento# 
+			   </isNotEmpty>	
+			GROUP BY num_seri
+			)
+	</select>
+	
+	<select id="getTipoDocumento"  parameterClass="java.util.Map" resultClass="string">
+		select tido_oid_tipo_docu
+		  from fac_docum_elect_homol
+		<dynamic prepend="where">            
+			<isNotEmpty prepend="AND" property="nombreCarpeta">
+				UPPER(nom_car_docu) = UPPER(#nombreCarpeta#)
+	    	</isNotEmpty>                                            
+			<isNotEmpty prepend="AND" property="serieDocumento"> 
+				val_seri_docu like #serieDocumento#
+	    	</isNotEmpty>
+		</dynamic>
+	</select>
+	
+    <insert id="insertDocumentoElectronico" parameterClass="java.util.Map">
+		insert into fac_temp_docum_elect (tido_oid_tipo_docu, val_seri_docu_lega, num_docu_cont_inte) 
+		values (to_number(#oidTipoDocumento#,'999999999999'), #serieDocumento#, to_number(#numeroDocumento#,'9999999999'))
+    </insert>
+    
+	<update id="updateIndicadorFacturacionElectronica" parameterClass="java.util.Map">
+		update fac_docum_conta_cabec 
+		   set ind_proc_fact_elec = '1', 
+		   		 fec_proc_fact_elect = (case when #fechaProceso# is null then null else to_date(#fechaProceso#, 'YYYY-MM-DD HH24:MI:SS') end) 
+		 where tido_oid_tipo_docu = to_number(#oidTipoDocumento#,'999999999999') 
+		   and val_seri_docu_lega = #serieDocumento# 
+		   and num_docu_cont_inte = to_number(#numeroDocumento#,'9999999999') 
+    </update>
+    
+	<update id="updateIndicadorProcesoNCRetail" parameterClass="java.util.Map">
+		update imp_tmp_felec_nc_retail_cabec 
+		   set ind_proc_fe = '1', 
+		   		 fec_proc_fact_elect = to_date(#fechaProceso#, 'YYYY-MM-DD HH24:MI:SS') 
+		 where num_seri = #serieDocumento# 
+		     and num_docu_inte = to_number(#numeroDocumento#,'9999999999') 
+    </update>
+    
+    <delete id="deleteZonasDeshabilitadasParaEnvio">
+    	DELETE FAC_DESHA_ZONAS_ENVIO_BOLET
+    </delete>
+    
+    <insert id="insertZonasDeshabilitadasParaEnvio" parameterClass="java.util.Map">     
+		INSERT INTO FAC_DESHA_ZONAS_ENVIO_BOLET (OID_ZONA)
+		VALUES (gen_pkg_gener.gen_fn_devuelve_id_zona(#codigoPais#, #codigoMarca#, #codigoCanal#, #codigoRegion#, #codigoZona#))
+    </insert>
+    
+    <resultMap id="zonasDeshabilitadasResult" class="java.util.HashMap">
+	      <result property="codigoRegion"			    column="COD_REGI" 	/>
+	      <result property="descripcionRegion"		    column="DES_REGI" 	/>
+	      <result property="codigoZona"					column="COD_ZONA" 	/>	      
+	      <result property="descripcionZona"		    column="DES_ZONA" 	/>	      	      
+	      <result property="oidZona"				    column="OID_ZONA" 	/>
+	 </resultMap>
+        
+	<select id="getZonasDeshabilitadas" resultMap="zonasDeshabilitadasResult">
+		SELECT ZR.COD_REGI,
+	           ZR.DES_REGI,
+	           ZZ.COD_ZONA,
+	           ZZ.DES_ZONA,
+	           F.OID_ZONA
+	   	  FROM FAC_DESHA_ZONAS_ENVIO_BOLET F,
+	           ZON_ZONA ZZ,
+	           ZON_REGIO ZR
+	 	 WHERE F.OID_ZONA = ZZ.OID_ZONA
+	       AND ZR.OID_REGI = ZZ.ZORG_OID_REGI
+	 	 ORDER BY OID_ZONA
+	</select>
+    
+	<delete id="deleteTablasTemporalesCabecera">
+        TRUNCATE TABLE IMP_TMP_FELEC_CABEC
+    </delete>
+    
+	<delete id="deleteTablasTemporalesDetalle">
+        TRUNCATE TABLE IMP_TMP_FELEC_DETAL
+    </delete>
+    
+    <select id="getZonasAbiertas"  parameterClass="java.util.Map" resultMap="baseResult">
+		<![CDATA[
+		SELECT COR_PROG_CIER CODIGO, 
+			   COR_PROG_CIER DESCRIPCION
+		  FROM FAC_PROGR_CIERR
+		 WHERE CAM_PROC = #campanhaProceso#
+		   AND TIP_CIER = 'Z'
+		   AND EST_CIER <> 'P'
+		   AND FEC_CIER > TO_DATE(#fechaCierre#, 'DD/MM/YYYY')
+		   AND EST_REGI <> '9'
+		]]>
+	</select>
+	
+	<select id="getRegionesAbiertas"  parameterClass="java.util.Map" resultMap="baseResult">
+		<![CDATA[
+		SELECT COR_PROG_CIER CODIGO, 
+			   COR_PROG_CIER DESCRIPCION
+		  FROM FAC_PROGR_CIERR
+		 WHERE CAM_PROC = #campanhaProceso#
+		   AND TIP_CIER = 'R'
+		   AND EST_CIER <> 'P'
+		   AND FEC_CIER > TO_DATE(#fechaCierre#, 'DD/MM/YYYY')
+		   AND EST_REGI <> '9'
+		]]>
+	</select>
+    
+    <select id="getProcesosControlCierre"  parameterClass="java.util.Map" resultMap="baseResult">
+		SELECT bi.cod_inte CODIGO,
+			   bi.des_inte DESCRIPCION
+		  FROM bas_compo_paque bcp, bas_inter bi
+		 WHERE bcp.pais_cod_pais = #codigoPais#
+		   AND bcp.sist_cod_sist = #codigoSistema#
+		   AND bcp.inte_cod_inpa = #codigoInterfaz#
+		   AND bcp.pais_cod_pais = bi.pais_cod_pais
+		   AND bcp.sist_cod_sist = bi.sist_cod_sist
+		   AND bcp.inte_cod_inte = bi.cod_inte
+		   AND UPPER(bi.des_inte) LIKE 'REGISTRAR CONTROL CIERRES%'	
+	</select>
+	
+</sqlMap>

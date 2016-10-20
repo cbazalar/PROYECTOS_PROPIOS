@@ -1,0 +1,10 @@
+CREATE OR REPLACE VIEW VCA_SEG_SUBAC AS
+SELECT T1.COD_USUA COD_USUA
+          ,T2.OID_SBAC OID_SBAC
+          ,T2.COD_SBAC COD_SBAC
+          ,T2.ACCE_OID_ACCE ACCE_OID_ACCE
+FROM SEG_SUBAC T2
+    ,VCA_MGU_PERMI_USUAR T1
+  WHERE t1.val_prop = to_char(t2.oid_SBAC)
+    and t1.cod_prop = 'SubnivelAcceso';
+

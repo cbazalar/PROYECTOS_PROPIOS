@@ -1,0 +1,455 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="subReporteINCConsolidadoPremioPendiente"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Portrait"
+		 pageWidth="442"
+		 pageHeight="802"
+		 columnWidth="442"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 whenResourceMissingType="Empty">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="oidPais" isForPrompting="false" class="java.lang.String"/>
+	<parameter name="oidMarca" isForPrompting="false" class="java.lang.String"/>
+	<parameter name="oidCanal" isForPrompting="false" class="java.lang.String"/>
+	<parameter name="numConc" isForPrompting="false" class="java.lang.String"/>
+	<queryString><![CDATA[/** Query para obtener Unidades Pendientes (Bolsa de Faltantes) */
+SELECT
+     con.num_nive
+    ,con.num_prem
+    ,con.cod_sap
+    ,con.des_producto
+    ,NVL(falt.PenSinFecSol,0) as unid_pendientes
+FROM
+(   -- Todos los concursos activos y vigentes --
+    select 
+        cpg.oid_para_gral
+        , pnp.num_nive
+        , lpa.num_prem
+        , p.oid_prod
+        , p.cod_sap
+        , pq_apl_aux.Valor_Gen_I18n_Sicc( 1, p.oid_prod, 'MAE_PRODU') as des_producto
+    from 
+        inc_concu_param_gener cpg
+        , inc_versi_concu vc
+        , inc_param_gener_premi pgp
+        , inc_param_nivel_premi pnp
+        , inc_premi_artic pa
+        , inc_lote_premi_artic lpa
+        , inc_artic_lote al
+        , mae_produ p
+    where
+        cpg.pais_oid_pais = $P{oidPais}
+    $P!{oidMarca}
+    $P!{oidCanal}
+    and cpg.oid_para_gral = vc.copa_oid_para_gral
+    and vc.vico_oid_vige_conc in ( 1, 6)
+    and cpg.oid_para_gral = pgp.copa_oid_para_gral
+    and pgp.oid_para_gene_prem = pnp.pagp_oid_para_gene_prem
+    and pnp.oid_para_nive_prem = pa.panp_oid_para_nive_prem
+    and pa.oid_prem_arti = lpa.prar_oid_prem_arti
+    and lpa.oid_lote_prem_arti = al.lopa_oid_lote_prem_arti
+    and al.prod_oid_prod = p.oid_prod
+    and cpg.num_conc = $P{numConc}
+    UNION
+    select 
+        cpg.oid_para_gral
+        , pnp.num_nive
+        , lpa.num_prem
+        , p.oid_prod
+        , p.cod_sap
+        , pq_apl_aux.Valor_Gen_I18n_Sicc( 1, p.oid_prod, 'MAE_PRODU') as des_producto
+    from 
+        inc_concu_param_gener cpg
+        , inc_versi_concu vc
+        , inc_param_gener_premi pgp
+        , inc_param_nivel_premi pnp
+        , inc_premi_artic pa
+        , inc_lote_premi_artic lpa
+        , inc_artic_lote al
+        , inc_reemp_artic_lote ral
+        , mae_produ p
+    where
+         cpg.pais_oid_pais = $P{oidPais}
+    	$P!{oidMarca}
+    	$P!{oidCanal}
+    and cpg.oid_para_gral = vc.copa_oid_para_gral
+    and cpg.oid_para_gral = pgp.copa_oid_para_gral
+    and pgp.oid_para_gene_prem = pnp.pagp_oid_para_gene_prem
+    and pnp.oid_para_nive_prem = pa.panp_oid_para_nive_prem
+    and pa.oid_prem_arti = lpa.prar_oid_prem_arti
+    and lpa.oid_lote_prem_arti = al.lopa_oid_lote_prem_arti
+    and al.oid_arti_lote = ral.arlo_oid_arti_lote
+    and ral.prod_oid_prod = p.oid_prod
+     and cpg.num_conc = $P{numConc}   
+) con,
+(   -- Cantidad de Premios Pendientes de Despacho 
+    select
+        x.oid_para_gral 
+        ,x.num_nive
+        ,x.num_prem
+        ,x.prod_oid_prod 
+        ,sum(x.sinFechaSol) as PenSinFecSol
+        ,sum(x.conFechaSol) as PenConFecSol 
+    from
+    (
+        select 
+            cpg.oid_para_gral 
+            ,pnp.num_nive
+            ,lpa.num_prem
+            ,alo.prod_oid_prod
+            ,sc.oid_soli_cabe
+            ,DECODE( bf.fec_solu, NULL, bf.num_unid_falt, 0) as sinFechaSol
+            ,DECODE( bf.fec_solu, NULL, 0, bf.num_unid_falt) as conFechaSol
+        from 
+             inc_concu_param_gener  cpg
+             ,inc_param_gener_premi pgp
+             ,inc_param_nivel_premi pnp
+             ,inc_premi_artic       par
+             ,inc_lote_premi_artic  lpa
+             ,inc_artic_lote        alo
+             ,inc_bolsa_falta       bf
+             ,ped_solic_cabec       sc        
+             ,ped_solic_posic       sp
+             , inc_versi_concu vc
+        where
+          cpg.oid_para_gral = vc.copa_oid_para_gral
+          and vc.vico_oid_vige_conc in ( 1, 6)
+          and cpg.oid_para_gral = pgp.copa_oid_para_gral
+          and cpg.oid_para_gral = sc.copa_oid_para_gene
+          and cpg.pais_oid_pais = sc.pais_oid_pais
+          and sc.oid_soli_cabe = sp.soca_oid_soli_cabe
+          and sp.oid_soli_posi = bf.sopo_oid_soli_posi          
+          and pnp.pagp_oid_para_gene_prem = pgp.oid_para_gene_prem
+          and pnp.tpre_oid_tipo_prem = 2
+          and par.panp_oid_para_nive_prem = pnp.oid_para_nive_prem
+          and lpa.prar_oid_prem_arti = par.oid_prem_arti
+          and alo.lopa_oid_lote_prem_arti = lpa.oid_lote_prem_arti
+          and lpa.num_prem = sc.num_prem
+          and sp.prod_oid_prod = alo.prod_oid_prod
+          and sc.tspa_oid_tipo_soli_pais in ( select oid_tipo_soli_pais
+                                              from ped_tipo_solic_pais tsp,ped_tipo_solic ts
+                                                   ,ped_clase_solic cs
+                                              where cs.cod_clas_soli = 'I1'
+                                              and cs.oid_clas_soli = ts.clso_oid_clas_soli
+                                              and ts.oid_tipo_soli = tsp.tsol_oid_tipo_soli
+                                              and ind_soli_nega = 0 )
+          and sc.GRPR_OID_GRUP_PROC = 5
+          and cpg.num_conc =$P{numConc}
+        UNION
+        select 
+            cpg.oid_para_gral 
+            ,pnp.num_nive
+            ,lpa.num_prem
+            ,ral.prod_oid_prod
+            ,sc.oid_soli_cabe
+            ,DECODE( bf.fec_solu, NULL, bf.num_unid_falt, 0) as sinFechaSol
+            ,DECODE( bf.fec_solu, NULL, 0, bf.num_unid_falt) as conFechaSol
+        from 
+             inc_concu_param_gener  cpg
+             ,inc_param_gener_premi pgp
+             ,inc_param_nivel_premi pnp
+             ,inc_premi_artic       par
+             ,inc_lote_premi_artic  lpa
+             ,inc_artic_lote        alo
+             ,inc_reemp_artic_lote  ral
+             ,inc_bolsa_falta       bf
+             ,ped_solic_cabec       sc
+             ,ped_solic_posic       sp
+        where
+              cpg.oid_para_gral = pgp.copa_oid_para_gral
+          and cpg.oid_para_gral = sc.copa_oid_para_gene
+          and cpg.pais_oid_pais = sc.pais_oid_pais
+          and sc.oid_soli_cabe = sp.soca_oid_soli_cabe
+          and sp.oid_soli_posi = bf.sopo_oid_soli_posi
+          and pnp.pagp_oid_para_gene_prem = pgp.oid_para_gene_prem
+          and pnp.tpre_oid_tipo_prem = 2
+          and par.panp_oid_para_nive_prem = pnp.oid_para_nive_prem
+          and lpa.prar_oid_prem_arti = par.oid_prem_arti
+          and alo.lopa_oid_lote_prem_arti = lpa.oid_lote_prem_arti
+          and lpa.num_prem = sc.num_prem
+          and alo.oid_arti_lote = ral.arlo_oid_arti_lote
+          and ral.prod_oid_prod = sp.prod_oid_prod 
+          and sc.tspa_oid_tipo_soli_pais in ( select oid_tipo_soli_pais
+                                              from ped_tipo_solic_pais tsp,ped_tipo_solic ts
+                                                   ,ped_clase_solic cs
+                                              where cs.cod_clas_soli = 'I1'
+                                              and cs.oid_clas_soli = ts.clso_oid_clas_soli
+                                              and ts.oid_tipo_soli = tsp.tsol_oid_tipo_soli
+                                              and ind_soli_nega = 0 )
+          and sc.GRPR_OID_GRUP_PROC = 5
+          and cpg.num_conc = $P{numConc}                              
+    ) x
+    group by x.oid_para_gral, x.num_nive, x.num_prem, x.prod_oid_prod
+) falt
+WHERE
+    con.oid_para_gral = falt.oid_para_gral(+)
+AND con.num_nive = falt.num_nive(+)
+AND con.num_prem = falt.num_prem(+)
+AND con.oid_prod = falt.prod_oid_prod(+)
+AND falt.PenSinFecSol > 0
+ORDER BY 
+    con.oid_para_gral
+    ,con.num_nive
+    ,con.num_prem
+    ,con.cod_sap]]></queryString>
+
+	<field name="NUM_NIVE" class="java.math.BigDecimal"/>
+	<field name="NUM_PREM" class="java.math.BigDecimal"/>
+	<field name="COD_SAP" class="java.lang.String"/>
+	<field name="DES_PRODUCTO" class="java.lang.String"/>
+	<field name="UNID_PENDIENTES" class="java.math.BigDecimal"/>
+
+	<variable name="SUM_UNID_PENDIENTES_1" class="java.math.BigDecimal" resetType="Report" calculation="Sum">
+		<variableExpression><![CDATA[$F{UNID_PENDIENTES}]]></variableExpression>
+	</variable>
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="12"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="40"
+						height="12"
+						forecolor="#000000"
+						backcolor="#FFFFFF"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica" size="8" isBold="false" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCConsolidadoPremioDespachadoForm.nivel}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="40"
+						y="0"
+						width="40"
+						height="12"
+						forecolor="#000000"
+						backcolor="#FFFFFF"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica" size="8" isBold="false" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCConsolidadoPremioDespachadoForm.opcion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="80"
+						y="0"
+						width="260"
+						height="12"
+						forecolor="#000000"
+						backcolor="#FFFFFF"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica" size="8" isBold="false" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCConsolidadoPremioDespachadoForm.premiosPendientes}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="340"
+						y="0"
+						width="100"
+						height="12"
+						forecolor="#000000"
+						backcolor="#FFFFFF"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica" size="8" isBold="false" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCConsolidadoPremioDespachadoForm.unidades}]]></textFieldExpression>
+				</textField>
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="12"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="40"
+						height="12"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{NUM_NIVE}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="40"
+						y="0"
+						width="40"
+						height="12"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{NUM_PREM}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="80"
+						y="0"
+						width="60"
+						height="12"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_SAP}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="140"
+						y="0"
+						width="200"
+						height="12"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{DES_PRODUCTO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="###0" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="340"
+						y="0"
+						width="100"
+						height="12"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{UNID_PENDIENTES}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="12"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="340"
+						y="0"
+						width="50"
+						height="12"
+						key="textField-2"
+						isRemoveLineWhenBlank="true"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement verticalAlignment="Top" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica" size="8" isBold="false" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCConsolidadoPremioDespachadoForm.total}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="###0" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="390"
+						y="0"
+						width="50"
+						height="12"
+						key="textField"
+						isRemoveLineWhenBlank="true"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font fontName="Arial" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SUM_UNID_PENDIENTES_1} == null ? new BigDecimal(0) :$V{SUM_UNID_PENDIENTES_1}]]></textFieldExpression>
+				</textField>
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

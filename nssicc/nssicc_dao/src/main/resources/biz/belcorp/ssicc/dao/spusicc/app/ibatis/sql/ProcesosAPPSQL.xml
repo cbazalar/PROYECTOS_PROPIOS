@@ -1,0 +1,537 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.app.ProcesosAPPSQL">
+
+	<parameterMap id="insertaHomologadoYobelParams" class="map" >
+		<parameter property="codigoZona"          jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoSeccion"	      jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoTerritorio"    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="numeroSecuencia"	  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+
+    <procedure id="insertaHomologadoYobel"  parameterMap="insertaHomologadoYobelParams" >
+		{call APP_PKG_PROCE.APP_PR_INSER_HOMOL_YOBEL(?,?,?,?)}
+    </procedure>    
+        
+	<procedure id="insertaTemporalHomologadoYobel"  parameterMap="insertaHomologadoYobelParams" >
+		{call APP_PKG_PROCE.APP_PR_INSER_TEMPO_HOMOL_YOBEL(?,?,?,?)}
+    </procedure>
+	
+	<delete id="deleteTemporalHomologadoYobel">
+		delete from app_tempo_homol_yobel
+	</delete>
+        
+	<resultMap id="getRegionZonaSecuenciarListResult" class="java.util.HashMap">
+		<result property="oidPais"    	    column="pais_oid_pais"/>
+		<result property="descRegion"    	column="des_regi"/>
+		<result property="codigoRegion"     column="cod_regi" />
+		<result property="descZona" 		column="des_zona" />
+		<result property="codigoZona"      	column="COD_ZONA" />
+		<result property="numeroSecuencia" 	column="NUM_SECU" />
+		<result property="oidRutaTrans"    	column="OID_RUTA_TRAN" />					
+	</resultMap>        
+	
+	<select id="getRegionZonaSecuenciarList" parameterClass="java.util.Map" resultMap="getRegionZonaSecuenciarListResult">
+		SELECT to_char(B.PAIS_OID_PAIS) pais_oid_pais,
+		       c.des_regi, 
+		       c.cod_regi, 
+		       a.des_zona, 
+		       a.COD_ZONA, 
+		       b.NUM_SECU,
+		       b.OID_RUTA_TRAN
+		  FROM ZON_ZONA a, 
+		       APP_RUTAS_TRANS b, 
+		       zon_regio c
+		 WHERE a.IND_ACTI = 1
+		   and c.ind_acti = 1
+		   and c.oid_regi = a.ZORG_OID_REGI
+		   AND a.COD_ZONA = b.COD_RUTA(+)
+		   <isNotEmpty property="codigoRegion">	
+		    <iterate prepend="AND" property="codigoRegion" open=" COD_REGI IN (" close=")" conjunction=",">
+        	 	#codigoRegion[]#
+        	</iterate>    
+		  </isNotEmpty>		   
+		  order by 3,5
+	</select>
+		
+	<parameterMap id="executeResetearSecuenciaParams" class="map" >
+		<parameter property="oidPais"	          jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="codigoZona"          jdbcType="VARCHAR" javaType="java.lang.String"  	 mode="IN"/>	    
+	    <parameter property="oidRutaTrans"  	  jdbcType="VARCHAR" javaType="java.math.BigDecimal" mode="IN"/>
+	    <parameter property="usuario"	  		  jdbcType="VARCHAR" 	javaType="java.lang.String" 		mode="IN"/>
+	    <parameter property="mensajeError"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>	
+	<procedure id="executeResetearSecuencia"  parameterMap="executeResetearSecuenciaParams" >
+		{call APP_PKG_PROCE.APP_PR_PROCE_SECUE_ZONA(?, ?, ?, ?, ?)}
+    </procedure>    
+    
+	<resultMap id="getTerritoriosSecuenciarListResult" class="java.util.HashMap">
+		<result property="codigoZona"      	column="COD_ZONA" />
+		<result property="descZona"      	column="DES_ZONA" />
+		<result property="codigoSeccion"    column="cod_secc" />
+		<result property="descSeccion"      column="des_secci" />
+		<result property="codigoTerritorio" column="cod_terr" />
+		<result property="numeroSecuencia" 	column="NUM_SECU" />						
+		<result property="oidRutaTerri"    	column="OID_RUTA_TERR" />
+		<result property="oidTerri"    	    column="OID_TERR" />					
+		<result property="oidRutaTrans"    	column="RUTR_OID_RUTA_TRAN" />
+	</resultMap>        
+	
+	<select id="getTerritoriosSecuenciarList" parameterClass="java.util.Map" resultMap="getTerritoriosSecuenciarListResult">
+		SELECT 	a.cod_zona,
+		       a.des_zona,
+		       b.cod_secc,
+		       b.des_secci,
+		       d.cod_terr,
+		   		e.num_secu,
+		   		e.oid_ruta_terr,
+		   		d.oid_terr,
+       			e.rutr_oid_ruta_tran
+		  FROM 	zon_zona        a,
+		       zon_secci       b,
+		       zon_terri_admin c,
+		       zon_terri       d,
+		       app_rutas_terri e
+		 WHERE 	b.zzon_oid_zona = a.oid_zona
+		   AND 	c.zscc_oid_secc = b.oid_secc
+		   AND 	c.terr_oid_terr = d.oid_terr
+		   AND 	a.ind_borr = 0
+		   AND 	b.ind_borr = 0
+		   AND 	d.ind_borr = 0
+		   AND 	c.ind_borr = 0
+		   AND 	a.ind_acti = 1
+		   AND 	b.ind_acti = 1
+		   AND 	d.oid_terr = e.terr_oid_terr(+)
+		   AND 	a.cod_zona = #codigoZona#
+		 ORDER BY 6, 5
+	</select>
+
+	<select id="getCantidadZonasSinSecuencia" parameterClass="java.util.Map" resultClass="string">
+		 SELECT count(1)
+		   FROM ZON_ZONA a, zon_regio c
+		  WHERE a.IND_ACTI = 1
+		    and c.ind_acti = 1
+		    and c.oid_regi = a.ZORG_OID_REGI
+		    AND a.COD_ZONA not in (select b.COD_RUTA from app_rutas_trans b)
+		   	<isNotEmpty property="codigoRegion">	
+			    <iterate prepend="AND" property="codigoRegion" open=" c.COD_REGI IN (" close=")" conjunction=",">
+	        	 	#codigoRegion[]#
+	        	</iterate>    
+			</isNotEmpty>
+	</select>
+
+	<select id="getCantidadTerritoriosSinSecuencia" parameterClass="java.util.Map" resultClass="string">
+		 SELECT count(1)		 
+		  from zon_zona a, 
+		       zon_secci b, 
+		       zon_terri_admin c, 
+		       zon_terri d, 
+		       zon_regio e
+		 where b.zzon_oid_zona = a.oid_zona
+		   and c.zscc_oid_secc = b.oid_secc
+		   and c.terr_oid_terr = d.oid_terr
+		   and a.ind_borr = 0
+		   and b.ind_borr = 0
+		   and d.ind_borr = 0
+		   and c.ind_borr = 0
+		   and a.ind_acti = 1
+		   and b.ind_acti = 1
+		   and a.ZORG_OID_REGI = e.OID_REGI
+		   and d.OID_TERR not in (select terr_oid_terr from app_rutas_terri)
+		   <isNotEmpty property="codigoRegion">	
+			    <iterate prepend="AND" property="codigoRegion" open=" e.COD_REGI IN (" close=")" conjunction=",">
+	        	 	#codigoRegion[]#
+	       		</iterate>    
+		   </isNotEmpty>
+	</select>
+
+	<resultMap id="getEmailSecuenciarListResult" class="java.util.HashMap">
+		<result property="email"      	column="val_emai" />		
+	</resultMap>        
+	
+	<select id="getEmailSecuenciarList" parameterClass="java.util.Map" resultMap="getEmailSecuenciarListResult">
+		select val_emai 
+		  from APP_PARAM_EMAIL
+	</select>
+
+	<parameterMap id="grabarSecuenciacionZonasParams" class="map" >
+		<parameter property="oidPais"	          jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="codigoZona"          jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="oidRutaTrans"  	  jdbcType="VARCHAR" javaType="java.math.BigDecimal" mode="IN"/>
+	    <parameter property="numeroSecuencia"	  jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>			    	    
+	    <parameter property="usuario"	  		  jdbcType="VARCHAR" 	javaType="java.lang.String" 		mode="IN"/>
+    </parameterMap>
+	<procedure id="grabarSecuenciacionZonas"  parameterMap="grabarSecuenciacionZonasParams" >
+		{call APP_PKG_PROCE.APP_PR_INSER_SECUE_ZONAS(?, ?, ?, ?, ?)}
+    </procedure> 
+
+	<resultMap id="getZonasSinSecuenciarListResult" class="java.util.HashMap">
+		<result property="descRegion"      	column="DES_REGI" />
+		<result property="descZona"      	column="DES_ZONA" />
+	</resultMap>        
+	
+	<select id="getZonasSinSecuenciarList" parameterClass="java.util.Map" resultMap="getZonasSinSecuenciarListResult">
+		SELECT des_regi, 		        
+		       des_zona
+		  FROM ZON_ZONA, zon_regio
+		 WHERE zon_zona.IND_ACTI = 1
+		   and zon_regio.ind_acti = 1
+		   and zon_regio.oid_regi = zon_zona.ZORG_OID_REGI
+		   AND COD_ZONA NOT IN (SELECT COD_RUTA FROM APP_RUTAS_TRANS)
+	</select>
+	
+	<resultMap id="getTerritoriosSinSecuenciarListResult" class="java.util.HashMap">
+		<result property="descZona"      		column="DES_ZONA" />
+		<result property="descSeccion"      	column="DES_SECCI" />		
+		<result property="codigoTerritorio"    	column="COD_TERR" />
+	</resultMap>        
+	
+	<select id="getTerritoriosSinSecuenciarList" parameterClass="java.util.Map" resultMap="getTerritoriosSinSecuenciarListResult">
+		select DISTINCT f.des_zona, e.des_secci, COD_TERR
+		  from app_rutas_terri a,
+		       app_rutas_trans b,
+		       zon_terri       c,
+		       zon_terri_admin d,
+		       zon_secci       e,
+		       zon_zona        f
+		 where rutr_oid_ruta_tran = oid_ruta_tran
+		   and a.terr_oid_terr = oid_terr
+		   and a.terr_oid_terr = d.terr_oid_terr
+		   and d.ind_borr = '0'
+		   and d.zscc_oid_secc = oid_secc
+		   and e.ind_acti = 1
+		   and e.zzon_oid_zona = oid_zona
+		   and f.ind_acti = 1
+		   and cod_ruta != cod_zona
+		UNION
+		select DISTINCT zon_zona.des_zona, zon_secci.des_secci, zon_terri.cod_terr
+		  from zon_zona, zon_secci, zon_terri_admin, zon_terri
+		 where zzon_oid_zona = oid_zona
+		   and zscc_oid_secc = oid_secc
+		   and zon_terri_admin.terr_oid_terr = oid_terr
+		   and zon_zona.ind_borr = 0
+		   and zon_secci.ind_borr = 0
+		   and zon_terri.ind_borr = 0
+		   and zon_terri_admin.ind_borr = 0
+		   and zon_zona.ind_acti = 1
+		   and zon_secci.ind_acti = 1
+		   and zon_terri.oid_terr not in
+		       (select terr_oid_terr from app_rutas_terri)
+	</select>
+
+	<parameterMap id="executeResetearSecuenciaTerritoriosParams" class="map" >		
+		<parameter property="codigoZona"          jdbcType="VARCHAR" javaType="java.lang.String"  	 mode="IN"/>	    
+		<parameter property="codigoSeccion"       jdbcType="VARCHAR" javaType="java.lang.String"  	 mode="IN"/>
+		<parameter property="codigoTerritorio"    jdbcType="VARCHAR" javaType="java.math.BigDecimal" mode="IN"/>
+		<parameter property="oidTerri"       	  jdbcType="VARCHAR" javaType="java.math.BigDecimal" mode="IN"/>
+	    <parameter property="oidRutaTerri"  	  jdbcType="VARCHAR" javaType="java.math.BigDecimal" mode="IN"/>
+	    <parameter property="oidRutaTrans"  	  jdbcType="VARCHAR" javaType="java.math.BigDecimal" mode="IN"/>	    
+    </parameterMap>	
+		
+	<procedure id="executeResetearSecuenciaTerritorios"  parameterMap="executeResetearSecuenciaTerritoriosParams" >
+		{call APP_PKG_PROCE.APP_PR_PROCE_SECUE_TERRI(?,?,?,?,?,?)}
+    </procedure>    
+
+	<parameterMap id="grabarSecuenciacionTerritoriosParams" class="map" >
+		<parameter property="oidRutaTrans"  	  jdbcType="VARCHAR" javaType="java.math.BigDecimal" mode="IN"/>
+		<parameter property="oidRutaTerri"  	  jdbcType="VARCHAR" javaType="java.math.BigDecimal" mode="IN"/>
+		<parameter property="oidTerri"      	  jdbcType="VARCHAR" javaType="java.math.BigDecimal" mode="IN"/>
+	    <parameter property="numeroSecuencia"	  jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>	
+	    <parameter property="codigoZona"          jdbcType="VARCHAR" javaType="java.lang.String"  	 mode="IN"/>	 
+	    <parameter property="codigoTerritorio"    jdbcType="VARCHAR" javaType="java.math.BigDecimal" mode="IN"/>   		    	    
+	    <parameter property="oidPais"	          jdbcType="VARCHAR" 	javaType="java.lang.String" 		mode="IN"/>
+	    <parameter property="usuario"	  		  jdbcType="VARCHAR" 	javaType="java.lang.String" 		mode="IN"/>
+    </parameterMap>
+	<procedure id="grabarSecuenciacionTerritorios"  parameterMap="grabarSecuenciacionTerritoriosParams" >
+		{call APP_PKG_PROCE.APP_PR_INSER_SECUE_TERRI(?, ?, ?, ?, ?, ?, ?, ?)}
+    </procedure> 
+
+	<delete id="deleteRutasTerri">
+		delete from app_rutas_terri x
+		 where x.oid_ruta_terr in (select DISTINCT a.OID_RUTA_TERR
+		                             from app_rutas_terri a,
+		                                  app_rutas_trans b,
+		                                  zon_terri       c,
+		                                  zon_terri_admin d,
+		                                  zon_secci       e,
+		                                  zon_zona        f
+		                            where rutr_oid_ruta_tran = oid_ruta_tran
+		                              and a.terr_oid_terr = oid_terr
+		                              and a.terr_oid_terr = d.terr_oid_terr
+		                              and d.ind_borr = '0'
+		                              and d.zscc_oid_secc = oid_secc
+		                              and e.ind_acti = 1
+		                              and e.zzon_oid_zona = oid_zona
+		                              and f.ind_acti = 1
+		                              <![CDATA[  
+		                              and cod_ruta <> cod_zona
+		                              ]]>
+		                              )
+	</delete>
+	
+	<select id="getCantidadSecuenciasExistentes" parameterClass="java.util.Map" resultClass="string">
+		select num_secu
+	      from app_rutas_trans a                                   
+			<dynamic prepend="WHERE">
+				<iterate prepend="AND" property="secuencias" open="(" close=")" conjunction="OR">
+	      	 		a.num_secu =  #secuencias[]#
+	            </iterate>                                   
+			</dynamic>                                            
+	</select>
+
+	<resultMap id="getSecuenciasZonasListResult" class="java.util.HashMap">
+		<result property="codigoZona"      	column="COD_ZONA" />
+		<result property="cantidad"      	column="CANT" />				
+	</resultMap>
+
+	<select id="getSecuenciasZonasList" parameterClass="java.util.Map" resultMap="getSecuenciasZonasListResult">
+		select a.cod_zona,
+		       count(1) cant
+		  from zon_zona        a,
+		       zon_secci       b,
+		       zon_terri_admin c,
+		       zon_terri       d
+		 where b.zzon_oid_zona = a.oid_zona
+		   and c.zscc_oid_secc = b.oid_secc
+		   and c.terr_oid_terr = d.oid_terr
+		   and a.ind_borr = 0
+		   and b.ind_borr = 0
+		   and d.ind_borr = 0
+		   and c.ind_borr = 0
+		   and a.ind_acti = 1
+		   and b.ind_acti = 1
+		   and a.cod_zona in(select distinct app.cod_zona 
+		                       from app_tempo_homol_yobel app
+		                       <isNotEmpty property="codigoZona">
+								 where cod_zona = #codigoZona# 	
+							   </isNotEmpty>  
+		                       )
+		group by a.cod_zona
+		order by 1
+	</select>	
+	
+	<resultMap id="getSecuenciasZonasHomologadasListResult" class="java.util.HashMap">
+		<result property="codigoZona"      	column="COD_ZONA" />
+		<result property="cantidad"      	column="CANT" />				
+	</resultMap>
+
+	<select id="getSecuenciasZonasTempoHomologadasList" parameterClass="java.util.Map" resultMap="getSecuenciasZonasHomologadasListResult">
+		select app.cod_zona, 
+		       count(1) cant
+		  from app_tempo_homol_yobel app
+		<isNotEmpty property="codigoZona">
+		 where cod_zona = #codigoZona# 	
+		</isNotEmpty>  
+		group by app.cod_zona
+		order by 1
+	</select>
+	
+	<select id="getSecuenciasZonasHomologadasList" parameterClass="java.util.Map" resultMap="getSecuenciasZonasHomologadasListResult">
+		select app.cod_zona, 
+		       count(1) cant
+		  from app_homol_yobel app
+		<isNotEmpty property="codigoZona">
+		 where cod_zona = #codigoZona# 	
+		</isNotEmpty>  
+		group by app.cod_zona
+		order by 1
+	</select>	
+
+	<procedure id="executeSecuenciarZonasTerritorios" >
+		{call APP_PKG_PROCE.APP_PR_PROCE_SECUE_ZONAS()}
+    </procedure>   
+	
+	<delete id="deleteTablaHomologacion">
+		delete from app_homol_yobel
+	</delete>	
+	
+	<parameterMap id="executeResetearSecuenciaTerritorios2Params" class="map" >		
+		<parameter property="codigoZona"          jdbcType="VARCHAR" javaType="java.lang.String"  	 mode="IN"/>	    
+		<parameter property="usuario"	  		  jdbcType="VARCHAR" 	javaType="java.lang.String" 		mode="IN"/>
+    </parameterMap>
+	<procedure id="executeResetearSecuenciaTerritorios2"  parameterMap="executeResetearSecuenciaTerritorios2Params" >
+		{call APP_PKG_PROCE.APP_PR_PROCE_SECUE_TERRI2(?, ?)}
+    </procedure>
+
+	<resultMap id="getAuditoriaListResult" class="java.util.HashMap">
+		<result property="oidRuta"      	column="OID_RUTA" />
+		<result property="codRuta"      	column="COD_RUTA" />
+		<result property="numSecuencia"    	column="NUM_SECU" />
+	</resultMap>
+    <select id="getAuditoriaList" parameterClass="java.util.Map" resultMap="getAuditoriaListResult">
+		 SELECT b.oid_ruta_tran    OID_RUTA,
+  		 		b.cod_ruta         COD_RUTA,
+       			nvl(b.num_secu,0)  NUM_SECU
+  		   FROM zon_zona a,
+       			app_rutas_trans b,
+       			zon_regio c
+ 	      WHERE a.ind_acti = 1
+   		    AND c.ind_acti = 1
+   			AND c.oid_regi = a.zorg_oid_regi
+   			AND a.cod_zona = b.cod_ruta(+)
+  		   <isNotEmpty property="codigoRegion"> 
+            <iterate prepend="AND" property="codigoRegion" open=" cod_regi IN (" close=")" conjunction=",">
+        	 	#codigoRegion[]#
+        	</iterate>
+		  </isNotEmpty>
+		  ORDER BY 2
+	</select>
+
+	<insert id="insertaAuditoria" parameterClass="java.util.Map">
+	    INSERT INTO app_rutas_audit_secue_terri
+			  (cod_audi,
+			   oid_regi_audi,
+			   use_usua_acci,
+			   cod_acci,
+			   fec_acci,
+			   cod_scrip,
+			   val_data_audi)
+		VALUES
+			  (#codAuditoria#,
+			   #oidRuta#,
+			   #codUsuario#,
+			   #codAccion#,
+			   SYSDATE,
+			   #codScrip#,
+			   #dataAuditoria#)
+	</insert>
+
+	<resultMap id="getSecuenciaZonasListResult" class="java.util.HashMap">
+		<result property="codRegion"    	column="COD_REGION"/>
+		<result property="desRegion"    	column="DES_REGION"/>
+		<result property="codZona"     		column="COD_ZONA"/>
+		<result property="desZona" 			column="DES_ZONA"/>
+		<result property="numSecuencia" 	column="NUM_SECUENCIA"/>
+	</resultMap>
+	<select id="getSecuenciaZonasList" parameterClass="java.util.Map" resultMap="getSecuenciaZonasListResult">
+		SELECT	c.cod_regi COD_REGION,
+       			c.des_regi DES_REGION,
+       			a.cod_zona COD_ZONA,
+       			a.des_zona DES_ZONA,
+       			b.num_secu NUM_SECUENCIA
+		  FROM 	zon_zona a,
+       			app_rutas_trans b,
+       			zon_regio c
+		 WHERE 	a.ind_acti = 1
+   		   AND 	c.ind_acti = 1
+   		   AND 	c.oid_regi = a.zorg_oid_regi
+   		   AND 	a.cod_zona=b.cod_ruta(+)
+		   <isNotEmpty property="codigoRegion">
+		    <iterate prepend="AND" property="codigoRegion" open=" COD_REGI IN (" close=")" conjunction=",">
+        	 	#codigoRegion[]#
+        	</iterate>
+		  </isNotEmpty>
+		  ORDER BY 	c.cod_regi,
+         			a.cod_zona
+	</select>
+	
+	<resultMap id="getSecuenciaTerritorioListResult" class="java.util.HashMap">
+		<result property="codRegion"    	column="COD_REGION"/>
+		<result property="desRegion"    	column="DES_REGION"/>
+		<result property="codZona"     		column="COD_ZONA"/>
+		<result property="secZona" 			column="SEC_ZONA"/>
+		<result property="desZona" 			column="DES_ZONA"/>
+		<result property="codSeccion"  		column="COD_SECCION"/>
+		<result property="desSeccion"  		column="DES_SECCION"/>
+		<result property="codTerritorio" 	column="COD_TERRITORIO"/>
+		<result property="secTerritorio" 	column="SEC_TERRI"/>
+	</resultMap>
+	<select id="getSecuenciaTerritorioList" parameterClass="java.util.Map" resultMap="getSecuenciaTerritorioListResult">
+		SELECT	r.cod_regi  COD_REGION,
+       			r.des_regi  DES_REGION,
+       			a.cod_zona  COD_ZONA,
+       			f.num_secu  SEC_ZONA,
+       			a.des_zona  DES_ZONA,
+       			b.cod_secc  COD_SECCION,
+       			b.des_secci DES_SECCION,
+       			d.cod_terr  COD_TERRITORIO,
+       			e.num_secu  SEC_TERRI
+		  FROM 	zon_regio r,
+       			zon_zona a,
+       			zon_secci b,
+       			zon_terri_admin c,
+       			zon_terri d,
+       			app_rutas_terri e,
+       			app_rutas_trans f
+		 WHERE	b.zzon_oid_zona = a.oid_zona
+   			AND c.zscc_oid_secc = b.oid_secc
+   			AND c.terr_oid_terr = d.oid_terr
+   			AND a.ind_borr = 0
+   			AND b.ind_borr = 0
+   			AND d.ind_borr = 0
+   			AND c.ind_borr = 0
+   			AND a.ind_acti = 1
+   			AND b.ind_acti = 1
+   			AND d.oid_terr = e.terr_oid_terr(+)
+   			AND a.zorg_oid_regi = r.oid_regi
+   			AND f.oid_ruta_tran = e.rutr_oid_ruta_tran
+
+		   	<isNotEmpty property="codigoRegion">
+		    	<iterate prepend="AND" property="codigoRegion" open=" r.cod_regi IN (" close=")" conjunction=",">
+        	 		#codigoRegion[]#
+        		</iterate>
+		  	</isNotEmpty>
+
+		  	<isNotEmpty property="codigoZona">
+		    	<iterate prepend="AND" property="codigoZona" open=" a.cod_zona IN (" close=")" conjunction=",">
+        	 		#codigoZona[]#
+        		</iterate>
+		  	</isNotEmpty>
+		  ORDER BY 	r.cod_regi,
+         			f.num_secu,
+         			b.cod_secc,
+         			e.num_secu
+	</select>
+
+	<parameterMap id="executeSecuenciarZonasTerritorios2Params" class="map" >
+		<parameter property="usuario"	  		  jdbcType="VARCHAR" 	javaType="java.lang.String" 		mode="IN"/>
+    </parameterMap>
+	<procedure id="executeSecuenciarZonasTerritorios2"  parameterMap="executeSecuenciarZonasTerritorios2Params" >
+		{call APP_PKG_PROCE.APP_PR_PROCE_SECUE_ZONAS(?)}
+    </procedure>    
+	
+	<parameterMap id="validarCargaHomologacionParams" class="map" >
+		<parameter property="listaErrores" jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>
+		<parameter property="mensajeInicioError" jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>
+		<parameter property="mensajeFinalError" jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>
+    </parameterMap>
+	<procedure id="validarCargaHomologacion"  parameterMap="validarCargaHomologacionParams">
+		{call APP_PKG_PROCE.APP_PR_VALID_CARGA_HOMOL(?,?,?)}
+    </procedure>
+
+    <delete id="deleteTablaSecuenciaZona">
+		delete from app_tempo_rutas_trans
+	</delete>
+
+	<insert id="insertaSecuenciaZona" parameterClass="java.util.Map">
+	    INSERT INTO app_tempo_rutas_trans(
+	      	oid_ruta_tran,
+	      	cod_zona,
+	      	num_secu
+	    )
+		VALUES (
+			app_temp_rutr_seq.nextval,
+			#codigoZona#,
+			#numeroSecuencia#
+		)
+	</insert>
+	
+	<parameterMap id="executeCargaSecuenciaZonaParams" class="map" >
+		<parameter property="codigoPais"	  	jdbcType="VARCHAR" 	javaType="java.lang.String"		mode="IN"/>
+		<parameter property="valError" 			jdbcType="VARCHAR" 	javaType="java.lang.String" 	mode="OUT"/>
+    </parameterMap>
+	<procedure id="executeCargaSecuenciaZona"  parameterMap="executeCargaSecuenciaZonaParams" >
+		{call APP_PKG_PROCE.APP_PR_CARGA_SECUE_ZONAS(?, ?)}
+    </procedure>
+    
+	<parameterMap id="executeProcesoSecuenciarZonaTerritorioParams" class="map" >
+		<parameter property="codUsuario"	  	jdbcType="VARCHAR" 	javaType="java.lang.String"		mode="IN"/>
+    </parameterMap>
+	<procedure id="executeProcesoSecuenciarZonaTerritorio"  parameterMap="executeProcesoSecuenciarZonaTerritorioParams" >
+		{call APP_PKG_PROCE.APP_PR_PROCE_SECUE_TERRIT(?)}
+    </procedure>
+    
+</sqlMap>	

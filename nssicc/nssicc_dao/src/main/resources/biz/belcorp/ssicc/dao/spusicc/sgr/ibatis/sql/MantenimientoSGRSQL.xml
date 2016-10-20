@@ -1,0 +1,904 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.famsegura.MantenimientoSGRSQL">
+ 
+	 <resultMap id="polizaResult" class="java.util.HashMap">
+	      <result property="codigoPoliza" 			    column="COD_POLI" 	/>
+	      <result property="descripcionPoliza" 		    column="DES_POLI" 	/>
+	      <result property="precioPoliza"		        column="PRE_POLI" 	/>
+	      <result property="edadMinima" 			    column="EDA_MINI_SEGU" 	/>
+	      <result property="edadMaxima"			        column="EDA_MAXI_SEGU" 	/>
+	      <result property="numeroCampanhasAntiguedad"	column="NUM_CAMP_ANTI" 	/>
+	      <result property="numDiasFacturacion"         column="NUM_DIAS_INIC_VIGE" />	      
+	      <result property="indicadorActivo" 		    column="IND_ACTI" 	/>
+	      <result property="estadoRegistro"		        column="EST_REGI" 	/>
+	      <result property="coberturaPEGS"		        column="IND_PEGS" 	/>
+	 </resultMap>
+        
+     <select id="getPoliza"  parameterClass="java.util.Map" resultMap="polizaResult">
+			SELECT A.COD_POLI,
+				   A.DES_POLI,
+				   A.PRE_POLI,
+				   A.EDA_MINI_SEGU,
+				   A.EDA_MAXI_SEGU,
+				   '' NUM_CAMP_ANTI,
+				   A.IND_ACTI,
+				   A.EST_REGI,
+				   A.NUM_DIAS_INIC_VIGE,
+				   NVL(A.IND_PEGS, '0') IND_PEGS
+		    FROM SGR_FAMSE_POLIZ A 	
+		    WHERE A.EST_REGI ='1'		
+  		 <isNotEmpty prepend="AND" property="codigoPoliza">			 	   
+			 	   A.COD_POLI = #codigoPoliza#
+		 </isNotEmpty>
+  		 <isNotEmpty prepend="AND" property="descripcionPoliza">			 	   
+			 	   upper(A.DES_POLI) like  '%'||upper(#descripcionPoliza#)||'%'
+		 </isNotEmpty>	
+  		 <isNotEmpty prepend="AND" property="indicadorActivo">			 	   
+			 	   A.IND_ACTI = #indicadorActivo#
+		 </isNotEmpty>
+  		 <isNotEmpty prepend="AND" property="indicadorActivoPoliza">			 	   
+			 	   A.COD_POLI != #codPoliza#
+		 </isNotEmpty>		 	 		 	 							 						    		 							
+	</select>  
+	
+	<update id="deletePoliza" parameterClass="java.util.Map">
+			UPDATE SGR_FAMSE_POLIZ
+			SET    EST_REGI = '9',
+			       IND_ACTI = 0,
+			       USU_MODI = #login#,
+			       FEC_MODI = SYSDATE
+			WHERE  COD_POLI = #codigoPoliza#
+    </update>
+    	
+	<update id="deleteVigencia" parameterClass="java.util.Map">
+			UPDATE SGR_FAMSE_VIGEN_POLIZ
+			SET    EST_REGI = '9',
+			       USU_MODI = #login#,
+			       FEC_MODI = SYSDATE
+			WHERE  POLI_COD_POLI = #codigoPoliza#
+    </update>
+
+	<update id="deleteDescuento" parameterClass="java.util.Map">
+			UPDATE SGR_FAMSE_DESCU_POLIZ
+			SET    EST_REGI = '9',
+			       USU_MODI = #login#,
+			       FEC_MODI = SYSDATE
+			WHERE  POLI_COD_POLI = #codigoPoliza#
+    </update>
+            	
+	<update id="deleteKit" parameterClass="java.util.Map">
+			UPDATE SGR_FAMSE_KITS_POLIZ
+			SET    EST_REGI = '9',
+			       USU_MODI = #login#,
+			       FEC_MODI = SYSDATE
+			WHERE  POLI_COD_POLI = #codigoPoliza#
+    </update>            	
+    
+    <insert id="savePoliza" parameterClass="java.util.Map">
+	
+			INSERT INTO SGR_FAMSE_POLIZ (
+			   COD_POLI, 
+			   DES_POLI, 
+			   PRE_POLI, 
+			   EDA_MINI_SEGU, 
+			   EDA_MAXI_SEGU,
+			   NUM_DIAS_INIC_VIGE, 
+			   IND_ACTI, 
+			   USU_MODI, 
+			   FEC_MODI, 
+			   EST_REGI,
+			   IND_PEGS) 
+			VALUES ( #codigoPoliza#
+					 ,#descripcionPoliza#
+					 ,TO_NUMBER(#precioPoliza#,'99999999.99')
+					 ,#edadMinima#
+			    	 ,#edadMaxima#
+			    	 ,#numDiasFacturacion#
+			    	 ,#indicadorActivo#
+			    	 ,#login#
+			    	 ,SYSDATE
+			    	 ,'1'
+			    	 ,#coberturaPEGS#)
+	
+    </insert>
+
+    <insert id="saveDescto" parameterClass="java.util.Map">
+	
+			INSERT INTO SGR_FAMSE_DESCU_POLIZ (
+			   	COR_DESC_POLI, 
+			   	POLI_COD_POLI, 
+			   	CAM_INIC, 
+			   	CAM_FINA, 
+			   	MON_VENT_INIC, 
+			   	MON_VENT_FINA, 
+			   	IMP_DESC, 
+			   	USU_MODI, 
+			   	FEC_MODI, 
+			   EST_REGI) 
+			VALUES (( SELECT (NVL(MAX(COR_DESC_POLI),0) + 1) FROM SGR_FAMSE_DESCU_POLIZ) , 
+					#codigoPoliza#,
+					#campInicialDscto#,
+			        #campFinalDscto#,
+			        TO_NUMBER(#montInicialVenta#,'99999999.99'),
+			        TO_NUMBER(#montoFinalVenta#,'99999999.99'),
+			    	TO_NUMBER(#montDscto#,'99999999.99'), 
+			    	#login#, 
+			    	SYSDATE,
+			    	 '1')						 
+	
+    </insert>
+
+    <insert id="saveKit" parameterClass="java.util.Map">
+	
+				INSERT INTO SGR_FAMSE_KITS_POLIZ (
+				   	POLI_COD_POLI, 
+				   	COR_KITS_POLI, 
+				   	CAM_PROC, 
+				   	COD_VENT,  
+				   	USU_MODI, 
+				   	FEC_MODI, 
+				   	EST_REGI) 
+				VALUES ( #codigoPoliza#
+						,(SELECT (NVL(MAX(COR_KITS_POLI),0) + 1) FROM SGR_FAMSE_KITS_POLIZ) 
+						,#campanhaProceso# 
+						,#codigoVenta#
+				    	,#login# 
+				    	,SYSDATE
+				    	,'1')						 
+	
+    </insert>
+
+    <insert id="saveVigencia" parameterClass="java.util.Map">
+						 
+			INSERT INTO SGR_FAMSE_VIGEN_POLIZ (
+			   COR_POLI_VIGE, 
+			   POLI_COD_POLI, 
+			   CAM_VIGE, 
+			   COD_REGI, 
+			   FEC_INIC, 
+			   FEC_FINA, 
+			   USU_MODI, 
+			   FEC_MODI, 
+			   EST_REGI) 
+			VALUES (( SELECT (NVL(MAX(COR_POLI_VIGE),0) + 1) FROM SGR_FAMSE_VIGEN_POLIZ) 
+				,#codigoPoliza# 
+				,#codigoPeriodo# 
+				,#codigoRegion#
+			    ,TO_DATE(#fechaInicial#,'dd/MM/yyyy') 
+			    ,TO_DATE(#fechaFinal#,'dd/MM/yyyy') 
+			    ,#login#
+			    ,SYSDATE
+			    ,'1')						 
+	
+    </insert>
+
+    <insert id="insertParametros" parameterClass="java.util.Map">
+	
+		INSERT INTO SGR_FAMSE_PARAM (
+   					NUM_CAMP_ANTI, 
+   					USU_MODI, 
+   					FEC_MODI, 
+   					EST_REGI) 
+				VALUES ( #numeroCampanhasAntiguedad#,
+				         #login#, 
+						 SYSDATE,
+						 '1')
+	
+    </insert>            
+    
+    <update id="deleteParametros" parameterClass="java.util.Map">
+			UPDATE SGR_FAMSE_PARAM
+			SET    EST_REGI = '9',
+			       USU_MODI = #login#,
+			       FEC_MODI = SYSDATE
+			WHERE  EST_REGI = '1'
+    </update>	
+
+
+	 <resultMap id="vigenciaResult" class="java.util.HashMap">
+	      <result property="correlativoVigencia" 		column="COR_POLI_VIGE" 	/>
+	      <result property="codigoPoliza" 		    	column="POLI_COD_POLI" 	/>
+	      <result property="codigoPeriodo" 		    	column="CAM_VIGE" 	/>
+	      <result property="codigoRegion"		        column="COD_REGI" 	/>
+	      <result property="fechaInicial" 			    column="FEC_INIC" 	/>
+	      <result property="fechaFinal"			        column="FEC_FINA" 	/>
+	      <result property="indicadorAccion"			column="IND_ACCI" 	/>
+	      <result property="indicadorModificacion"		column="IND_MODI" 	/>
+	 </resultMap>
+        
+     <select id="getVigencia"  parameterClass="java.util.Map" resultMap="vigenciaResult">
+			SELECT A.COR_POLI_VIGE,
+				   A.POLI_COD_POLI,
+				   A.CAM_VIGE,
+				   A.COD_REGI,
+				   TO_CHAR(A.FEC_INIC,'dd/MM/yyyy') FEC_INIC,
+				   TO_CHAR(A.FEC_FINA,'dd/MM/yyyy') FEC_FINA,
+				   '1' IND_ACCI,
+				   '0' IND_MODI				   
+		    FROM SGR_FAMSE_VIGEN_POLIZ A 	
+		    WHERE A.EST_REGI ='1'		
+  		 <isNotEmpty prepend="AND" property="codigoPoliza">			 	   
+			 	   A.POLI_COD_POLI = #codigoPoliza#
+		 </isNotEmpty>
+  		 <isNotEmpty prepend="AND" property="codigoPeriodo">			 	   
+			 	   A.CAM_VIGE = #codigoPeriodo#
+		 </isNotEmpty>
+  		 <isNotEmpty prepend="AND" property="codigoRegion">			 	   
+			 	   A.COD_REGI = #codigoRegion#
+		 </isNotEmpty>
+		  <isNotEmpty prepend="AND" property="indicadorActivoPoliza">			 	   
+			 	    #indicadorActivoPoliza# in(select x.ind_acti from sgr_famse_poliz x where x.cod_poli = A.POLI_COD_POLI)
+		 </isNotEmpty>			 		
+		 ORDER BY  A.CAM_VIGE DESC, A.COD_REGI ASC
+	</select>
+
+	 <resultMap id="kitResult" class="java.util.HashMap">
+	      <result property="correlativoKit" 		column="COR_KITS_POLI" 	/>
+	      <result property="codigoPoliza" 		  	column="POLI_COD_POLI" 	/>
+	      <result property="campanhaProceso" 		column="CAM_PROC" 	/>
+	      <result property="codigoVenta"			column="COD_VENT" 	/>
+	      <result property="descripcionProducto"	column="DES_PRD" 	/>	  	         
+	      <result property="indicadorAccion"		column="IND_ACCI" 	/>	       
+	      <result property="indicadorModificacion"		column="IND_MODI" 	/>	      
+	 </resultMap>
+        
+     <select id="getKit"  parameterClass="java.util.Map" resultMap="kitResult">
+			SELECT X.COR_KITS_POLI,
+				   X.POLI_COD_POLI,
+				   X.CAM_PROC,
+				   X.COD_VENT,
+				   NVL((SELECT  d.val_i18n 
+					  FROM pre_ofert a,
+					       pre_ofert_detal b,
+					       mae_produ c,
+					       gen_i18n_sicc_pais d,
+					       pre_tipo_ofert e,
+					       cra_perio f,
+					       seg_perio_corpo g,
+					       pre_matri_factu_cabec h
+					 WHERE a.oid_ofer = b.ofer_oid_ofer
+					   AND b.prod_oid_prod = c.oid_prod
+					   AND c.oid_prod = d.val_oid
+					   AND d.attr_enti = 'MAE_PRODU'
+					   AND b.tofe_oid_tipo_ofer = e.oid_tipo_ofer
+					   AND a.mfca_oid_cabe = h.oid_cabe
+					   AND h.perd_oid_peri = f.oid_peri
+					   AND f.peri_oid_peri = g.oid_peri
+					   AND g.cod_peri = X.CAM_PROC
+					   AND b.val_codi_vent = X.COD_VENT),'') DES_PRD,
+				   '1' IND_ACCI,
+				   '0' IND_MODI
+		    FROM SGR_FAMSE_KITS_POLIZ X 	
+		    WHERE X.EST_REGI ='1'		
+  		 <isNotEmpty prepend="AND" property="codigoPoliza">			 	   
+			 	   X.POLI_COD_POLI = #codigoPoliza#
+		 </isNotEmpty>
+		 	ORDER BY X.CAM_PROC DESC
+	</select>	  
+		
+     <resultMap id="dsctoResult" class="java.util.HashMap">
+	      <result property="correlativoDscto" 		    column="COR_DESC_POLI" 	/>
+	      <result property="codigoPoliza" 		  	    column="POLI_COD_POLI" 	/>
+	      <result property="campInicialDscto" 		    column="CAM_INIC" 	/>
+	      <result property="campFinalDscto"			    column="CAM_FINA" 	/>
+	      <result property="montInicialVenta" 		    column="MON_VENT_INIC" 	/>
+	      <result property="montoFinalVenta" 		    column="MON_VENT_FINA" 	/>
+	      <result property="montDscto" 				    column="IMP_DESC" 	/>
+	      <result property="indicadorAccion"		    column="IND_ACCI" 	/>	      
+	      <result property="indicadorModificacion"		column="IND_MODI" 	/>	      
+	 </resultMap>
+        
+     <select id="getDscto"  parameterClass="java.util.Map" resultMap="dsctoResult">
+			SELECT A.COR_DESC_POLI,
+				   A.POLI_COD_POLI,
+				   A.CAM_INIC,
+				   A.CAM_FINA,
+				   A.MON_VENT_INIC,
+				   A.MON_VENT_FINA,
+				   A.IMP_DESC,
+				   '1' IND_ACCI,
+				   '0' IND_MODI
+		    FROM SGR_FAMSE_DESCU_POLIZ A 	
+		    WHERE A.EST_REGI ='1'		
+  		 <isNotEmpty prepend="AND" property="codigoPoliza">			 	   
+			 	   A.POLI_COD_POLI = #codigoPoliza#
+		 </isNotEmpty>
+		    ORDER BY A.CAM_INIC DESC, A.MON_VENT_INIC ASC
+	</select>
+	
+	 <select id="getNumPolizasRegistradas"  parameterClass="java.util.Map" resultClass="int">
+			SELECT COUNT(1)
+		    FROM SGR_FAMSE_POLIZ_REGIS A 	
+		    WHERE A.EST_REGI ='1'		
+  		 <isNotEmpty prepend="AND" property="codigoPoliza">			 	   
+			 	   A.POLI_COD_POLI = #codigoPoliza#
+		 </isNotEmpty>
+	</select>
+
+	<update id="deleteVigenciaByCorre" parameterClass="java.util.Map">
+			UPDATE SGR_FAMSE_VIGEN_POLIZ
+			SET    EST_REGI = '9',
+			       USU_MODI = #login#,
+			       FEC_MODI = SYSDATE
+			WHERE  POLI_COD_POLI = #codigoPoliza#
+			  and cor_poli_vige = #correlativoVigencia#
+    </update>
+
+	<update id="deleteDesctoByCorre" parameterClass="java.util.Map">
+			UPDATE SGR_FAMSE_DESCU_POLIZ
+			SET    EST_REGI = '9',
+			       USU_MODI = #login#,
+			       FEC_MODI = SYSDATE
+			WHERE  POLI_COD_POLI = #codigoPoliza#
+			 and cor_desc_poli =#correlativoDscto#
+    </update>
+            	
+	<update id="deleteKitByCorre" parameterClass="java.util.Map">
+			UPDATE SGR_FAMSE_KITS_POLIZ
+			SET    EST_REGI = '9',
+			       USU_MODI = #login#,
+			       FEC_MODI = SYSDATE
+			WHERE  POLI_COD_POLI = #codigoPoliza#
+			 AND COR_KITS_POLI = #correlativoKit#
+    </update>            	
+
+	<update id="updateVigenciaByCorre" parameterClass="java.util.Map">
+			UPDATE SGR_FAMSE_VIGEN_POLIZ
+			SET    FEC_INIC= TO_DATE(#fechaInicial#,'dd/MM/yyyy'),
+				   FEC_FINA= TO_DATE(#fechaFinal#,'dd/MM/yyyy'),
+			       USU_MODI = #login#,
+			       FEC_MODI = SYSDATE
+			WHERE  POLI_COD_POLI = #codigoPoliza#
+				and cor_poli_vige =#correlativoVigencia#
+    </update>
+
+	<update id="updateDesctoByCorre" parameterClass="java.util.Map">
+				        			    	 
+			UPDATE SGR_FAMSE_DESCU_POLIZ
+			SET    MON_VENT_INIC=TO_NUMBER(#montInicialVenta#,'99999999.99'),
+				   MON_VENT_FINA =TO_NUMBER(#montoFinalVenta#,'99999999.99'),
+				   IMP_DESC = TO_NUMBER(#montDscto#,'99999999.99'),
+			       USU_MODI = #login#,
+			       FEC_MODI = SYSDATE
+			WHERE  POLI_COD_POLI = #codigoPoliza#
+			 and cor_desc_poli =#correlativoDscto#
+    </update>
+            	
+	<update id="updateKitByCorre" parameterClass="java.util.Map">
+			UPDATE SGR_FAMSE_KITS_POLIZ
+			SET    EST_REGI = '1',
+			       USU_MODI = #login#,
+			       FEC_MODI = SYSDATE
+			WHERE  POLI_COD_POLI = #codigoPoliza#
+			 AND COR_KITS_POLI = #correlativoKit#
+    </update>            	    	
+    
+    <update id="updatePoliza" parameterClass="java.util.Map">
+			UPDATE SGR_FAMSE_POLIZ
+			SET    DES_POLI=#descripcionPoliza#,
+				   PRE_POLI=TO_NUMBER(#precioPoliza#,'99999999.99'),
+				   EDA_MINI_SEGU=#edadMinima#,
+				   EDA_MAXI_SEGU=#edadMaxima#,
+				   NUM_DIAS_INIC_VIGE=#numDiasFacturacion#,	
+				   IND_ACTI=#indicadorActivo#,				
+			       USU_MODI = #login#,
+			       FEC_MODI = SYSDATE,
+			       IND_PEGS = #coberturaPEGS#
+			WHERE  COD_POLI = #codigoPoliza#
+    </update>  
+	        	
+     <select id="getValidarTraslapeDescuento" parameterClass="java.util.Map" resultClass="int">
+			WITH TMP AS
+			(
+			  SELECT min(cam_inic) mini, 
+			         max(cam_fina) maxi
+			  FROM SGR_FAMSE_DESCU_POLIZ
+			  WHERE EST_REGI='1'
+			)
+			SELECT count(1)
+			FROM SGR_FAMSE_DESCU_POLIZ A, 
+			     tmp,
+			     sgr_famse_poliz B
+			WHERE A.EST_REGI = '1' 
+		     AND B.COD_POLI = A.POLI_COD_POLI
+		     AND B.IND_ACTI=1
+		     AND B.EST_REGI=A.EST_REGI 			
+	        <isNotEmpty prepend="AND" property="codigoPoliza">	
+	           A.POLI_COD_POLI != #codigoPoliza#		        
+	         </isNotEmpty>			
+			and 
+			<![CDATA[			  
+			  ( #campInicialDscto# BETWEEN CAM_INIC AND CAM_FINA
+			          OR  #campFinalDscto# BETWEEN CAM_INIC AND CAM_FINA)    
+			  OR ( #campInicialDscto# < tmp.mini AND #campFinalDscto#  > tmp.maxi) 
+			]]>           		          
+    </select>
+
+     <select id="getValidarTraslapeFechas" parameterClass="java.util.Map" resultClass="int">
+			WITH TMP AS
+			(
+			  SELECT min(fec_inic) mini, 
+			         max(fec_fina) maxi
+			  FROM SGR_FAMSE_VIGEN_POLIZ
+			  WHERE EST_REGI='1'
+			)
+			SELECT count(1)
+		    FROM sgr_famse_vigen_poliz A,
+		          tmp,
+		         sgr_famse_poliz B       
+		    WHERE A.est_regi = '1'
+		        AND B.COD_POLI = A.POLI_COD_POLI
+		        AND B.EST_REGI=A.EST_REGI 
+	        <isNotEmpty prepend="AND" property="codigoPoliza">	
+	           POLI_COD_POLI = #codigoPoliza#		        
+	         </isNotEmpty>
+	        <isNotEmpty prepend="AND" property="codigoRegion">	
+	           COD_REGI = #codigoRegion#		        
+	         </isNotEmpty>	         
+	        <isNotEmpty prepend="AND" property="correlativoVigencia">	
+	           COR_POLI_VIGE != #correlativoVigencia#		        
+	         </isNotEmpty>	         			
+			and 
+			<![CDATA[			  
+			  ( TO_DATE(#fechaInicial#,'dd/MM/yyyy') BETWEEN FEC_INIC AND FEC_FINA
+			          OR  TO_DATE(#fechaFinal#,'dd/MM/yyyy') BETWEEN FEC_INIC AND FEC_FINA)    
+			  OR ( TO_DATE(#fechaInicial#,'dd/MM/yyyy') < tmp.mini AND TO_DATE(#fechaFinal#,'dd/MM/yyyy')  > tmp.maxi) 
+			]]>           		          
+    </select>    	      
+    
+     <select id="getExisteConsultoraPolizaActiva" parameterClass="string" resultClass="int">
+		SELECT COUNT(1)
+		FROM SGR_FAMSE_POLIZ_REGIS A, 
+			 SGR_FAMSE_POLIZ B	
+		WHERE (A.EST_POLI='3' OR A.EST_POLI='1')
+		 AND A.COD_CLIE=#value#
+		 AND A.POLI_COD_POLI = B.COD_POLI   
+		 AND A.EST_REGI= '1'
+		 AND A.EST_REGI= B.EST_REGI		
+		 AND B.IND_ACTI='1'          
+    </select>        	
+    
+    
+     <insert id="saveInscripcionPoliza" parameterClass="java.util.Map">
+						 					   
+			INSERT INTO SGR_FAMSE_POLIZ_REGIS (
+			   POLI_COD_POLI, 
+			   COD_CLIE, 
+			   NUM_POLI, 
+			   CLIE_OID_CLIE, 
+			   FEC_SOLI, 
+			   TIP_DOCU_IDEN, 
+			   NUM_DOCU_IDEN, 
+			   VAL_SEXO, 
+			   EST_CIVI, 
+			   FEC_NACI, 
+			   EDA_CLIE, 
+			   NUM_FAMI_COAS, 
+			   NUM_CAMP_ANTI, 
+			   CAM_REGI, 
+			   CAM_ACTI, 
+			   EST_POLI, 
+			   CAM_CANC, 
+			   FEC_CANC, 
+			   MOTI_COD_MOTI_CANC, 
+			   IND_ORIG_REGI, 
+			   USU_MODI, 
+			   FEC_MODI, 
+			   EST_REGI,
+			   CAM_PROC) 
+			VALUES (#codigoPoliza#,
+				#codigoCliente#,
+				#numeroCertificado#,
+				#oidCliente#,
+				SYSDATE,
+				#tipoDocumentoIdentidad#,
+				#numeroDocumentoIdent#,
+				#sexo#,
+				#estadoCivil#,
+				TO_DATE(#fechaNacimiento#,'dd/MM/yyyy'),
+				#edadCliente#,
+				TO_NUMBER(#numeroAsegurados#,'99999999'),
+				TO_NUMBER(#numeroCampanhasAnt#,'99999999'),
+				#campanhaRegistro#,
+				null,
+				'1',
+				null,
+				null, 
+				null,
+				'C', 
+			    #login#,
+			    SYSDATE,
+			    '1',
+			    #campanhaProceso#)			    			 	
+    </insert>
+    
+     <insert id="saveBenefPoliza" parameterClass="java.util.Map">
+						 
+			INSERT INTO SGR_FAMSE_BENEF_POLIZ ( 
+			   POLI_COD_POLI, 
+			   COD_CLIE,
+			   POLR_NUM_POLI,
+			   COR_BENE,
+			   TIP_DOCU_IDEN,
+			   NUM_DOCU_IDEN,
+			   NOM_BENE,
+			   APE_BENE,
+			   STA_BENE,
+			   USU_MODI, 
+			   FEC_MODI, 
+			   EST_REGI) 
+			VALUES (#codigoPoliza#,
+				#codigoCliente#,
+				#numeroCertificado#,
+				(SELECT (NVL(MAX(COR_BENE),0) + 1) 
+				    FROM SGR_FAMSE_BENEF_POLIZ  
+				      WHERE POLI_COD_POLI = #codigoPoliza# AND COD_CLIE=#codigoCliente# AND POLR_NUM_POLI=#numeroCertificado#), 
+				#tipoDocumentoIdentidadBenef#, 
+				#numeroDocumentoIdentBenef#,
+			    #nombreBeneficiario#, 
+			    #apellidoBeneficiario#,
+			    '1', 
+			    #login#,
+			    SYSDATE,
+			    '1')						 
+	
+    </insert>    
+        
+    <update id="deleteBenefPoliza" parameterClass="java.util.Map">
+				UPDATE SGR_FAMSE_BENEF_POLIZ
+				SET EST_REGI='9',
+				    USU_MODI=#login#,
+				    FEC_MODI=SYSDATE
+				WHERE  POLI_COD_POLI = #codigoPoliza#
+				AND    COD_CLIE      = #codigoCliente#
+				AND    POLR_NUM_POLI = #numeroCertificado#			    						 	
+    </update>
+    
+    <delete id="deleteBenefPolizaFis" parameterClass="java.util.Map">
+				DELETE FROM SGR_FAMSE_BENEF_POLIZ
+				WHERE  POLI_COD_POLI = #codigoPoliza#
+				AND    COD_CLIE      = #codigoCliente#
+				AND    POLR_NUM_POLI = #numeroCertificado#
+				AND    EST_REGI != '9'			    						 	
+    </delete>        
+    
+  <parameterMap id="executeValidacionesInscripcionPolizaParams" class="java.util.Map">														
+    	<parameter property="codigoPais"            	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoPoliza"          	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>														
+	  	<parameter property="numeroCertificado"     	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>	
+	  	<parameter property="codigoCliente"      		jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="tipoDocumentoIdentidad"    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="numeroDocumentoIdent"      jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="indicadorAccion"	      	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMotivoRechazo"	    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="login"	    			    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="indicadorNuevo"	    	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="mensajeResultado"      	jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+   </parameterMap>
+  														
+  	<procedure id="executeValidacionesInscripcionPoliza" parameterMap="executeValidacionesInscripcionPolizaParams">														
+			{call SGR_PKG_PROCE_FAMSE.SGR_PR_VALID_INSCR_POLIZ(?,?,?,?,?,?,?,?,?,?,?)}											
+	</procedure>
+	
+    <update id="updateBenefPolizaSTO" parameterClass="java.util.Map">
+			UPDATE INT_SOLIC_CONSO_FAMIL_SEGUR
+			SET NOM_BEN1 = upper(#nombreBenef1#),
+			    TIP_DOCU_BEN1 =#tipoDocuBenef1#,
+			    NUM_DOCU_BEN1 =#numDocuBenef1#,
+				NOM_BEN2 = upper(#nombreBenef2#),
+			    TIP_DOCU_BEN2 =#tipoDocuBenef2#,
+			    NUM_DOCU_BEN2 =	#numDocuBenef2#,		
+			    CAN_COAS =#numeroAsegurados#    
+			WHERE  COD_PAIS = #codigoPais#
+			  AND SEC_NUME_DOCU = #numSecuencia#
+			  AND NUM_LOTE = #numLote#
+    </update>
+
+	 <resultMap id="beneficiariosResult" class="java.util.HashMap">
+	      <result property="correlativoBenef" 			 column="COR_BENE" 	/>
+	      <result property="codigoPoliza" 		  		 column="POLI_COD_POLI" 	/>
+	      <result property="codigoCliente" 				 column="COD_CLIE" 	/>
+	      <result property="numeroCertificado"			 column="POLR_NUM_POLI" 	/>	     
+	      <result property="tipoDocumentoIdentidadBenef" column="TIP_DOCU_IDEN" 	/>
+	      <result property="numeroDocumentoIdentBenef"	 column="NUM_DOCU_IDEN" 	/>
+	      <result property="nombreBeneficiario"			 column="NOM_BENE" 	/>
+	      <result property="apellidoBeneficiario"		 column="APE_BENE" 	/>	      	      
+	 </resultMap>
+        
+     <select id="getBeneficiarios"  parameterClass="java.util.Map" resultMap="beneficiariosResult">
+			SELECT A.COR_BENE,
+				   A.POLI_COD_POLI,
+				   A.COD_CLIE,
+				   A.POLR_NUM_POLI,
+				   A.TIP_DOCU_IDEN,
+				   A.NUM_DOCU_IDEN,
+				   A.NOM_BENE,
+				   A.APE_BENE
+		    FROM SGR_FAMSE_BENEF_POLIZ A 	
+		    WHERE A.EST_REGI ='1'		
+  		 <isNotEmpty prepend="AND" property="codigoPoliza">			 	   
+			 	   A.POLI_COD_POLI = #codigoPoliza#
+		 </isNotEmpty>
+  		 <isNotEmpty prepend="AND" property="codigoCliente">			 	   
+			 	   A.COD_CLIE = #codigoCliente#
+		 </isNotEmpty>
+  		 <isNotEmpty prepend="AND" property="numeroCertificado">			 	   
+			 	   A.POLR_NUM_POLI = #numeroCertificado#
+		 </isNotEmpty>
+	</select>	    
+
+    <update id="deleteInscripcionPoliza" parameterClass="java.util.Map">
+				UPDATE SGR_FAMSE_POLIZ_REGIS
+				SET EST_REGI='9',
+				    USU_MODI=#login#,
+				    FEC_MODI= SYSDATE 
+				WHERE  POLI_COD_POLI = #codigoPoliza#
+				AND    COD_CLIE      = #codigoCliente#
+				AND    NUM_POLI = #numeroCertificado#			    						 	
+    </update>    
+    
+    <delete id="deleteInscripcionPolizaFisica" parameterClass="java.util.Map">
+		DELETE FROM SGR_FAMSE_POLIZ_REGIS
+		WHERE  POLI_COD_POLI = #codigoPoliza#
+		AND    COD_CLIE      = #codigoCliente#
+		AND    NUM_POLI = #numeroCertificado#			    						 	
+    </delete>    
+    
+    <update id="updateInscripcionPoliza" parameterClass="java.util.Map">
+				UPDATE SGR_FAMSE_POLIZ_REGIS
+				SET NUM_FAMI_COAS=#numeroAsegurados#,
+				    USU_MODI=#login#,
+				    FEC_MODI= SYSDATE 
+				WHERE  POLI_COD_POLI = #codigoPoliza#
+				AND    COD_CLIE      = #codigoCliente#
+				AND    NUM_POLI = #numeroCertificado#			    						 	
+    </update>
+    	
+	 <resultMap id="inscripcionPolizaResult" class="java.util.HashMap">
+	      <result property="codigoPoliza" 		  		 column="POLI_COD_POLI" 	/>
+	      <result property="descripcionPoliza" 		     column="DES_POLI" 	/>
+	      <result property="numeroCertificado"			 column="NUM_POLI" 	/>	      
+	      <result property="codigoCliente" 				 column="COD_CLIE" 	/>
+	      <result property="nomCliente" 				 column="NOM_CLIE" 	/>	      	      
+	      <result property="estado" 				 	 column="EST_POLI" 	/>
+	      <result property="tipoDocumentoIdentidad" 	 column="TIP_DOCU_IDEN" />
+	      <result property="numeroDocumentoIdent" 		 column="NUM_DOCU_IDEN" />
+	      <result property="indicadorActivo" 		     column="IND_ACTI" />
+	    <result property="descripcionEstado" 		     column="DES_ESTA" />
+	    <result property="descripcionOrigen" 		     column="DES_ORIG" />
+	 </resultMap>
+        
+     <select id="getInscripcionPoliza"  parameterClass="java.util.Map" resultMap="inscripcionPolizaResult">
+			SELECT A.POLI_COD_POLI,
+			       B.DES_POLI,
+				   A.NUM_POLI,			
+				   A.COD_CLIE,
+				   GEN_PKG_GENER.GEN_FN_CLIEN_DATOS_CODIG(A.COD_CLIE,'NOM_CLIE') NOM_CLIE,
+				   A.EST_POLI,
+				   A.TIP_DOCU_IDEN,
+				   A.NUM_DOCU_IDEN,
+				   B.IND_ACTI,
+				   SGR_PKG_PROCE_FAMSE.SGR_PR_DESCR_ESTAD_POLIZ(A.EST_POLI) DES_ESTA,
+				   SGR_PKG_PROCE_FAMSE.SGR_PR_DESCR_ORIGE_POLIZ(A.IND_ORIG_REGI) DES_ORIG
+		    FROM SGR_FAMSE_POLIZ_REGIS A , SGR_FAMSE_POLIZ B	
+		    WHERE A.EST_REGI ='1'		
+		      AND B.COD_POLI = A.POLI_COD_POLI 
+  		 <isNotEmpty prepend="AND" property="codigoPoliza">			 	   
+			 	   A.POLI_COD_POLI = #codigoPoliza#
+		 </isNotEmpty>
+  		 <isNotEmpty prepend="AND" property="codigoCliente">			 	   
+			 	   A.COD_CLIE = #codigoCliente#
+		 </isNotEmpty>
+  		 <isNotEmpty prepend="AND" property="estado">			 	   
+			 	   A.EST_POLI = #estado#
+		 </isNotEmpty>
+		 <isNotEmpty prepend="AND" property="origen">			 	   
+			 	   A.IND_ORIG_REGI = #origen#
+		 </isNotEmpty>
+	</select>
+
+	<parameterMap id="paramGenerarReporteControlAbonos" class="java.util.Map" >
+		<parameter property="codigoPais"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaInicio"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaFin"           	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    <procedure id="executeGenerarReporteControlAbonos" parameterMap="paramGenerarReporteControlAbonos" >
+		{call SGR_PKG_PROCE_FAMSE.SGR_PR_REPOR_CONTR_ABONO(?, ?, ?, ?)}
+    </procedure>
+    
+    
+     <!-- OBTIENE LA LONGITUD DEL TIPO DE DOCUMENTO DE IDENTIDAD SELECCIONADO -->
+    <select id="getLongitudTipoDocumentoByCodigo" parameterClass="java.util.Map" resultClass="int">
+		SELECT VAL_LONG 
+		  FROM MAE_TIPO_DOCUM
+		 WHERE PAIS_OID_PAIS = #oidPais#
+		   AND OID_TIPO_DOCU = #codigoTipoDocumento# 
+    </select>
+    
+    <insert id="saveEstatus" parameterClass="java.util.Map">
+	
+		INSERT INTO SGR_FAMSE_ESTAT_ANULA_POLIZ (
+		   	POLI_COD_POLI, 
+		   	COR_POLI_ESTA_ANUL, 
+		   	ESTA_OID_ESTA_CLIE, 
+		    USU_MODI, 
+		   	FEC_MODI, 
+		   	EST_REGI) 
+		VALUES ( #codigoPoliza#
+				,(SELECT (NVL(MAX(COR_POLI_ESTA_ANUL),0) + 1) FROM SGR_FAMSE_ESTAT_ANULA_POLIZ) 
+				,#codigoEstatus# 
+				,#login# 
+		    	,SYSDATE
+		    	,'1')						 
+	
+    </insert>
+    
+    <update id="deleteEstatusByCorre" parameterClass="java.util.Map">
+    	UPDATE SGR_FAMSE_ESTAT_ANULA_POLIZ
+		SET    EST_REGI = '9',
+		       USU_MODI = #login#,
+		       FEC_MODI = SYSDATE
+		WHERE  POLI_COD_POLI = #codigoPoliza#
+		AND    COR_POLI_ESTA_ANUL = #correlativoEstatus#
+    </update>
+    
+    <update id="deleteEstatus" parameterClass="java.util.Map">
+    	UPDATE SGR_FAMSE_ESTAT_ANULA_POLIZ
+		SET    EST_REGI = '9',
+		       USU_MODI = #login#,
+		       FEC_MODI = SYSDATE
+		WHERE  POLI_COD_POLI = #codigoPoliza#
+	</update>
+    
+    <resultMap id="estatusResult" class="java.util.HashMap">
+      <result property="correlativoEstatus" 	   column="COR_POLI_ESTA_ANUL" 	/>
+      <result property="codigoPoliza" 		  	   column="POLI_COD_POLI" 	/>
+      <result property="oidEstatusCliente"	       column="ESTA_OID_ESTA_CLIE" 	/>
+      <result property="descripcionEstatus"        column="DES_ESTA_CLIE" 	/>
+      <result property="indicadorAccion"		   column="IND_ACCI" 	/>	       
+      <result property="indicadorModificacion"	   column="IND_MODI" 	/>	      
+	</resultMap>
+    <select id="getEstatus" parameterClass="java.util.Map" resultMap="estatusResult">
+    	SELECT famea.COR_POLI_ESTA_ANUL,
+		       famea.POLI_COD_POLI,
+		       famea.ESTA_OID_ESTA_CLIE,
+		       (SELECT b.val_i18n
+		        FROM mae_estat_clien a, 
+		             gen_i18n_sicc_comun b
+		 	    WHERE a.oid_esta_clie = b.val_oid 
+		   		AND b.attr_enti = 'MAE_ESTAT_CLIEN'
+		        AND a.oid_esta_clie = famea.esta_oid_esta_clie) AS DES_ESTA_CLIE,
+		        '1' IND_ACCI,
+				'0' IND_MODI	
+		FROM SGR_FAMSE_ESTAT_ANULA_POLIZ famea
+		WHERE famea.EST_REGI = '1'
+		<isNotEmpty prepend="AND" property="codigoPoliza">			 	   
+		 	   famea.POLI_COD_POLI = #codigoPoliza#
+	 	</isNotEmpty>
+    </select>
+    
+    <select id="getNumDocumentoIdentByCodigoCliente" parameterClass="java.util.Map" resultClass="string">
+    	select a.Num_Docu_Iden
+		from mae_clien_ident a,
+		     mae_clien b,
+		     mae_tipo_docum c
+		where a.clie_oid_clie = b.oid_clie
+		and   c.oid_tipo_docu = a.tdoc_oid_tipo_docu
+		and c.cod_tipo_docu = #codigoTipoDocu#
+		and b.cod_clie = #codigoCliente#
+    </select>
+    
+    <resultMap id="campaniaGratuitaResult" class="java.util.HashMap">
+      <result property="correlativoCampaniaGratuita" column="COR_CAMP_GRAT" 	/>
+      <result property="codigoPoliza" 		  	     column="POLI_COD_POLI" 	/>
+      <result property="campInicialCampGratuitas"    column="CAM_INIC" 	/>
+      <result property="campFinalCampGratuitas"      column="CAM_FINA" 	/>
+      <result property="codigoBeneficiario"          column="IND_BENE" 	/>
+      <result property="descripcionBeneficiario"     column="DES_BENE" 	/>
+      <result property="indicadorAccion"		     column="IND_ACCI" 	/>	       
+      <result property="indicadorModificacion"	     column="IND_MODI" 	/>	      
+      <result property="numeroPeriodosEvaluar"		 column="NUM_CAMP_EVAL" 	javaType="java.lang.String" />	       
+      <result property="numeroMaximoDescuento"	     column="NUM_MAXI_DESC" 	javaType="java.lang.String" />
+	</resultMap>
+	
+    <select id="getCampaniaGratuita" parameterClass="java.util.Map" resultMap="campaniaGratuitaResult">
+    	SELECT famea.COR_CAMP_GRAT,
+		       famea.POLI_COD_POLI,
+		       famea.CAM_INIC,
+		       famea.CAM_FINA,
+		       famea.IND_BENE,
+		       (CASE WHEN famea.IND_BENE = 'T' THEN 'Todas' WHEN famea.IND_BENE = 'N' THEN 'Nuevas' WHEN famea.IND_BENE = 'L' THEN 'Lideres' WHEN famea.IND_BENE = 'P' THEN 'Migración Póliza' END) AS DES_BENE,
+		       '1' IND_ACCI,
+			   '0' IND_MODI,
+			   famea.NUM_CAMP_EVAL,
+		       famea.NUM_MAXI_DESC
+		FROM SGR_FAMSE_CAMPA_GRATI famea
+		WHERE famea.EST_REGI = '1'
+		<isNotEmpty prepend="AND" property="codigoPoliza">			 	   
+		 	   famea.POLI_COD_POLI = #codigoPoliza#
+	 	</isNotEmpty>
+	 	order by 3 desc
+    </select>
+    
+    <update id="deleteCampaniaGratuitasByCorre" parameterClass="java.util.Map">
+    	UPDATE SGR_FAMSE_CAMPA_GRATI
+		SET    EST_REGI = '9',
+		       USU_MODI = #login#,
+		       FEC_MODI = SYSDATE
+		WHERE  POLI_COD_POLI = #codigoPoliza#
+		AND    COR_CAMP_GRAT = #correlativoCampaniaGratuita#
+    </update>
+    
+    <insert id="saveCampaniaGratuitas" parameterClass="java.util.Map">
+    	INSERT INTO SGR_FAMSE_CAMPA_GRATI (
+		   	POLI_COD_POLI, 
+		   	COR_CAMP_GRAT, 
+		   	CAM_INIC, 
+		    CAM_FINA, 
+		   	IND_BENE,
+		   	NUM_CAMP_EVAL,
+		   	NUM_MAXI_DESC,
+		   	USU_MODI, 
+		   	FEC_MODI, 
+		   	EST_REGI) 
+		VALUES ( #codigoPoliza#
+				,(SELECT (NVL(MAX(COR_CAMP_GRAT),0) + 1) FROM SGR_FAMSE_CAMPA_GRATI) 
+				,#campInicialCampGratuitas#
+				,#campFinalCampGratuitas# 
+				,#codigoBeneficiario#
+				,#numeroPeriodosEvaluar#
+				,#numeroMaximoDescuento#
+				,#login# 
+		    	,SYSDATE
+		    	,'1')	
+    </insert>
+    
+    <update id="updateCampaniaGratuitas">
+    	UPDATE SGR_FAMSE_CAMPA_GRATI
+			SET    CAM_INIC = #campInicialCampGratuitas#,
+			       CAM_FINA = #campFinalCampGratuitas# ,
+			       IND_BENE = #codigoBeneficiario#,
+			       NUM_CAMP_EVAL = #numeroPeriodosEvaluar# ,
+			       NUM_MAXI_DESC = #numeroMaximoDescuento#,
+			       EST_REGI = '1',
+			       USU_MODI = #login#,
+			       FEC_MODI = SYSDATE
+			WHERE  POLI_COD_POLI = #codigoPoliza#
+			 AND COR_CAMP_GRAT = #correlativoCampaniaGratuita#
+    </update>
+    
+    <update id="deleteCampaniaGratuitas" parameterClass="java.util.Map">
+    	UPDATE SGR_FAMSE_CAMPA_GRATI
+		SET    EST_REGI = '9',
+		       USU_MODI = #login#,
+		       FEC_MODI = SYSDATE
+		WHERE  POLI_COD_POLI = #codigoPoliza#		
+    </update>
+    
+        <!-- OBTIENE LA LONGITUD POR DEFECTO = 01 DEL TIPO DE DOCUMENTO -->
+    <select id="getLongitudDefaultTipoDocumento" parameterClass="java.util.Map" resultClass="int">
+		select VAL_LONG from MAE_TIPO_DOCUM WHERE COD_TIPO_DOCU = '01' 
+		AND PAIS_OID_PAIS = #oidPais#
+    </select>
+
+    
+    <!-- CANCELA UNA POLIZA ACTIVA DESDE EL BOTON ELIMINAR -->
+    <update id="updateInscripcionPolizaActiva" parameterClass="java.util.Map">
+		    UPDATE SGR_FAMSE_POLIZ_REGIS A 
+		    SET
+			       A.EST_POLI = '4',
+			       A.FEC_CANC = DECODE(#fechaFacturacion#,NULL,NULL,TO_DATE(#fechaFacturacion#,'dd/MM/yyyy')),
+			       A.cam_canc = #campanhaCancelacion#,
+			       A.Moti_Cod_Moti_Canc = '8',
+			       A.Usu_Modi = #login#,
+			       A.Fec_Modi = sysdate
+			where  POLI_COD_POLI = #codigoPoliza#
+				   AND COD_CLIE = #codigoCliente#
+				   AND NUM_POLI = #numeroCertificado#			    						 	
+    </update>
+</sqlMap>

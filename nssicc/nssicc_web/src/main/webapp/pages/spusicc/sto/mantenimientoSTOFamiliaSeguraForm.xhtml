@@ -1,0 +1,278 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:ssicc="http://java.sun.com/jsf/composite/componentes/ssicc">
+
+<body>
+
+	<ui:composition template="/templates/templateMantenimientoSearch.xhtml">
+		<ui:param name="mAlias" value="#{mantenimientoSTOFamiliaSeguraAction}" />
+
+		<ui:define name="titulo_Pantalla">
+			<h:outputText value="#{i18n['mantenimientoSTOFamiliaSeguraForm.title']}" styleClass="clsEncabezadoPantalla" />
+		</ui:define>	
+		
+		<ui:define name="body_toolbar_adicionales">		 		
+			<!--Buscar -->  
+			<ssicc:linkAjax  value="#{msg['botonBuscar.titulo']}" title="#{msg['botonBuscar.tooltip']}" 
+							icon="#{resource['images:buscarForm3.png']}"
+							width="30"
+							height="30"
+							process="@this"
+							accion="#{mantenimientoSTOFamiliaSeguraAction.linkHiperconsulta}"
+							update=":principalForm:messagesPrincipalForm" rendered="#{mAlias.formBusqueda.indicadorLink}" />
+							  			
+	 		<ssicc:linkSaveAjax manage="#{mAlias}" rendered="#{mAlias.editable}" oncomplete="handleComplete(xhr, status, args)"
+	 		   update=":principalForm:panelCriterioBusqueda, :principalForm:idBody_final_busqueda, :principalForm:messagesPrincipalForm, :principalForm:mensajesGrowl"/>	 	
+	 	
+	 		<ssicc:linkAjax value="#{msg['botonSalir.titulo']}"
+							title="#{msg['botonSalir.tooltip']}"
+							icon="#{resource['images:salirForm.png']}"
+                            width="30"
+                            height="30"
+							process="@this"
+							accion="#{mantenimientoSTOFamiliaSeguraAction.salir}"
+							update=":principalForm:messagesPrincipalForm"
+							oncomplete="window.close();" />	
+	 		
+		</ui:define>
+
+		<ui:define name="body_criterio_busqueda">
+		<br />
+		<p:fieldset>
+				<h:panelGrid columns="2">
+					 <h:outputText value="#{mAlias.formBusqueda.validacion}" style="font-weight:bold;"/>
+					 <h:outputText value="#{mAlias.formBusqueda.desValidacion}" style="font-weight:bold;"/>
+					 <ssicc:labelBlank/>
+					 <h:outputText value="#{mAlias.formBusqueda.desValidacionLarga}" style="font-weight:bold;" />					
+					<!--Lista de Archivos -->    	
+
+					 <c:forEach var="lista" items="#{mAlias.stoMensajeErrorList}">
+						<ssicc:label value="#{lista}" header="true"/>
+						<ssicc:labelBlank/>
+					</c:forEach> 
+				</h:panelGrid>				
+		</p:fieldset>	
+	<br /><br />
+	
+	<h:panelGrid columns="2" rendered="#{mAlias.formBusqueda.validacion=='FAS-7' or mAlias.formBusqueda.validacion=='FAS-8' or mAlias.formBusqueda.validacion=='FAS-14' }">							
+		<p:commandLink actionListener="#{mantenimientoSTOFamiliaSeguraAction.openModuloRegistroPoliza}"
+				 	update=":principalForm:messagesPrincipalForm" style="font-weight:bold;color: #355A8F;text-decoration: underline;">
+			    	<h:outputText value="MODULO REGISTRO DE POLIZA" />	
+		</p:commandLink>		
+	</h:panelGrid>
+	<br />
+	<p:fieldset>
+		<h:panelGrid columns="6">		
+			<ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.codigoPais']}" required="true" /> 			
+			<ssicc:label value="#{mPantallaPrincipalBean.currentUser.pais.descripcion}" header="true" required="true" />
+			<ssicc:labelBlank/><ssicc:labelBlank/><ssicc:labelBlank/><ssicc:labelBlank/>
+			
+			 <!--Compañia  -->			
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.codCompania']}" /> 		 
+			 <ssicc:label value="#{mAlias.formBusqueda.codCompania}" />
+			 <ssicc:labelBlank/><ssicc:labelBlank/>
+			 
+			 <!--Cliente  -->
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.codCliente']}" />
+			 
+			 <h:panelGroup id="panelCliente">
+			 	<p:remoteCommand name="validaCliente"
+								 update=":principalForm:panelCliente :principalForm:cTipoDoc:select
+	           							:principalForm:panelDocumento"					
+								actionListener="#{mantenimientoSTOFamiliaSeguraAction.validarCodigoCliente}" />
+			 	<p:inputText value="#{mAlias.formBusqueda.codCliente}" size="15" maxlength="15"  process="@this" 
+							 onkeypress="if (event.keyCode &lt; 48 || event.keyCode &gt; 57) { event.returnValue = false;} 
+				   		  	  if (event.keyCode == 13) { validaCliente(); return false; }" >
+					<p:ajax event="change" listener="#{mantenimientoSTOFamiliaSeguraAction.completarCodigoCliente}"
+	           					process="@this" update=":principalForm:panelCliente :principalForm:cTipoDoc:select
+	           											:principalForm:panelDocumento"/>	           											
+				</p:inputText>        	
+	           		&nbsp;
+	           		<h:outputText value="#{mAlias.formBusqueda.nombreConsultora}" style="font-weight:bold;color: #355A8F;" />      	  		
+			 </h:panelGroup>
+			
+			 <!--Tipo doc. -->
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.codTipoDocumentoIdentidad']}"/>
+			 <ssicc:selectMenu id="cTipoDoc" value="#{mAlias.formBusqueda.codTipoDocumentoIdentidad}">								 
+				<f:selectItem itemValue="" itemLabel=""/>				
+				<f:selectItems value="#{mAlias.stoTipoDocList}" var="lista"
+								itemLabel="#{lista.descripcion}" itemValue="#{lista.codigo}" />
+			 </ssicc:selectMenu>	
+			<ssicc:labelBlank/><ssicc:labelBlank/>
+			
+			 <!--Nro Doc  -->
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.codNumeDocumentoIdentidad']}" /> 
+			 			 
+			 <h:panelGroup id="panelDocumento"> 
+			 	<p:remoteCommand name="validaNroDni"
+								 update=":principalForm:panelCliente :principalForm:cTipoDoc:select
+	           						   	:principalForm:panelDocumento"					
+								actionListener="#{mantenimientoSTOFamiliaSeguraAction.validarNumeroDocIdentidad}" />
+								
+			 	<p:inputText value="#{mAlias.formBusqueda.codNumeDocumentoIdentidad}" size="20" maxlength="20" process="@this" 
+							 onkeypress="if (event.keyCode &lt; 48 || event.keyCode &gt; 57) { event.returnValue = false;} 
+				   		  	  if (event.keyCode == 13) { validaNroDni(); return false; }" >
+					<p:ajax event="change" listener="#{mantenimientoSTOFamiliaSeguraAction.completarNumeroDocIdentidad}"
+	           					process="@this" update=":principalForm:panelCliente :principalForm:cTipoDoc:select
+	           											:principalForm:panelDocumento"/>
+				</p:inputText>			 	
+			 </h:panelGroup> 
+			   
+			 <!--Fecha Proceso  -->
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.fechaProceso']}" />    
+			 <ssicc:label value="#{mAlias.formBusqueda.fechaProceso}" />			 
+			 <ssicc:labelBlank/><ssicc:labelBlank/>
+			 
+			 <!--Periodo -->
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.codCampanaProc']}" /> 
+			 <ssicc:label value="#{mAlias.formBusqueda.codCampanaProc}" />	
+			 
+			 <!--Camp. Inicio -->
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.codCampanaInicio']}" /> 
+			 <ssicc:label value="#{mAlias.formBusqueda.codCampanaInicio}" />
+			 <ssicc:labelBlank/><ssicc:labelBlank/>
+			 
+			 <!--Camp. Registro -->
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.codCampanaRegistro']}" /> 
+			 <ssicc:label value="#{mAlias.formBusqueda.codCampanaRegistro}" />
+			 
+			 <!--Nro CoAsegurados -->
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.numCoasegurado']}" />    
+			 <ssicc:inputText value="#{mAlias.formBusqueda.numCoasegurado}" maxlength="2" size="3" esNumerico="true"/>
+			 <ssicc:labelBlank/><ssicc:labelBlank/><ssicc:labelBlank/><ssicc:labelBlank/>
+		</h:panelGrid>
+		<br />	 
+			 
+			 <h:panelGrid columns="2">	 
+			 	<!--Nombre Benef.1 -->
+			 	<ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.nomBeneficiario1']}" />    
+			 	<ssicc:inputText value="#{mAlias.formBusqueda.nomBeneficiario1}" maxlength="100" size="100"/>
+			</h:panelGrid>
+			
+			<h:panelGrid columns="6">
+			 	 <!--Tipo doc. -->
+			 	 <h:panelGroup style="padding-left:25px;" >
+			 	<ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.codTipoDocumentoIdentidad1']}"/>
+			 	</h:panelGroup>				 	
+			 	<ssicc:selectMenu id="cTipoDocBeneficiario" value="#{mAlias.formBusqueda.codTipoDocumentoIdentidad1}">							 
+					<f:selectItem itemValue="" itemLabel=""/>				
+					<f:selectItems value="#{mAlias.stoTipoDocList}" var="lista"
+									   itemLabel="#{lista.descripcion}" itemValue="#{lista.codigo}" />
+			 	</ssicc:selectMenu>		
+			 	<ssicc:labelBlank/><ssicc:labelBlank/>	
+			
+			 <!--Nro Doc  -->
+			 <h:panelGroup style="padding-left:40px;" >
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.codNumeDocumentoIdentidad1']}" />  
+			 </h:panelGroup>  
+			 <ssicc:inputText value="#{mAlias.formBusqueda.codNumeDocumentoIdentidad1}" maxlength="20" size="20"/>
+			 <ssicc:labelBlank/><ssicc:labelBlank/>
+			</h:panelGrid>	 
+			<br />
+			 
+			  <h:panelGrid columns="2">	 
+			 	<!--Nombre Benef.2 -->
+			 	<ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.nomBeneficiario2']}" />    
+			 	<ssicc:inputText value="#{mAlias.formBusqueda.nomBeneficiario2}" maxlength="100" size="100"/>
+			</h:panelGrid>
+			
+			 <h:panelGrid columns="6">
+			 	<!--Tipo doc. -->
+			 	<h:panelGroup style="padding-left:25px;" >
+			 	<ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.codTipoDocumentoIdentidad2']}"/>
+			 	</h:panelGroup>	
+			 	<ssicc:selectMenu id="cTipoDocBeneficiario2" value="#{mAlias.formBusqueda.codTipoDocumentoIdentidad2}">								 
+					<f:selectItem itemValue="" itemLabel=""/>				
+					<f:selectItems value="#{mAlias.stoTipoDocList}" var="lista"
+									   itemLabel="#{lista.descripcion}" itemValue="#{lista.codigo}" />
+				</ssicc:selectMenu>					
+				
+			 <!--Nro Doc  -->
+			 <h:panelGroup style="padding-left:40px;" >
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.codNumeDocumentoIdentidad2']}" />   
+			 </h:panelGroup> 
+			 <ssicc:inputText value="#{mAlias.formBusqueda.codNumeDocumentoIdentidad2}" maxlength="20" size="20"/>
+			 <ssicc:labelBlank/><ssicc:labelBlank/>
+			 
+			 <!--Region -->
+			 <h:panelGroup style="padding-left:25px;" >  
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.codigoRegion']}" />
+			 </h:panelGroup>  
+			 <ssicc:inputText value="#{mAlias.formBusqueda.codigoRegion}" maxlength="2" size="6" esNumerico="true"/>
+				 
+			 <!--Zona -->
+			 <h:panelGroup style="padding-left:40px;" >
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.codigoZona']}" />    
+			 </h:panelGroup>
+			 <ssicc:inputText value="#{mAlias.formBusqueda.codigoZona}" maxlength="4" size="6" esNumerico="true"/>
+			 <ssicc:labelBlank/><ssicc:labelBlank/>
+			 
+			 <!--Fecha Nacimiento -->
+			 <h:panelGroup style="padding-left:25px;" > 
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.fechaNacimiento']}" />
+			 </h:panelGroup>
+			 <ssicc:label value="#{mAlias.formBusqueda.fechaNacimiento}" />	
+			 
+			  
+			 <!--Val Edad -->
+			 <h:panelGroup style="padding-left:40px;" >
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.valEdad']}" /> 
+			 </h:panelGroup>
+			 <ssicc:label value="#{mAlias.formBusqueda.valEdad}" />	
+			 <ssicc:labelBlank/><ssicc:labelBlank/>
+			 
+			  <!--Estado Civil -->
+			 <h:panelGroup style="padding-left:25px;" > 
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.codEstadoCivil']}" /> 
+			 </h:panelGroup>			
+			 <ssicc:label value="#{mAlias.formBusqueda.codEstadoCivil}" />			
+			 <ssicc:labelBlank/><ssicc:labelBlank/><ssicc:labelBlank/><ssicc:labelBlank/>
+			 			
+			 <!--Lote -->
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.numLote']}" />			  
+			 <ssicc:label value="#{mAlias.formBusqueda.numLote}" />	
+			
+			 
+			 <!--Nro Secuencia -->
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.numSecuencia']}" /> 			 
+			 <ssicc:label value="#{mAlias.formBusqueda.numSecuencia}" />	
+			 
+			 <!--Firma en Blanco -->
+			  <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.firmaBlanco']}" />
+			  <ssicc:selectOneRadio id="flagFirma" value="#{mAlias.formBusqueda.firmaBlanco}" disabled="true">
+				<f:selectItem itemLabel="#{i18n['mantenimientoSTOFamiliaSeguraForm.firmaBlanco.si']}" itemValue="#{SI}" />
+				<f:selectItem itemLabel="#{i18n['mantenimientoSTOFamiliaSeguraForm.firmaBlanco.no']}" itemValue="#{NO}" /> 
+			 </ssicc:selectOneRadio>
+						
+			 <!--Cod Estado -->
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.codEstadoOCR']}" />			
+			 <ssicc:label value="#{mAlias.formBusqueda.codEstadoOCR}" />
+			
+			  
+			  <!--Motivo Rechazo -->
+			 <ssicc:label key="#{i18n['mantenimientoSTOFamiliaSeguraForm.motRechazoOCR']}" /> 
+			 <ssicc:label value="#{mAlias.formBusqueda.motRechazoOCR}" />
+			 <ssicc:labelBlank/><ssicc:labelBlank/>
+		 </h:panelGrid>
+		 		
+	</p:fieldset>
+	
+	<h:outputScript>     
+	    function handleComplete(xhr, status, args) {
+			var ventanaPopup = args.activarCerrar;
+			if (ventanaPopup == false) return ;		
+				window.close();		
+		}
+		
+	</h:outputScript>
+	
+</ui:define>
+	
+	</ui:composition>
+</body>
+</html>

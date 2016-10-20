@@ -1,0 +1,167 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" 
+      xmlns:h="http://java.sun.com/jsf/html" 
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:ui="http://java.sun.com/jsf/facelets"     
+      xmlns:p="http://primefaces.org/ui"      
+      xmlns:ssicc="http://java.sun.com/jsf/composite/componentes/ssicc"
+      >
+
+<body>
+<ui:composition template="/templates/templatePopupGraficosEXTJS.xhtml">
+  	 
+ <ui:define name="body_javascript_adicionales">	
+ 
+ <script type="text/javascript"> 	
+ generarReporteEmitidos();
+ function generardataReporteEmitidos(id) {
+		Ext.onReady(function() {
+			
+		    window.generateDataJsonReporteUsuario = function(id){
+		        var data = [];
+		        var dataJson = document.getElementById(id).value;
+		        var obj = $.parseJSON(dataJson);
+		        $.each(obj, function(i) {
+		          codigoReporte = this['codigoReporte'] ;
+		          duracionSegundos = this['duracionSegundos'] ;
+		          data.push({
+		                name: codigoReporte,
+		                data1: duracionSegundos
+		           });
+	            });
+		    	return data;
+		    };
+		    
+		    
+		    window.datajsonReporteUsuario = Ext.create('Ext.data.JsonStore', {
+		        fields: ['name', 'data1'],
+		        data: generateDataJsonReporteUsuario(id)
+		    });
+		});
+
+	}
+
+ function generarReporteEmitidos() {
+	generardataReporteEmitidos('datajson');
+
+    Ext.onReady(function () {
+	    
+	    Ext.chart.theme.White = Ext.extend(Ext.chart.theme.Base, {
+	        constructor: function() {
+	           Ext.chart.theme.White.superclass.constructor.call(this, {
+	               axis: {
+	                   stroke: 'rgb(8,69,148)',
+	                   'stroke-width': 1
+	               },
+	               axisLabel: {
+	                   fill: 'rgb(8,69,148)',
+	                   font: '12px Arial',
+	                   'font-family': '"Arial',
+	                   spacing: 2,
+	                   padding: 5,
+	                   renderer: function(v) { return v; }
+	               },
+	               axisTitle: {
+	                  font: 'bold 18px Arial'
+	               }
+	           });
+	        }
+	    });
+	    var chart = Ext.create('Ext.chart.Chart', {
+	            id: 'chartCmp',
+	            xtype: 'chart',
+	            animate: true,
+	            shadow: true,
+	            store: datajsonReporteUsuario,
+	            axes: [{
+	                type: 'Numeric',
+	                position: 'bottom',
+	                fields: ['data1'],
+	                label: {
+	                    renderer: Ext.util.Format.numberRenderer('0,0')
+	                },
+	                title: 'Duracion (Seg)', 
+	                grid: true,
+	                minimum: 0
+	            }, {
+	                type: 'Category',
+	                position: 'left',
+	                fields: ['name'],
+	                title: 'Reporte' ,
+	            }],
+	            theme: 'White',
+	            background: {
+	              gradient: {
+	                id: 'backgroundGradient',
+	                angle: 45,
+	                stops: {
+	                  0: {
+	                    color: '#ffffff'
+	                  },
+	                  100: {
+	                    color: '#eaf1f8'
+	                  }
+	                }
+	              }
+	            },
+	            series: [{
+	                type: 'bar',
+	                axis: 'bottom',
+	                highlight: true,
+	                tips: {
+	                  trackMouse: true,
+	                  width: 340,
+	                  height: 32,
+	                  renderer: function(storeItem, item) {
+	                    this.setTitle(storeItem.get('name') + ' (' + storeItem.get('data1') + ' seg)');
+	                  }
+	                },
+	                label: {
+	                  display: 'insideEnd',
+	                    field: 'data1',
+	                    renderer: Ext.util.Format.numberRenderer('0'),
+	                    orientation: 'horizontal',
+	                    color: '#333',
+	                  'text-anchor': 'middle'
+	                },
+	                xField: 'name',
+	                yField: ['data1']
+	            }]
+	        });
+	        
+	    var win = Ext.create('Ext.Window', {
+	        width: 800,
+	        height: 600,
+	        minHeight: 400,
+	        minWidth: 550,
+	        hidden: false,
+	        maximizable: true,
+	        modal: true,
+	        title: 'Bar Chart',
+	        renderTo: Ext.getBody(),
+	        layout: 'fit',
+	        tbar: [{
+	            text: 'Grabar Chart',
+	            handler: function() {
+	                Ext.MessageBox.confirm('Confirmar descarga', 'Desea descargar BAR Chart en Imagen?', function(choice){
+	                    if(choice == 'yes'){
+	                        chart.save({
+	                            type: 'image/png'
+	                        });
+	                    }
+	                });
+	            }
+	        }],
+	        items: chart
+	    });
+	});
+
+ }
+ </script>
+ 
+ </ui:define>
+         
+</ui:composition>
+</body>
+</html>

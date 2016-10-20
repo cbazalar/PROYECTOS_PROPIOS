@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.ape.ProcesosAPESQL">
+
+	<resultMap id="baseResult"          class="baseGenerico">
+		<result property="codigo" 		column="CODIGO" 	/>
+		<result property="descripcion" 	column="DESCRIPCION"/>
+	</resultMap>
+	
+	<resultMap id="ordenAnaquelResult" class="java.util.HashMap">
+		<result property="centroDistribucion"   column="CENTRO_DISTRIBUCION" />
+		<result property="mapaCD"       		column="MAPA_CD" />
+		<result property="mapaZona"     		column="MAPA_ZONA" />
+		<result property="ordenAnaquel" 		column="ORDEN_ANAQUEL" />
+		<result property="lineaArmado"  		column="LINEA_ARMADO" />		
+		<result property="subLineaArmado"  		column="SUBLI_ARMADO" />				
+	</resultMap>
+
+	<resultMap id="subLineaResult" class="java.util.HashMap">
+		<result property="centroDistribucion" column="CENTRO_DISTRIBUCION" />
+		<result property="mapaCD" column="MAPA_CD" />
+		<result property="mapaZona" column="MAPA_ZONA" />
+		<result property="ordenAnaquel" column="ORDEN_ANAQUEL" />
+		<result property="lineaArmado" column="LINEA_ARMADO" />							
+		<result property="oidOrdenAnaquel" column="OID_ANAQ_CABE" />
+		<result property="oidMapaCD" column="OID_MAPA_CENT_DIST_CABE" />
+		<result property="oidSubLinea" column="OID_SUBL_ARMA" />
+		<result property="descripcion" column="DESC_SUBLINEA" />
+		<result property="orden" column="ORDEN_SUBLINEA" />
+	</resultMap>
+
+	<resultMap id="detalleMapaCDResult" class="java.util.HashMap">
+		<result property="oidDetalleMapaCD" column="OID_MAPA_CENT_DIST_DETA" javaType="java.lang.String"/>
+		<result property="numeroAnaquel" column="NUM_ANAQ" />
+		<result property="indicadorExpansion" column="IND_EXPA" />
+		<result property="anaquelDestino" column="NUM_ANAQ_DEST" />				
+	</resultMap>
+
+	<resultMap id="detalleOrdenResult" class="java.util.HashMap">
+		<result property="oidDetalleOrden" column="OID_ORDE_ANAQ_DETA" javaType="java.lang.String"/>
+		<result property="numeroAnaquel" column="NUM_ANAQ" />
+		<result property="indicadorExpansion" column="IND_EXPA" />
+		<result property="anaquelDestino" column="NUM_ANAQ_DEST" />				
+	</resultMap>
+
+    <select id="getMapaCentroDistribucion" parameterClass="java.util.Map" resultMap="baseResult">
+	    SELECT cab.OID_MAPA_CENT_DIST_CABE codigo, gen.VAL_I18N descripcion
+	      FROM SEG_PAIS pais, SEG_IDIOM idio, APP_CONFI_CENTR_DISTR centro, APE_MAPA_CENTR_DISTR_CABEC cab, GEN_I18N_SICC_PAIS gen
+	     WHERE cab.CCDI_OID_CONF_CENT_DIST = centro.OID_CONF_CENT_DIST
+		   AND centro.PAIS_OID_PAIS = pais.OID_PAIS
+		   AND centro.COD_CENT_DIST = #codigoCentroDistribucion#
+		   AND pais.COD_PAIS = #codigoPais#
+		   AND gen.ATTR_ENTI = 'APE_MAPA_CENTR_DISTR_CABEC'
+		   AND cab.OID_MAPA_CENT_DIST_CABE = gen.VAL_OID
+		   AND gen.IDIO_OID_IDIO = idio.OID_IDIO
+		   AND idio.COD_ISO_IDIO = #codigoIdiomaISO#
+		ORDER BY 1 ASC
+    </select>
+
+    <select id="getMapaZonaCentroDistribucion" parameterClass="java.util.Map" resultMap="baseResult">
+	    SELECT mapa.OID_MAPA_ZONA_CABE codigo, gen.VAL_I18N descripcion
+	      FROM APE_MAPA_CENTR_DISTR_CABEC centro, APE_MAPA_ZONA_CABEC mapa, GEN_I18N_SICC_PAIS gen, SEG_IDIOM idio
+	     WHERE mapa.MCDC_OID_MAPA_CENT_DIST_CABE = centro.OID_MAPA_CENT_DIST_CABE
+	       AND centro.OID_MAPA_CENT_DIST_CABE = #oidMapaCD#
+	       AND gen.ATTR_ENTI = 'APE_MAPA_ZONA_CABEC'
+	       AND mapa.OID_MAPA_ZONA_CABE = gen.VAL_OID
+		   AND gen.IDIO_OID_IDIO = idio.OID_IDIO
+		   AND idio.COD_ISO_IDIO = #codigoIdiomaISO#
+	     ORDER BY 1 ASC
+    </select>
+
+    <select id="getOrdenAnaqueles" parameterClass="java.util.Map" resultMap="baseResult">
+  	    SELECT orden.OID_ANAQ_CABE codigo, gen.VAL_I18N descripcion
+	      FROM ape_mapa_zona_cabec mapa, ape_orden_anaqu_cabec  orden, gen_i18n_sicc_pais gen, seg_idiom idio
+	     WHERE orden.MZCA_OID_MAPA_ZONA_CABE = mapa.OID_MAPA_ZONA_CABE
+	       AND mapa.OID_MAPA_ZONA_CABE = #oidMapaZonaCD#
+	       AND gen.attr_enti = 'APE_ORDEN_ANAQU_CABEC'
+	       AND mapa.oid_mapa_zona_cabe = gen.val_oid
+		   AND gen.IDIO_OID_IDIO = idio.OID_IDIO
+		   AND idio.COD_ISO_IDIO = #codigoIdiomaISO#
+	     ORDER BY 1 ASC   
+    </select>
+
+    <select id="getOrdenAnaquel" parameterClass="java.util.Map" resultMap="ordenAnaquelResult">
+		SELECT pq_apl_aux.Valor_Gen_I18n_Sicc(idio.OID_IDIO, centro.OID_CONF_CENT_DIST, 'APP_CONFI_CENTR_DISTR') CENTRO_DISTRIBUCION,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(idio.OID_IDIO, mapa.OID_MAPA_CENT_DIST_CABE, 'APE_MAPA_CENTR_DISTR_CABEC') MAPA_CD,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(idio.OID_IDIO, zona.OID_MAPA_ZONA_CABE, 'APE_MAPA_ZONA_CABEC') MAPA_ZONA,       
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(idio.OID_IDIO, orden.OID_ANAQ_CABE, 'APE_ORDEN_ANAQU_CABEC') ORDEN_ANAQUEL,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(idio.OID_IDIO, orden.LIAR_OID_LINE_ARMA, 'APE_LINEA_ARMAD') LINEA_ARMADO,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(idio.OID_IDIO, subli.OID_SUBL_ARMA, 'APE_SUBLI_ARMAD') SUBLI_ARMADO           		       
+		 FROM  APP_CONFI_CENTR_DISTR centro, APE_MAPA_CENTR_DISTR_CABEC mapa, APE_MAPA_ZONA_CABEC zona, APE_ORDEN_ANAQU_CABEC orden, 
+               APE_LINEA_ARMAD linea, APE_SUBLI_ARMAD subli, SEG_IDIOM idio
+		WHERE centro.OID_CONF_CENT_DIST = mapa.CCDI_OID_CONF_CENT_DIST
+		  AND zona.MCDC_OID_MAPA_CENT_DIST_CABE = mapa.OID_MAPA_CENT_DIST_CABE
+		  AND orden.MZCA_OID_MAPA_ZONA_CABE = zona.OID_MAPA_ZONA_CABE
+	      AND linea.OID_LINE_ARMA = orden.LIAR_OID_LINE_ARMA
+	      AND subli.LIAR_OID_LINE_ARMA = linea.OID_LINE_ARMA
+          AND subli.OID_SUBL_ARMA = #oidSubLineaArmado#	      
+		  AND orden.OID_ANAQ_CABE = #oidOrdenAnaquel#
+		  AND idio.COD_ISO_IDIO = #codigoIdiomaISO#
+    </select>
+    
+    <select id="getSubLineaOrdenAnaquel" parameterClass="java.util.Map" resultMap="subLineaResult">
+		SELECT DISTINCT pq_apl_aux.Valor_Gen_I18n_Sicc(idio.OID_IDIO, mccab.ccdi_oid_conf_cent_dist, 'APP_CONFI_CENTR_DISTR') CENTRO_DISTRIBUCION,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(idio.OID_IDIO, mccab.OID_MAPA_CENT_DIST_CABE, 'APE_MAPA_CENTR_DISTR_CABEC') MAPA_CD,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(idio.OID_IDIO, zocab.OID_MAPA_ZONA_CABE, 'APE_MAPA_ZONA_CABEC') MAPA_ZONA,       
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(idio.OID_IDIO, orcab.OID_ANAQ_CABE, 'APE_ORDEN_ANAQU_CABEC') ORDEN_ANAQUEL,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(idio.OID_IDIO, orcab.LIAR_OID_LINE_ARMA, 'APE_LINEA_ARMAD') LINEA_ARMADO,
+         	   orcab.OID_ANAQ_CABE,
+         	   mccab.OID_MAPA_CENT_DIST_CABE,
+	           sublin.OID_SUBL_ARMA,     
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(idio.OID_IDIO, sublin.OID_SUBL_ARMA, 'APE_SUBLI_ARMAD') DESC_SUBLINEA,
+		       DECODE((SELECT COUNT(ordet.OID_ORDE_ANAQ_DETA)
+		               FROM APE_ORDEN_ANAQU_DETAL ordet, APE_MAPA_CENTR_DISTR_DETAL det
+		               WHERE ordet.OACA_OID_ANAQ_CABE = orcab.OID_ANAQ_CABE
+		                 AND ordet.MCDD_OID_MAPA_CENT_DIST_DETA = det.OID_MAPA_CENT_DIST_DETA
+		                 AND det.SBAR_OID_SUBL_ARMA = sublin.OID_SUBL_ARMA),0,'NO','SI') ORDEN_SUBLINEA
+		 FROM APE_SUBLI_ARMAD sublin,
+		      APE_MAPA_CENTR_DISTR_CABEC mccab,
+		      APE_MAPA_CENTR_DISTR_DETAL mcdet,
+		      APE_ORDEN_ANAQU_CABEC orcab,
+		      APE_MAPA_ZONA_CABEC zocab,
+		      SEG_IDIOM idio
+		WHERE mcdet.SBAR_OID_SUBL_ARMA = sublin.OID_SUBL_ARMA
+		  AND mccab.OID_MAPA_CENT_DIST_CABE = mcdet.MCDC_OID_MAPA_CENT_DIST_CABE
+		  AND sublin.LIAR_OID_LINE_ARMA = orcab.LIAR_OID_LINE_ARMA
+		  AND orcab.MZCA_OID_MAPA_ZONA_CABE = zocab.OID_MAPA_ZONA_CABE
+		  AND zocab.MCDC_OID_MAPA_CENT_DIST_CABE = mccab.OID_MAPA_CENT_DIST_CABE
+		  AND orcab.OID_ANAQ_CABE = #oidOrdenAnaquel#
+		  AND idio.COD_ISO_IDIO = #codigoIdiomaISO# 
+	</select>
+
+    <select id="getDetalleMapaCDBySubLinea" parameterClass="java.util.Map" resultMap="detalleMapaCDResult">
+		SELECT mcdd.OID_MAPA_CENT_DIST_DETA, 
+		       mcdd.NUM_ANAQ, 
+		       DECODE(NVL(mcdd.IND_EXPA,0), 0, 'N','S') IND_EXPA,
+		       NVL(mcdd1.NUM_ANAQ,' ') NUM_ANAQ_DEST
+	  	  FROM APE_MAPA_CENTR_DISTR_DETAL mcdd, APE_MAPA_CENTR_DISTR_DETAL mcdd1    
+		 WHERE mcdd.MCDC_OID_MAPA_CENT_DIST_CABE = #oidMapaCD#
+		   AND mcdd.SBAR_OID_SUBL_ARMA = #oidSubLineaArmado#
+		   AND (mcdd.IND_EXPA IS NULL OR mcdd.IND_EXPA = 0)
+           AND mcdd.MCDD_OID_MAPA_CENT_DIST_DETA = mcdd1.OID_MAPA_CENT_DIST_DETA(+) 		   
+		ORDER BY NUM_ANAQ
+	</select>
+
+    <select id="getDetalleOrdenAnaquelBySubLinea" parameterClass="java.util.Map" resultMap="detalleOrdenResult">
+		SELECT anaq.OID_ORDE_ANAQ_DETA, 
+		       mcdd.NUM_ANAQ, 
+		       DECODE(NVL(mcdd.IND_EXPA,0), 0, 'N','S') IND_EXPA,
+		       NVL(mcdd1.NUM_ANAQ,' ') NUM_ANAQ_DEST
+		FROM APE_ORDEN_ANAQU_DETAL anaq, APE_MAPA_CENTR_DISTR_DETAL mcdd, APE_MAPA_CENTR_DISTR_DETAL mcdd1
+		WHERE anaq.OACA_OID_ANAQ_CABE = #oidOrdenAnaquel#
+		  AND anaq.mcdd_oid_mapa_cent_dist_deta = mcdd.oid_mapa_cent_dist_deta
+		  AND mcdd.MCDD_OID_MAPA_CENT_DIST_DETA = mcdd1.OID_MAPA_CENT_DIST_DETA(+) 
+		  AND mcdd.SBAR_OID_SUBL_ARMA = #oidSubLineaArmado#
+		ORDER BY NUM_ANAQ
+	</select>
+
+    <insert id="insertDetalleOrdenAnaquel" parameterClass="java.util.Map">
+		INSERT INTO APE_ORDEN_ANAQU_DETAL
+		   (OID_ORDE_ANAQ_DETA, NUM_ORDE,
+			OACA_OID_ANAQ_CABE, MCDD_OID_MAPA_CENT_DIST_DETA)
+		VALUES
+		   (APE_OACD_SEQ.NEXTVAL, #numeroOrden#,
+		    #oidOrdenAnaquel#, #oidDetalleMapaCD#)
+	</insert>
+
+    <update id="updateDetalleOrdenAnaquel" parameterClass="java.util.Map">
+		UPDATE APE_ORDEN_ANAQU_DETAL
+		   SET NUM_ORDE = #numeroOrden#
+		 WHERE OID_ORDE_ANAQ_DETA = #oidDetalleOrden#
+	</update>
+	
+	    
+    <!-- OBTIENE LA LISTA DE TIPO DE CONSULTAS CONSOLIDADOS -->
+    <select id="getTipoSolConsolidado" parameterClass="java.util.Map" resultMap="baseResult">
+
+		SELECT DISTINCT SOL.COD_TIPO_SOLI CODIGO, GEN.VAL_I18N DESCRIPCION
+		FROM PED_TIPO_SOLIC_PAIS PAIS
+			INNER JOIN PED_TIPO_SOLIC SOL ON SOL.OID_TIPO_SOLI=PAIS.TSOL_OID_TIPO_SOLI
+			AND PAIS.PAIS_OID_PAIS=(SELECT PA.OID_PAIS FROM  SEG_PAIS PA WHERE PA.COD_PAIS ='PE')
+			INNER JOIN GEN_I18N_SICC_COMUN GEN ON GEN.VAL_OID= SOL.OID_TIPO_SOLI
+			AND GEN.ATTR_ENTI='PED_TIPO_SOLIC'
+			AND SOL.IND_CONS = 1
+		ORDER BY GEN.VAL_I18N
+    </select>
+    
+    <delete id="deleteSecuenciaClientes">
+        delete from app_rutas_clien
+    </delete>
+        
+    <insert id="insertSecuenciaClientes" parameterClass="java.util.Map">
+		INSERT INTO app_rutas_clien
+		   (SELECT app_aprc_seq.NEXTVAL, 
+			       x.nume_secu, 
+			       oidcliente, 
+			       #oidPais#, 
+			       oid_ruta 
+			  FROM (SELECT ROWNUM nume_secu, 
+			               cli.oid_clie AS oidcliente, 
+			               cli.cod_clie AS codigocliente, 			               
+			               rut_ter.num_secu orden_terr, 
+			               rut_trans.oid_ruta_tran oid_ruta, 
+			               ape_pkg_gener.ape_fn_obten_tipo_consu(#codigoPais#, TO_DATE(#fechaFacturacion#, 'DD/MM/YYYY'), cli.oid_clie) AS tipo_consultora 
+			          FROM mae_clien cli, 
+			               mae_clien_datos_adici adici, 
+			               mae_clien_unida_admin uad, 
+			               zon_terri_admin zta, 
+			               zon_secci sec, 
+			               zon_terri terr, 
+			               zon_zona zon, 
+			               app_rutas_trans rut_trans, 
+			               app_rutas_terri rut_ter 
+			         WHERE cli.oid_clie = adici.clie_oid_clie 
+			           AND cli.oid_clie = uad.clie_oid_clie 
+			           AND uad.ztad_oid_terr_admi = zta.oid_terr_admi 
+			           AND zta.terr_oid_terr = terr.oid_terr 
+			           AND zta.zscc_oid_secc = sec.oid_secc 
+			           AND sec.zzon_oid_zona = zon.oid_zona 
+			           AND rut_trans.cod_ruta = zon.cod_zona 
+			           AND rut_ter.terr_oid_terr = terr.oid_terr 
+			           AND 1 = adici.ind_acti 
+			           AND 1 = uad.ind_acti 
+			           AND uad.perd_oid_peri_fin IS NULL 
+			           AND adici.clie_oid_clie = uad.clie_oid_clie 
+			           AND rut_ter.terr_oid_terr = zta.terr_oid_terr 
+			           AND adici.ind_acti = uad.ind_acti 
+			         ORDER BY orden_terr, tipo_consultora, codigocliente) x)
+	</insert>    
+       
+    <parameterMap id="executeProcesoAPECargaRutasClienteParams" class="map" >
+		<parameter property="oidPais"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoPais"	      jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaFacturacion"	  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <procedure id="executeProcesoAPECargaRutasCliente"  parameterMap="executeProcesoAPECargaRutasClienteParams" >
+		{call INT_PKG_APE.APE_PR_CARGA_RUTAS_CLIEN(?,?,?)}
+    </procedure>    
+        
+    <delete id="deleteZonasDistribucionFacturacionReal">
+    	DELETE FROM APE_REPOR_DISTR_FACTU_ZONA
+    </delete>
+    
+    <insert id="insertZonasDistribucionFacturacionReal" parameterClass="java.util.Map">
+    	INSERT INTO APE_REPOR_DISTR_FACTU_ZONA (COD_ZONA)
+		VALUES (#codigoZona#)
+    </insert>    
+        
+    <parameterMap id="executeDeleteInsertZonasDistribucionFacturacionRealParams" class="map" >
+		<parameter property="codigoPais"             	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="campania"	      			jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="usuario"	  				jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaInicioFacturacion" 	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaFinFacturacion"	    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="centroAcopio"	  			jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="companiaTransporte"	  	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <procedure id="executeDeleteInsertZonasDistribucionFacturacionReal"  parameterMap="executeDeleteInsertZonasDistribucionFacturacionRealParams" >
+		{call APE_PKG_PROCE.APE_PR_GENER_DATOS_FACTU_REAL(?,?,?,?,?,?,?)}
+    </procedure>
+    
+    <parameterMap id="executeDeleteInsertZonasInventarioCampoParams" class="map" >
+		<parameter property="codigoPais"             	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="usuario"	  				jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaInicioFacturacion" 	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="fechaFinFacturacion"	    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="centroAcopio"	  			jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="companiaTransporte"	  	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <procedure id="executeDeleteInsertZonasInventarioCampoResumen"  parameterMap="executeDeleteInsertZonasInventarioCampoParams" >
+		{call APE_PKG_PROCE.APE_PR_GENER_DATOS_INVEN_CARES(?,?,?,?,?,?)}
+    </procedure>
+    
+    <procedure id="executeDeleteInsertZonasInventarioCampoDetalle"  parameterMap="executeDeleteInsertZonasInventarioCampoParams" >
+		{call APE_PKG_PROCE.APE_PR_GENER_DATOS_INVEN_CADET(?,?,?,?,?,?)}
+    </procedure>
+    
+    <delete id="deleteZonasReporteInventarioCampo">
+    	DELETE FROM APE_REPOR_INVEN_CAMPO_ZONA
+    </delete>
+    
+    <insert id="insertZonasReporteInventarioCampo" parameterClass="java.util.Map">
+    	INSERT INTO APE_REPOR_INVEN_CAMPO_ZONA (COD_ZONA)
+		VALUES (#codigoZona#)
+    </insert>
+        
+</sqlMap>	

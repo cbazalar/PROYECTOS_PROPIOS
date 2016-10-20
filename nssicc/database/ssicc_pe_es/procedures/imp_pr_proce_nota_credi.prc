@@ -1,0 +1,28 @@
+CREATE OR REPLACE PROCEDURE "IMP_PR_PROCE_NOTA_CREDI"
+(p_fechaInicio VARCHAR2, p_fechaFin VARCHAR2, p_num_docu_inic NUMBER, p_num_docu_fina NUMBER, p_codigoTipoDocumento VARCHAR2, p_nombreArchivo IN VARCHAR2, p_directorio IN VARCHAR2) AS
+BEGIN
+  -- Truncamos las tablas que contienen la infomacion
+  EXECUTE IMMEDIATE 'TRUNCATE TABLE IMP_TMP_NOTA_CREDI';
+  EXECUTE IMMEDIATE 'TRUNCATE TABLE IMP_TMP_NUME_BOLET_DESPA';
+
+  -- Insertamos los numeros de boleta de despacho
+  INSERT INTO IMP_TMP_NUME_BOLET_DESPA
+  SELECT B.VAL_NUME_SOLI, A.NUM_DOCU_CONT_INTE
+  FROM FAC_DOCUM_CONTA_CABEC A,
+       PED_SOLIC_CABEC B,
+       FAC_TIPO_DOCUM C
+  WHERE A.SOCA_OID_SOLI_CABE = B.OID_SOLI_CABE
+  AND A.FEC_EMIS >= DECODE(p_fechaInicio, NULL, A.FEC_FACT, TO_DATE(p_fechaInicio,'dd/MM/yyyy'))
+  AND A.FEC_EMIS <= DECODE(p_fechaFin, NULL, A.FEC_FACT, TO_DATE(p_fechaFin,'dd/MM/yyyy') + 1)
+  AND A.TIDO_OID_TIPO_DOCU = C.OID_TIPO_DOCU
+  AND A.NUM_DOCU_CONT_INTE IS NOT NULL
+  AND C.COD_TIPO_DOCU = p_codigoTipoDocumento
+  AND A.NUM_DOCU_CONT_INTE >= DECODE(p_num_docu_inic, NULL, A.NUM_DOCU_CONT_INTE, p_num_docu_inic)
+  AND A.NUM_DOCU_CONT_INTE <= DECODE(p_num_docu_fina, NULL, A.NUM_DOCU_CONT_INTE, p_num_docu_fina)
+  AND ((A.IND_IMPR = 1) OR (A.IND_IMPR = 0 AND A.VAL_PREC_CATA_TOTA_LOCA < 0));
+
+  IMP_PR_GENER_NOTA_CREDI_MASIV;
+  IMP_PR_NOTA_CREDI_TO_FILE(p_nombreArchivo, p_directorio);
+END IMP_PR_PROCE_NOTA_CREDI;
+/
+

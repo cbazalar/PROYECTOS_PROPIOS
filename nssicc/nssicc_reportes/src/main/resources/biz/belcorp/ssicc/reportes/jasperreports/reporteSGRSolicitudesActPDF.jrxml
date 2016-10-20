@@ -1,0 +1,1070 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteSGRSolicitudesActPDF"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Landscape"
+		 pageWidth="1060"
+		 pageHeight="969"
+		 columnWidth="1060"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="NoPages"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 whenResourceMissingType="Empty"
+		 isIgnorePagination="true">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="codigoPais" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPais")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoRegion" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoRegion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoZona" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoZona")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoPeriodoInicio" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPeriodoInicio")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoPeriodoFin" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPeriodoFin")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoEstado" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoEstado")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoSeccion" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoSeccion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="tipoFormato" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("tipoFormato")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoPoliza" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPoliza")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="nombreAseguradora" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("nombreAseguradora")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[SELECT  DISTINCT
+	fpr.cod_clie                                                      COD_CONSULTORA,
+        GEN_PKG_GENER.GEN_FN_CLIEN_DATOS_CODIG(fpr.cod_clie, 'NOM_CLIE')  NOM_COLSUTORA,
+        fpr.fec_soli                                                      FEC_SOLICITUD,
+        decode(fpr.est_poli, '3', 'ACTIVA','CANCELADA')                   EST_SOLICITUD,
+        fpr.num_poli                                                      NUM_POLIZA,
+        fpr.num_fami_coas                                                 NUM_COASEGURADO,
+        fp.pre_poli                                                       PRE_POLIZA,
+        zr.cod_regi                                                       COD_REGION,
+        zr.des_regi                                                       DES_REGION,
+        zz.cod_zona                                                       COD_ZONA,
+        zz.des_zona                                                       DES_ZONA,
+        hc.fec_inic_poli                                                  FEC_INICIO,
+        hc.fec_fina_poli                                                  FEC_FIN,
+        fpr.cam_proc							  CAM_PROC,
+        fpr.cam_regi		  					  COD_CAMPANA,
+        zs.cod_secc,
+        zs.des_secci                                                      DES_SECCION,
+        DECODE(fpr.IND_ORIG_REGI,'C','SSICC','O','OCR','W','WEB','B','BLACKBERRY') IND_ORIG,
+	NVL((SELECT 
+          MAX(TO_CHAR(FEC_FACT,'dd/MM/yyyy')) FEC_FACT          
+        FROM
+          PED_SOLIC_CABEC,
+          MAE_CLIEN
+        WHERE COD_CLIE = fpr.cod_clie 
+          AND PED_SOLIC_CABEC.CLIE_OID_CLIE=OID_CLIE
+          AND ind_oc=1
+          AND val_tota_paga_loca>0
+          AND FEC_FACT IS NOT NULL),'') FEC_FACT,
+   NVL((SELECT MAX(sp.cod_peri)         
+		FROM PED_SOLIC_CABEC,
+		     MAE_CLIEN,
+		     cra_perio cp,
+		     seg_perio_corpo sp      
+		WHERE COD_CLIE = fpr.cod_clie 
+		  and sp.oid_peri = cp.peri_oid_peri
+		  and cp.oid_peri = PERD_OID_PERI
+		  AND PED_SOLIC_CABEC.CLIE_OID_CLIE=OID_CLIE
+		  AND ind_oc='1'
+		  AND val_tota_paga_loca > 0
+		  AND FEC_FACT IS NOT NULL),'') COD_ULT_CAMP,
+	(SELECT b.val_i18n 
+		FROM mae_estat_clien a, 
+		     gen_i18n_sicc_comun b,
+		     mae_clien_datos_adici c,
+		     mae_clien d
+		WHERE a.oid_esta_clie = b.val_oid 
+		AND b.attr_enti = 'MAE_ESTAT_CLIEN'
+		and c.esta_oid_esta_clie = a.oid_esta_clie
+		and c.clie_oid_clie = d.oid_clie
+		and d.cod_clie = fpr.cod_clie) ESTATUS,
+	     (case when sysdate between hc.fec_inic_poli and hc.fec_fina_poli then 'SI' ELSE 'NO' END) VIGENCIA,
+	fpr.cam_acti,
+	fpr.cam_canc,
+	null cam_rech,
+	fp.cod_poli	
+  FROM  sgr_famse_poliz_regis  fpr,
+        sgr_famse_poliz        fp,
+        mae_clien_unida_admin  ua,
+        zon_terri_admin        ta,
+        zon_regio              zr,
+        zon_zona               zz,
+        zon_secci              zs,
+        ccc_histo_cargo_famil_segur hc
+ WHERE  fpr.poli_cod_poli = fp.cod_poli
+   AND  ( $P{tipoFormato} = '3' AND fpr.cam_acti >= $P{codigoPeriodoInicio}  AND  fpr.cam_acti <= $P{codigoPeriodoFin} 
+          OR 
+          $P{tipoFormato} = '4' AND fpr.cam_canc >= $P{codigoPeriodoInicio}  AND  fpr.cam_canc <= $P{codigoPeriodoFin}		
+        )
+   AND  fpr.est_poli = $P{codigoEstado}
+   AND  ua.ind_acti(+) = '1'
+   AND  fpr.clie_oid_clie = ua.clie_oid_clie(+)
+   AND  ta.oid_terr_admi(+) = ua.ztad_oid_terr_admi
+   AND  ta.zscc_oid_secc = zs.oid_secc(+)
+   AND  zz.oid_zona(+) = zs.zzon_oid_zona
+   AND  zr.oid_regi(+) = zz.zorg_oid_regi
+   AND  fpr.poli_cod_poli = hc.cod_poli(+)
+   AND  fpr.cod_clie = hc.cod_clie(+)
+   AND  fpr.num_poli = hc.num_poli(+)
+   AND  fpr.est_regi <> '9'
+  AND  (hc.fec_inic_poli IS NULL OR   hc.fec_inic_poli = (SELECT MAX(hc2.fec_inic_poli)
+                                                             FROM ccc_histo_cargo_famil_segur hc2
+                                                            WHERE hc2.num_poli(+) = fpr.num_poli
+                                                             AND hc2.cod_clie(+) = fpr.cod_clie))
+   AND  ($P{codigoRegion} is null or $P{codigoRegion} in ('Todos','') OR zr.cod_regi = DECODE($P{codigoRegion}, null, zr.cod_regi, '', zr.cod_regi, 'Todos', zr.cod_regi, $P{codigoRegion}))
+   AND  ($P{codigoZona} is null or $P{codigoZona} in ('Todos','') OR zz.cod_zona = DECODE($P{codigoZona}, null, zz.cod_zona, '', zz.cod_zona, 'Todos', zz.cod_zona, $P{codigoZona}))
+   AND  fp.ind_acti = 1
+   AND  ($P{codigoSeccion} is null or $P{codigoSeccion} in ('Todos','') OR zs.cod_secc = DECODE($P{codigoSeccion}, null, zs.cod_secc, '', zs.cod_secc, 'Todos', zs.cod_secc, $P{codigoSeccion}))
+   AND  fp.cod_poli = NVL($P{codigoPoliza}, fp.cod_poli)
+ ORDER BY fp.cod_poli, zr.cod_regi,
+          zz.cod_zona,
+          zs.cod_secc,
+	  	  CAM_PROC,
+          COD_CAMPANA,
+          fpr.num_poli]]></queryString>
+
+	<field name="COD_CONSULTORA" class="java.lang.String"/>
+	<field name="NOM_COLSUTORA" class="java.lang.String"/>
+	<field name="FEC_SOLICITUD" class="java.util.Date"/>
+	<field name="EST_SOLICITUD" class="java.lang.String"/>
+	<field name="NUM_POLIZA" class="java.lang.String"/>
+	<field name="NUM_COASEGURADO" class="java.math.BigDecimal"/>
+	<field name="PRE_POLIZA" class="java.math.BigDecimal"/>
+	<field name="COD_REGION" class="java.lang.String"/>
+	<field name="DES_REGION" class="java.lang.String"/>
+	<field name="COD_ZONA" class="java.lang.String"/>
+	<field name="DES_ZONA" class="java.lang.String"/>
+	<field name="FEC_INICIO" class="java.util.Date"/>
+	<field name="FEC_FIN" class="java.util.Date"/>
+	<field name="COD_CAMPANA" class="java.lang.String"/>
+	<field name="DES_SECCION" class="java.lang.String"/>
+	<field name="IND_ORIG" class="java.lang.String"/>
+	<field name="FEC_FACT" class="java.lang.String"/>
+	<field name="COD_ULT_CAMP" class="java.lang.String"/>
+	<field name="ESTATUS" class="java.lang.String"/>
+	<field name="VIGENCIA" class="java.lang.String"/>
+	<field name="CAM_PROC" class="java.lang.String"/>
+	<field name="CAM_ACTI" class="java.lang.String"/>
+	<field name="CAM_CANC" class="java.lang.String"/>
+	<field name="CAM_RECH" class="java.lang.String"/>
+
+
+		<group  name="REGION" isStartNewPage="true" >
+			<groupExpression><![CDATA[$F{COD_REGION}]]></groupExpression>
+			<groupHeader>
+			<band height="34"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2"
+						y="10"
+						width="80"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-10"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.region}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="85"
+						y="10"
+						width="295"
+						height="24"
+						key="textField-12"/>
+					<box>					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_REGION} + " - " + $F{DES_REGION}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2"
+						y="-24"
+						width="80"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-39"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.aseguradora}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="85"
+						y="-24"
+						width="398"
+						height="24"
+						key="textField-40"/>
+					<box>					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$P{nombreAseguradora}]]></textFieldExpression>
+				</textField>
+			</band>
+			</groupHeader>
+			<groupFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+			</groupFooter>
+		</group>
+		<group  name="ZONA" isStartNewPage="true" >
+			<groupExpression><![CDATA[$F{COD_ZONA}]]></groupExpression>
+			<groupHeader>
+			<band height="72"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="318"
+						y="48"
+						width="140"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-1"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.nombreConsultora}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2"
+						y="48"
+						width="45"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-2"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.seccion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="458"
+						y="48"
+						width="40"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-3"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.fechaSolicitud}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="498"
+						y="48"
+						width="45"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-4"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.estadoSolicitud}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="543"
+						y="48"
+						width="45"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-5"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.numeroPoliza}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="633"
+						y="48"
+						width="40"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-8"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.precioPoliza}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2"
+						y="11"
+						width="80"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-9"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.zona}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="85"
+						y="11"
+						width="295"
+						height="24"
+						key="textField-11"/>
+					<box>					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{DES_ZONA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="673"
+						y="48"
+						width="58"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-13"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.fechaInicio}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="731"
+						y="48"
+						width="40"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-15"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.fechaFin}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="268"
+						y="48"
+						width="50"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-17"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.codigoConsultora}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="47"
+						y="48"
+						width="40"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-19"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.campanaProceso}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="588"
+						y="48"
+						width="45"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-21"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.origenPoliza}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="87"
+						y="48"
+						width="40"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-23"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.campanaRegistro}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="127"
+						y="48"
+						width="48"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-25"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.campanaActivacion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="175"
+						y="48"
+						width="53"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-26"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.campanaCancelacion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="228"
+						y="48"
+						width="40"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-29"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.campanaRechazo}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="915"
+						y="48"
+						width="72"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-31"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.fechaUltimoPedido}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="771"
+						y="48"
+						width="72"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-33"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.vigencia}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="843"
+						y="48"
+						width="72"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-35"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.ultimaCampana}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="987"
+						y="48"
+						width="72"
+						height="24"
+						backcolor="#EBEBEB"
+						key="textField-37"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSGRSolicitudesForm.estatus}]]></textFieldExpression>
+				</textField>
+			</band>
+			</groupHeader>
+			<groupFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+			</groupFooter>
+		</group>
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="56"  isSplitAllowed="true" >
+				<staticText>
+					<reportElement
+						x="408"
+						y="1"
+						width="306"
+						height="19"
+						key="staticText-1"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="14" isBold="true"/>
+					</textElement>
+				<text><![CDATA[Familia Protegida]]></text>
+				</staticText>
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="12"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="2"
+						y="0"
+						width="45"
+						height="12"
+						key="textField"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Left">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{DES_SECCION}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="318"
+						y="0"
+						width="140"
+						height="12"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{NOM_COLSUTORA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="dd/MM/yyyy" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="458"
+						y="0"
+						width="40"
+						height="12"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.util.Date"><![CDATA[$F{FEC_SOLICITUD}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="498"
+						y="0"
+						width="45"
+						height="12"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{EST_SOLICITUD}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="543"
+						y="0"
+						width="45"
+						height="12"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{NUM_POLIZA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="#,##0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="633"
+						y="0"
+						width="40"
+						height="12"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{PRE_POLIZA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="dd/MM/yyyy" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="673"
+						y="0"
+						width="58"
+						height="12"
+						key="textField-14"/>
+					<box>					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.util.Date"><![CDATA[$F{FEC_INICIO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="dd/MM/yyyy" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="731"
+						y="0"
+						width="40"
+						height="12"
+						key="textField-16"/>
+					<box>					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.util.Date"><![CDATA[$F{FEC_FIN}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="268"
+						y="0"
+						width="50"
+						height="12"
+						key="textField-18"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_CONSULTORA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="47"
+						y="0"
+						width="40"
+						height="12"
+						key="textField-20"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{CAM_PROC}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="588"
+						y="0"
+						width="45"
+						height="12"
+						key="textField-22"/>
+					<box>					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{IND_ORIG}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="87"
+						y="0"
+						width="40"
+						height="12"
+						key="textField-24"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_CAMPANA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="127"
+						y="0"
+						width="48"
+						height="12"
+						key="textField-27"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{CAM_ACTI}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="175"
+						y="0"
+						width="53"
+						height="12"
+						key="textField-28"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{CAM_CANC}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="228"
+						y="0"
+						width="40"
+						height="12"
+						key="textField-30"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{CAM_RECH}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="915"
+						y="0"
+						width="72"
+						height="12"
+						key="textField-32"/>
+					<box>					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{FEC_FACT}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="771"
+						y="0"
+						width="72"
+						height="12"
+						key="textField-34"/>
+					<box>					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{VIGENCIA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="843"
+						y="0"
+						width="72"
+						height="12"
+						key="textField-36"/>
+					<box>					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_ULT_CAMP}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="987"
+						y="0"
+						width="72"
+						height="12"
+						key="textField-38"/>
+					<box>					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="Arial" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{ESTATUS}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

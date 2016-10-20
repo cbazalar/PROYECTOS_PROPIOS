@@ -1,0 +1,31 @@
+CREATE OR REPLACE FUNCTION "OBTENER_FECHA_ENTREGA" (
+ IDZONA IN NUMBER,
+ IDPERIODO IN NUMBER,
+ IDPAIS IN NUMBER,
+ FECHA_FACT VARCHAR2
+)RETURN DATE IS
+INDICADOR DATE;
+BEGIN
+
+SELECT CASE
+          WHEN (PIP.IND_BUSQ_FECH_ENTR = 1)
+             THEN (SELECT FEC_INIC FECHAENTREGA
+                     FROM (SELECT   CC.FEC_INIC
+                               FROM CRA_CRONO CC, CRA_ACTIV CA
+                              WHERE CC.ZZON_OID_ZONA = IDZONA
+                                AND CC.PERD_OID_PERI = IDPERIODO
+                                AND CC.CACT_OID_ACTI = CA.OID_ACTI
+                                AND CA.COD_ACTI = 'RP'                               --REP
+                                AND CC.FEC_INIC >= TO_DATE (FECHA_FACT, 'YYYY-MM-DD')
+                           ORDER BY CC.FEC_INIC)
+                    WHERE ROWNUM = 1)
+          ELSE NULL
+       END FECHAENTREGA
+  INTO INDICADOR
+  FROM SEG_PARAM_INTER_PAIS PIP
+ WHERE PIP.PAIS_OID_PAIS = IDPAIS;
+
+RETURN INDICADOR;
+end OBTENER_FECHA_ENTREGA;
+/
+

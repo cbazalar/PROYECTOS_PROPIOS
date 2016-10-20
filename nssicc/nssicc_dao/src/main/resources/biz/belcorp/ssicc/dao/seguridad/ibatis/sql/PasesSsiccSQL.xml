@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="PasesSsiccSQL">
+	<typeAlias alias="baseGenerico"		type="biz.belcorp.ssicc.dao.sisicc.model.Base"/>
+	
+	<resultMap id="baseResult"          class="baseGenerico">
+    	<result property="codigo" 		column="CODIGO" 	/>
+    	<result property="descripcion" 	column="DESCRIPCION"/>
+    </resultMap>
+
+
+	<select id="getListaPaisMarca" parameterClass="java.util.Map" resultMap="baseResult">
+       SELECT DISTINCT 
+       		  p.cod_esqu_bd CODIGO, 
+       		  p.cod_esqu_bd DESCRIPCION
+  		 FROM bas_pais p
+	</select>
+	    
+	<resultMap id="getResultadoLogErroresResult"  class="java.util.HashMap"  >                                                                       
+    	<result property="codigoPase"			column="COD_PASE"/>                                                                 
+    	<result property="paisMarca" 			column="PAIS_MARCA"/>                                                             
+    	<result property="fechaEjecucion" 		column="FECHA_HORA"/>
+    	<result property="errorEsquema" 		column="ERROR_ESQUEMA"/>                                                                        
+    	<result property="indicadorError" 		column="ES_ERROR"/>                                                                      
+	    <result property="errorGenerado" 		column="ERROR_GENERADO"/>
+	    <result property="descErrorGenerado" 	column="ERROR_GENERADO_DET"/>
+	    <result property="errorSentencia" 		column="ERROR_SENTENCIA"/>
+	    <result property="descErrorSentencia" 	column="ERROR_SENTENCIA_DET"/>
+	</resultMap>         
+	
+	<select id="getResultadoLogErrores" parameterClass="java.util.Map" resultMap="getResultadoLogErroresResult">
+        
+        SELECT 	l.cod_pase COD_PASE,
+       			l.cod_pais_marc PAIS_MARCA,
+       			l.fec_date_ejec FECHA_HORA,
+       			l.err_esqu ERROR_ESQUEMA,
+       			l.ind_erro ES_ERROR,
+       			substr(l.err_gene,0,30) ERROR_GENERADO,
+       			l.err_gene ERROR_GENERADO_DET,
+       			substr(l.err_sent_sql,0,30) ERROR_SENTENCIA,
+       			l.err_sent_sql ERROR_SENTENCIA_DET
+  		   FROM log_pases_ssicc l
+		  	<dynamic prepend="WHERE">
+				<isNotEmpty prepend="AND" property="codigoPase">
+					l.cod_pase = #codigoPase#
+    			</isNotEmpty>
+
+				<isNotEmpty prepend="AND" property="fechaInicio">
+					l.fec_date_ejec >= to_date(#fechaInicio#,'DD/MM/YYYY')
+    			</isNotEmpty>
+
+    			<isNotEmpty prepend="AND" property="fechaFinal">
+		 			<![CDATA[
+						l.fec_date_ejec <= to_date(#fechaFinal#,'DD/MM/YYYY')
+       				]]>
+      			</isNotEmpty>
+
+				<isNotEmpty prepend="AND" property="paisMarca">
+					l.cod_pais_marc =  #paisMarca#
+    			</isNotEmpty>
+			</dynamic>
+		ORDER BY l.cod_pase, l.cod_pais_marc, l.ind_erro, l.fec_date_ejec                                                    
+    </select>
+
+	<resultMap id="getResultadoEjecucionResult"  class="java.util.HashMap"  >                                                                       
+    	<result property="codigoPase"			column="COD_PASE"/>                                                                 
+    	<result property="paisMarca" 			column="PAIS_MARCA"/>
+    	<result property="ejecutado" 			column="EJECUTADO"/>                                                              
+    	<result property="numeroErrores" 		column="NUM_ERRORES"/>
+	</resultMap>         
+	
+	<select id="getResultadoEjecucion" parameterClass="java.util.Map" resultMap="getResultadoEjecucionResult">
+        
+        SELECT  DISTINCT
+        		#codigoPase# COD_PASE,
+       			p.cod_esqu_bd PAIS_MARCA,
+       			SSICC_COMUN.LOG_PKG_PASES.INT_FN_DEVUE_EJECU_PASES(#codigoPase#, p.cod_esqu_bd ) EJECUTADO,
+       			SSICC_COMUN.LOG_PKG_PASES.INT_FN_DEVUE_ERROR_PASES(#codigoPase#, p.cod_esqu_bd ) NUM_ERRORES
+  		  FROM bas_pais p
+	  ORDER BY 1, 3, p.cod_esqu_bd                                           
+    </select>
+	
+</sqlMap>

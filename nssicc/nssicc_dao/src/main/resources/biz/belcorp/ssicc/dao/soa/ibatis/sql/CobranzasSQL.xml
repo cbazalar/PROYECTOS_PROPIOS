@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+<sqlMap namespace="soa.CobranzasSQL">
+
+	<resultMap id="diasTranscurridosDesdeFacturacion" class="java.util.HashMap">
+		<result property="indicadorDias" column="VAL_PARA" />
+	</resultMap>
+    
+	<resultMap id="getEstatusCobranzaDeudaResult" class="java.util.HashMap">
+		<result property="numeroRegistros"		        column="NUM_REGI"/> 	
+	    <result property="cantidadTotalRegistros"		column="TOT_REGI"/>	  	
+	    <result property="codigoSeccion"				column="COD_SECC"/>	
+	    <result property="montoVentaNeta" 		  		column="imp_fact_neto"/>    	     	
+	    <result property="montoCobranza" 		  		column="monto_cobranza"/>
+	     <result property="porcentajeCobranza" 		  	column="porce_cobranza"/>
+		<result property="saldo"		        		column="imp_sald_pend"/>
+	    <result property="simboloMoneda"		 		column="SMB_MONE"/>
+	    <result property="nombreMoneda" 				column="NOM_MONE"/>
+	   	    	    	    
+    </resultMap>
+
+	<resultMap id="getEstatusCobranzaSeccionResult" class="java.util.HashMap">
+		<result property="numeroRegistros"		        column="NUM_REGI"/> 	
+	    <result property="cantidadTotalRegistros"		column="TOT_REGI"/>
+		<result property="codigoCampania"		        column="COD_PERI"/> 	
+	    <result property="codigoSeccion"				column="COD_SECC"/>	    	     	
+	    <result property="codigoConsultora" 		  	column="COD_CLIE"/>    	     	
+	    <result property="primerNombre" 		  		column="VAL_NOM1"/>
+	    <result property="segundoNombre" 		  		column="VAL_NOM2"/>
+		<result property="primerApellido"		       	column="VAL_APE1"/>
+	    <result property="segundoApellido"		 		column="VAL_APE2"/>
+	    <result property="nivelConsultora" 				column="NOM_SEGM"/>
+	    <result property="numeroTelefonoFijo" 			column="TELE_FIJO"/>
+	    <result property="numeroTelefonoMovil" 			column="TELE_MOVI"/>
+	    <result property="numeroTelefonoTrabajo"		column="TELE_TRAB"/>
+	    <result property="fechaVencimiento"				column="FEC_VENC"/>	    
+	    <result property="montoVentaNeta"				column="IMP_FACT_NETO"/>
+	    <result property="montoCancelado"				column="VAL_IMPO_CANC"/>
+	    <result property="montoSaldo"					column="IMP_SALD_PEND"/>
+	    <result property="nombreMoneda"					column="NOM_MONE"/>
+	    <result property="simboloMoneda"				column="SMB_MONE"/>	 
+	    <result property="digitoVerificacion" 		column="COD_DIGI_CTRL"/>   	    	    	    
+    </resultMap>
+    
+	<select id="getDiasTranscurridosDesdeFacturacion"
+		parameterClass="java.util.Map" resultMap="diasTranscurridosDesdeFacturacion">
+
+		select bas.val_para
+		from BAS_PARAM_PAIS bas
+		where bas.cod_sist = 'SOA'
+		and bas.nom_para = 'cobranzaDiasFacturacion'
+		and bas.cod_pais = #codigoPais#
+
+	</select>
+
+
+	<select id="getEstatusCobranzaDeuda" parameterClass="java.util.Map" resultMap="getEstatusCobranzaDeudaResult">
+
+	WITH TMP AS(
+		SELECT
+		COD_SECC,
+		SUM(imp_fact_neto) imp_fact_neto,
+		CASE
+		WHEN #numeroDias# = 1 THEN SUM(val_mont_cob1)
+		WHEN #numeroDias# = 2 THEN SUM(val_mont_cob2)
+		WHEN #numeroDias# = 3 THEN SUM(val_mont_cob3)
+		WHEN #numeroDias# = 4 THEN SUM(val_mont_cob4) END monto_cobranza,
+		CASE
+		WHEN SUM(NVL(imp_fact_neto,0)) = 0 THEN 0  
+		WHEN #numeroDias# = 1 THEN ROUND(SUM(val_mont_cob1)*100/SUM(imp_fact_neto),2)
+		WHEN #numeroDias# = 2 THEN ROUND(SUM(val_mont_cob2)*100/SUM(imp_fact_neto),2)
+		WHEN #numeroDias# = 3 THEN ROUND(SUM(val_mont_cob3)*100/SUM(imp_fact_neto),2)
+		WHEN #numeroDias# = 4 THEN ROUND(SUM(val_mont_cob4)*100/SUM(imp_fact_neto),2) END porce_cobranza,
+		SUM(IMP_SALD_PEND) imp_sald_pend,
+		NOM_MONE,
+		SMB_MONE
+		FROM SOA_COBRA_DEUDA 
+		WHERE 
+			cod_pais =#codigoPais#
+			   and cod_regi =#codigoRegion#
+			   and cod_zona =#codigoZona#			    
+			   and cod_peri =#codigoCampania#			   
+			<isNotEmpty prepend="AND" property="codigoSeccion">
+				   	COD_SECC = #codigoSeccion#			   	   	
+			</isNotEmpty>
+			  				
+		GROUP BY cod_peri, COD_SECC, NOM_MONE, SMB_MONE
+		
+		<isEmpty prepend="ORDER BY" property="campoOrdenamiento">
+			 COD_SECC
+		</isEmpty>
+					    			    
+	   )
+				SELECT * 
+				FROM (
+				    SELECT  ROWNUM  AS NUM_REGI,
+				            (SELECT COUNT(1) FROM TMP) AS  TOT_REGI,
+				            X.*
+				    FROM TMP X  )
+					<isNotEmpty prepend="where" property="tamanhoPagina">
+				    		NUM_REGI BETWEEN (#paginaActual# - 1) * #tamanhoPagina# + 1   AND  #paginaActual# * #tamanhoPagina#	
+				    </isNotEmpty>	
+
+	</select>
+
+	<select id="getEstatusCobranzaSeccion" parameterClass="java.util.Map" resultMap="getEstatusCobranzaSeccionResult">
+
+		WITH TMP AS(
+			SELECT X.COD_PERI,
+			       X.COD_SECC,
+			       X.COD_CLIE,
+			       X.VAL_NOM1,
+			       X.VAL_NOM2,
+			       X.VAL_APE1,
+			       X.VAL_APE2,
+			       '' NOM_SEGM,
+			       X.TELE_FIJO,
+			       X.TELE_MOVI,
+			       X.TELE_TRAB,
+			       TO_CHAR(X.FEC_VENC,'dd/MM/yyyy') FEC_VENC,
+			       X.IMP_FACT_NETO,	
+			       CASE
+			  			WHEN #NumeroDias# = 1 THEN x.VAL_IMPO_CAN1 
+			  		    WHEN #NumeroDias# = 2 THEN x.VAL_IMPO_CAN2 
+			  			WHEN #NumeroDias# = 3 THEN x.VAL_IMPO_CAN3 
+			  			WHEN #NumeroDias# = 4 THEN x.VAL_IMPO_CAN4
+			 			END VAL_IMPO_CANC,		       
+			       X.IMP_SALD_PEND,
+			       X.NOM_MONE,
+			       X.SMB_MONE,
+                   (SELECT cod_digi_ctrl  FROM mae_clien WHERE cod_clie = X.cod_clie) COD_DIGI_CTRL
+			FROM SOA_COBRA_DEUDA_SECCI x
+						where   x.cod_pais = #codigoPais#
+						    and x.cod_peri = #codigoCampania#
+						    and x.cod_regi = #codigoRegion#
+						    and x.cod_zona = #codigoZona#			   
+			<isNotEmpty prepend="AND" property="codigoSeccion">
+				   	x.COD_SECC = #codigoSeccion#			   	   	
+			</isNotEmpty>
+			<isEmpty prepend="ORDER BY" property="campoOrdenamiento">
+				 x.COD_SECC, X.VAL_NOM1||' '||X.VAL_NOM2||' '||X.VAL_APE1||' '||X.VAL_APE2
+			</isEmpty>
+  		 )
+				SELECT * 
+				FROM (
+				    SELECT  ROWNUM  AS NUM_REGI,
+				            (SELECT COUNT(1) FROM TMP) AS  TOT_REGI,
+				            X.*
+				    FROM TMP X  )
+					<isNotEmpty prepend="where" property="tamanhoPagina">
+				    		NUM_REGI BETWEEN (#paginaActual# - 1) * #tamanhoPagina# + 1   AND  #paginaActual# * #tamanhoPagina#	
+				    </isNotEmpty>
+
+	</select>
+
+</sqlMap>
+

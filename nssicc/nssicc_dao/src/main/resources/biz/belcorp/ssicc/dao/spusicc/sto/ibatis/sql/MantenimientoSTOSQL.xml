@@ -1,0 +1,870 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+<sqlMap namespace="sto.MantenimientoSTOSQL">   
+
+	<typeAlias alias="stoParametroValidacion" type="biz.belcorp.ssicc.dao.spusicc.sto.model.ParametroValidacion"/>	
+	<typeAlias alias="stoValidacion"                   type="biz.belcorp.ssicc.dao.spusicc.sto.model.ValidacionSTO"/>
+	<typeAlias alias="stoMensajeValidacion"                   type="biz.belcorp.ssicc.dao.spusicc.sto.model.MensajeValidacionSTO"/>
+	<typeAlias alias="base" type="biz.belcorp.ssicc.dao.sisicc.model.Base"/>
+	<typeAlias alias="secuenciaValidacion" type="biz.belcorp.ssicc.dao.spncd.model.SecuenciaValidacion"/>
+	<typeAlias alias="stoMotivoRechazo" type="biz.belcorp.ssicc.dao.spusicc.sto.model.MotivoRechazo"/>
+ 
+     <resultMap id="stoParametroValidacionResult" class="stoParametroValidacion">
+		<result property ="codigoPais"          column = "COD_PAIS"/>         
+		<result property ="codigoParametro"     column = "COD_PARA"/>   
+		<result property ="nombreParametro"     column = "DES_PARAM"/>   
+		<result property ="valorParametro"      column = "VAL_PARAM"/> 
+		<result property="auditInfo.createdBy" 	    column = "USU_DIGI"/>
+		<result property="auditInfo.created" 		column = "FEC_DIGI"/>
+		<result property="auditInfo.updatedBy" 		column = "USU_MODI"/>
+		<result property="auditInfo.lastUpdated" 	column = "FEC_MODI"/>    	    	
+	</resultMap>
+
+    <select id="getParametroValidacion" parameterClass="stoParametroValidacion" resultMap="stoParametroValidacionResult">
+		SELECT COD_PAIS,
+		COD_PARA,
+		DES_PARAM, 
+		VAL_PARAM,
+		USU_DIGI,
+		FEC_DIGI,
+		USU_MODI,
+		FEC_MODI 
+		FROM sto_param_gener_occrr 
+		WHERE 1 = 1
+ 		  <isNotEmpty prepend="AND" property="codigoParametro">	
+		        COD_PARA LIKE #codigoParametro#     
+		  </isNotEmpty>	
+		   <isNotEmpty prepend="AND" property="codigoPais">	
+		        COD_PAIS = #codigoPais#     
+		  </isNotEmpty>		
+         ORDER BY COD_PAIS, COD_PARA  
+	</select>
+
+
+   <insert id="insertParametroValidacion" parameterClass="stoParametroValidacion">
+		INSERT INTO sto_param_gener_occrr(COD_PAIS, COD_PARA,DES_PARAM, VAL_PARAM,USU_DIGI,
+							FEC_DIGI,USU_MODI,FEC_MODI)
+		VALUES
+			(#codigoPais#, #codigoParametro#, #nombreParametro#,
+			 #valorParametro#,#auditInfo.createdBy#, SYSDATE,NULL,NULL)     
+	</insert>
+
+
+   <update id="updateParametroValidacion" parameterClass="stoParametroValidacion">
+		UPDATE sto_param_gener_occrr
+		SET 
+          DES_PARAM = #nombreParametro#, 
+          VAL_PARAM = #valorParametro#,
+  		  USU_MODI = #auditInfo.updatedBy#,
+  		  FEC_MODI = SYSDATE
+		WHERE COD_PAIS = #codigoPais# 
+		AND COD_PARA = #codigoParametro#	
+	</update>
+	
+	 <insert id="insertHistoParametroValidacion" parameterClass="stoParametroValidacion">
+		INSERT INTO sto_histo_param_gener_occrr (COD_PAIS, COD_PARA,DES_PARAM, VAL_PARAM,
+						USU_DIGI,FEC_DIGI,USU_MODI,FEC_MODI, USU_ELIM, FEC_ELIM)
+		VALUES
+			(#codigoPais#, #codigoParametro#,
+			 #nombreParametro#, #valorParametro#, #auditInfo.createdBy#, #auditInfo.created#,
+	  		 #auditInfo.updatedBy#, 
+	  		 #auditInfo.lastUpdated#,
+	  		 #deletedBy#,
+	  		 SYSDATE
+	  		 )     
+	</insert>
+	
+	 <delete id="deleteParametroValidacion" parameterClass="stoParametroValidacion">
+		DELETE sto_param_gener_occrr
+		WHERE COD_PAIS = #codigoPais# 
+		AND COD_PARA = #codigoParametro#	
+	</delete>	
+	
+	<resultMap id="validacionesSTOResultMap" class="java.util.HashMap">
+    	<result property="codigoValidacion" column="CODIGO_VALIDACION" />		
+    	<result property="validacion" 		column="DESC_VALIDACION" />
+    	<result property="gestionable" 		column="GESTIONABLE" />
+    	<result property="continua" 		column="CONTINUA" />
+    	<result property="secuencia" 		column="SECUENCIA" />
+    	<result property="secuenciaInicial" column="SECUENCIA_INICIAL" />
+    	<result property="estado" 			column="ESTADO" />
+    </resultMap>
+	
+	<select id="getValidacionesSTO" parameterClass="java.util.Map" resultMap="validacionesSTOResultMap">
+		SELECT PV.COD_VALI CODIGO_VALIDACION,
+		       PV.DES_VALI DESC_VALIDACION,
+		       DECODE(PV.IND_GEST, '1', 'Si', 'No') GESTIONABLE,
+		       DECODE(PV.IND_CONT, 'S', 'Si', 'No') CONTINUA,
+		       SV.NUM_SECU SECUENCIA,
+		       SV.NUM_SECU SECUENCIA_INICIAL,
+		       SV.EST_REGI ESTADO
+		  FROM STO_PARAM_VALID PV,
+		       STO_PARAM_SECUE_VALID SV
+		 WHERE PV.COD_TIPO_DOCU = SV.COD_TIPO_DOCU
+		   AND PV.COD_VALI = SV.COD_VALI
+		<isNotEmpty property="tipoDocumento">
+	       AND PV.COD_TIPO_DOCU = #tipoDocumento#
+	    </isNotEmpty>
+	    <isNotEmpty property="estado">
+	       AND SV.EST_REGI = #estado#
+	    </isNotEmpty>
+	    <isNotEmpty property="codigoValidacion">
+		   AND PV.COD_VALI = #codigoValidacion#
+		</isNotEmpty>
+		 ORDER BY SV.NUM_SECU
+	</select>
+	
+	<select id="getNextCodigoValidacion" parameterClass="string" resultClass="string">
+		SELECT COD_TIPO_DOCU || '-' || MAX( TO_NUMBER( REPLACE(COD_VALI, (SELECT REGEXP_SUBSTR(COD_VALI, '[^-]+') || '-' FROM DUAL), '')) + 1) FROM STO_PARAM_VALID
+ 		 WHERE COD_TIPO_DOCU = #value#
+		 GROUP BY COD_TIPO_DOCU
+	</select>
+	
+	<insert id="insertValidacionesParametria" parameterClass="java.util.Map">
+		INSERT INTO STO_PARAM_VALID 
+		        (COD_PAIS,
+		         COD_TIPO_DOCU,
+		         COD_VALI,
+		         DES_VALI,
+		         EXE_PROC,
+		         EXE_PROC_APRO,
+		         EXE_PROC_DESA,
+		         IND_GEST,
+		         IND_MODI_CODI_CLIE,
+		         IND_VIEW_MOTI_GEST,
+		         IND_RECH_AUTO,
+		         IND_CONT,
+		         IND_HIST_EXCE,
+		         IND_EXCL_VALID,
+		         COD_MOTI_RECH,
+		         IND_RECH_GEST,
+		         IND_OBSE_MENS,
+		         USU_DIGI,
+		         FEC_DIGI)
+		VALUES
+		        (#codigoPais#,
+		         #tipoDocumento#,
+		         #codigoValidacion#,
+		         #descripcion#,
+		         #descProcesoEjecutarValidar#,
+		         #descProcesoEjecutarAprobar#,
+		         #descProcesoEjecutarDesaprobar#,
+		         #indicadorGestionable#,
+		         #indicadorModificarCodigoConsultora#,
+		         DECODE(#indicadorMuestraMotivoGestion#, '1', 'S', 'N'),
+		         #indicadorRechazoAutomatico#,
+		         DECODE(#indicadorContinua#, '1', 'S', 'N'),
+		         #indicadorGrabaHistoricoExcep#,
+		         DECODE(#indicadorPermiteRegistrarExcep#, '1', 'S', 'N'),
+		         #codigoMotivoRechazo#,
+		         #indicadorPermiteRechazo#,
+		         DECODE(#indicadorGeneraMensajeAdicional#, '1', 'S', 'N'),
+		         #usuario#,
+		         SYSDATE)
+	</insert>
+	
+	<insert id="insertValidacionesMensaje" parameterClass="java.util.Map">
+		INSERT INTO STO_MENSA_VALID 
+		        (COD_IDIO,
+		         COD_MENS,
+		         COD_PAIS,
+		         COD_TIPO_DOCU,
+		         COD_VALI,
+		         DES_CORT_MENS,
+		         DES_LARG_MENS)
+		VALUES
+		        (#codigoIdioma#,
+		         #codigoMensaje#,
+		         #codigoPais#,
+		         #tipoDocumento#,
+		         #codigoValidacion#,
+		         #descMensajeErrorCorto#,
+		         #descMensajeErrorLargo#)
+	</insert>
+	
+	<insert id="insertValidacionesSecuencia" parameterClass="java.util.Map">
+		INSERT INTO STO_PARAM_SECUE_VALID 
+		        (COD_PAIS,
+		         COD_TIPO_DOCU,
+		         COD_VALI,
+		         NUM_SECU,
+		         EST_REGI,
+		         FEC_DIGI,
+		         USU_DIGI)
+		VALUES 
+		        (#codigoPais#,
+		         #tipoDocumento#,
+		         #codigoValidacion#,
+		         #secuencia#,
+		         #indicadorActiva#,
+		         SYSDATE,
+		         #usuario#)
+	</insert>
+	
+	<resultMap id="validacionesParametriaMensajeSTOResultMap" class="java.util.HashMap">
+    	<result property="codigoPais" 							column="COD_PAIS" />
+    	<result property="tipoDocumento" 						column="COD_TIPO_DOCU" />
+    	<result property="codigoValidacion" 					column="COD_VALI" />
+    	<result property="descripcion" 							column="DES_VALI" />
+    	<result property="descProcesoEjecutarValidar" 			column="EXE_PROC" />
+    	<result property="descProcesoEjecutarAprobar" 			column="EXE_PROC_APRO" />
+    	<result property="descProcesoEjecutarDesaprobar" 		column="EXE_PROC_DESA" />
+    	<result property="indicadorGestionable" 				column="IND_GEST" />
+    	<result property="indicadorModificarCodigoConsultora" 	column="IND_MODI_CODI_CLIE" />
+    	<result property="indicadorMuestraMotivoGestion" 		column="IND_VIEW_MOTI_GEST" />
+    	<result property="indicadorRechazoAutomatico" 			column="IND_RECH_AUTO" />
+    	<result property="indicadorContinua" 					column="IND_CONT" />
+    	<result property="indicadorGrabaHistoricoExcep" 		column="IND_HIST_EXCE" />
+    	<result property="indicadorPermiteRegistrarExcep" 		column="IND_EXCL_VALID" />
+    	<result property="codigoMotivoRechazo" 					column="COD_MOTI_RECH" />
+    	<result property="indicadorPermiteRechazo" 				column="IND_RECH_GEST" />
+    	<result property="indicadorGeneraMensajeAdicional" 		column="IND_OBSE_MENS" />
+    	<result property="descMensajeErrorCorto" 				column="DES_CORT_MENS" />
+    	<result property="descMensajeErrorLargo" 				column="DES_LARG_MENS" />
+    	<result property="secuencia" 							column="NUM_SECU" />
+    	<result property="indicadorActiva" 						column="EST_REGI" />
+    </resultMap>
+	
+	<select id="getValidacionesParametriaMensajeSTO" parameterClass="string" resultMap="validacionesParametriaMensajeSTOResultMap">
+		SELECT PV.COD_PAIS,
+	           PV.COD_TIPO_DOCU,
+	           PV.COD_VALI,
+	           PV.DES_VALI,
+	           PV.EXE_PROC,
+	           PV.EXE_PROC_APRO,
+	           PV.EXE_PROC_DESA,
+	           PV.IND_GEST,
+	           PV.IND_MODI_CODI_CLIE,
+	           DECODE(PV.IND_VIEW_MOTI_GEST, 'S', '1', '0') IND_VIEW_MOTI_GEST,
+	           PV.IND_RECH_AUTO,
+	           DECODE(PV.IND_CONT, 'S', '1', '0') IND_CONT,
+	           PV.IND_HIST_EXCE,
+	           DECODE(PV.IND_EXCL_VALID, 'S', '1', '0') IND_EXCL_VALID,
+	           PV.COD_MOTI_RECH,
+	           PV.IND_RECH_GEST,
+	           DECODE(PV.IND_OBSE_MENS, 'S', '1', '0') IND_OBSE_MENS,
+	           MV.DES_CORT_MENS,
+	           MV.DES_LARG_MENS,
+	           SV.NUM_SECU,
+               SV.EST_REGI
+		  FROM STO_PARAM_VALID PV,
+		       STO_MENSA_VALID MV,
+		       STO_PARAM_SECUE_VALID SV
+		 WHERE PV.COD_TIPO_DOCU = MV.COD_TIPO_DOCU
+		   AND PV.COD_TIPO_DOCU = SV.COD_TIPO_DOCU(+)
+	       AND PV.COD_VALI = MV.COD_VALI
+	       AND PV.COD_VALI = SV.COD_VALI(+)
+		   AND PV.COD_VALI = #value#
+	</select>
+	
+	<update id="updateValidacionesParametria" parameterClass="java.util.Map">
+		UPDATE STO_PARAM_VALID
+	       SET DES_VALI = #descripcion#,
+	           EXE_PROC = #descProcesoEjecutarValidar#,
+	           EXE_PROC_APRO = #descProcesoEjecutarAprobar#,
+	           EXE_PROC_DESA = #descProcesoEjecutarDesaprobar#,
+	           IND_GEST = #indicadorGestionable#,
+	           IND_MODI_CODI_CLIE = #indicadorModificarCodigoConsultora#,
+	           IND_VIEW_MOTI_GEST = DECODE(#indicadorMuestraMotivoGestion#, '1', 'S', 'N'),
+	           IND_RECH_AUTO = #indicadorRechazoAutomatico#,
+	           IND_CONT = DECODE(#indicadorContinua#, '1', 'S', 'N'),
+	           IND_HIST_EXCE = #indicadorGrabaHistoricoExcep#,
+	           IND_EXCL_VALID = DECODE(#indicadorPermiteRegistrarExcep#, '1', 'S', 'N'),
+	           COD_MOTI_RECH = #codigoMotivoRechazo#,
+	           IND_RECH_GEST = #indicadorPermiteRechazo#,
+	           IND_OBSE_MENS = DECODE(#indicadorGeneraMensajeAdicional#, '1', 'S', 'N'),
+	           USU_MODI = #usuario#,
+	           FEC_MODI = SYSDATE
+	 	 WHERE COD_PAIS = #codigoPais#
+	       AND COD_TIPO_DOCU = #tipoDocumento#
+	       AND COD_VALI = #codigoValidacion#
+	</update>
+	
+	<update id="updateValidacionesMensaje" parameterClass="java.util.Map">
+		UPDATE STO_MENSA_VALID
+	       SET DES_CORT_MENS = #descMensajeErrorCorto#,
+	           DES_LARG_MENS = #descMensajeErrorLargo#
+	  	 WHERE COD_PAIS = #codigoPais#
+	       AND COD_TIPO_DOCU = #tipoDocumento#
+	       AND COD_VALI = #codigoValidacion#
+	</update>
+	
+	<update id="updateValidacionesSecuencia" parameterClass="java.util.Map">
+		UPDATE STO_PARAM_SECUE_VALID
+	       SET NUM_SECU = #secuencia#
+	     <isNotEmpty property="indicadorActiva">
+	           ,EST_REGI = #indicadorActiva#
+	     </isNotEmpty>
+	  	 WHERE COD_PAIS = #codigoPais#
+	       AND COD_TIPO_DOCU = #tipoDocumento#
+	       AND COD_VALI = #codigoValidacion#
+	       AND NUM_SECU = #secuenciaInicial#
+	</update>
+
+	<resultMap id="validacionSTOResultMap" class="java.util.HashMap">
+    	<result property="codigoPais" 					column="COD_PAIS" />		
+    	<result property="descripcionDocumento" 		column="DESCRIPCION_DOCUM" />
+    	<result property="codigoValidacion" 			column="COD_VALI" />
+    	<result property="descripcionValidacion" 		column="DES_VALI" />
+    	<result property="indicadorGestionable" 		column="INDICADOR_GESTIONABLE" />
+    	<result property="indicadorContinuacion"	    column="INDICADOR_CONTINUACION" />
+    </resultMap>
+	
+	<select id="getValidacionListSTO" parameterClass="java.util.Map" resultMap="validacionSTOResultMap">	
+		select A.cod_pais,
+       (select x.des_tipo_docu
+          from sto_tipo_docum_digit x
+         where x.cod_tipo_docu = A.cod_tipo_docu) DESCRIPCION_DOCUM,
+       A.cod_vali,
+       A.des_vali,
+       (CASE
+         WHEN A.ind_gest = '0' THEN
+          'NO'
+         ELSE
+          'SI'
+       END) INDICADOR_GESTIONABLE,
+       (CASE
+         WHEN A.ind_cont = 'N' THEN
+          'NO'
+         ELSE
+          'SI'
+       END) INDICADOR_CONTINUACION
+ 	 from STO_PARAM_VALID A
+		WHERE 1=1
+		
+		<isNotEmpty property="codigoPais">
+	        AND A.COD_PAIS = #codigoPais#
+	    </isNotEmpty>
+		
+		<isNotEmpty property="tipoDocumento">
+	        AND A.COD_TIPO_DOCU = #tipoDocumento#
+	    </isNotEmpty>
+	    <isNotEmpty property="codigoValidacion">
+	        AND A.COD_VALI = #codigoValidacion#
+	    </isNotEmpty>
+	    <isNotEmpty property="descripcionValidacion">
+		   AND A.DES_VALI = #descripcionValidacion#
+		</isNotEmpty>
+
+	</select>
+
+	 <delete id="deleteParamValidSTO" parameterClass="string">
+		delete STO_PARAM_VALID where cod_vali=#value#
+	</delete>	
+	
+	<delete id="deleteParamSecueValidSTO" parameterClass="string">
+		delete STO_PARAM_SECUE_VALID where cod_vali=#value#
+	</delete>	
+	
+	<delete id="deleteMensaValidSTO" parameterClass="string">
+		delete STO_MENSA_VALID where cod_vali=#value#
+	</delete>	
+	
+	<resultMap id="stoValidacionResult" class="stoValidacion">
+		<result property ="codigoPais"          column = "COD_PAIS"/>         
+		<result property ="tipoDocumento"     column = "COD_TIPO_DOCU"/>  		
+		<result property ="descripcionDocumento"     column = "DESCRIPCION_DOCUM"/>  		 
+		<result property ="codigoValidacion"     column = "COD_VALI"/>   
+		<result property ="descripcionValidacion"      column = "DES_VALI"/>
+		<result property ="procesoValidacion"      column = "EXE_PROC"/>
+		<result property ="procesoAprobar"      column = "EXE_PROC_APRO"/>
+		<result property ="procesoDesaprobar"      column = "EXE_PROC_DESA"/>
+		<result property ="motivoRechazo"      column = "COD_MOTI_RECH"/>
+		<result property ="mensajeRechazo"      column = "VAL_MENS_RECH"/>
+		<result property ="indicadorGestionable"      column = "IND_GEST"/>
+		<result property ="indicadorContinuacion"      column = "IND_CONT"/>
+		<result property ="indicadorRechazoAutomatico"      column = "IND_RECH_AUTO"/>		
+		<result property ="indicadorHistoricoExcepciones"      column = "IND_HIST_EXCE"/>
+		<result property ="indicadorRechazoGestion"      column = "IND_RECH_GEST"/>
+		<result property ="indicadorModificacionConsultora"      column = "IND_MODI_CODI_CLIE"/>
+		<result property ="indicadorExcepcionValidacion"      column = "IND_EXCL_VALID"/>
+		<result property ="indicadorMensajeAdicionalError"      column = "IND_OBSE_MENS"/>		
+		<result property ="indicadorVisualizarMotivoGestion"      column = "IND_VIEW_MOTI_GEST"/>
+		<result property ="indicadorForzarValidacion"      column = "IND_FORZ_ENVI_ERRO"/>
+  	    	
+	</resultMap>
+	
+	<select id="getValidacionSTO" parameterClass="stoValidacion" resultMap="stoValidacionResult">
+	   select
+	     A.cod_pais,
+	     A.cod_tipo_docu,
+	     (select x.des_tipo_docu
+	          from sto_tipo_docum_digit x
+	         where x.cod_tipo_docu = A.cod_tipo_docu) DESCRIPCION_DOCUM,
+	     A.cod_vali,
+	     A.des_vali,
+	     A.exe_proc,
+	     A.exe_proc_apro,
+	     A.exe_proc_desa,
+	     A.cod_moti_rech,
+	     A.val_mens_rech,
+	     
+	     A.ind_gest,
+	     A.ind_cont,
+	     A.ind_rech_auto,
+	     A.ind_hist_exce,
+	     A.ind_rech_gest,
+	     
+	     A.ind_modi_codi_clie,
+	     A.ind_excl_valid,
+	     A.ind_obse_mens,
+	     A.ind_view_moti_gest,
+	     A.ind_forz_envi_erro
+	    
+	     from STO_PARAM_VALID A where cod_vali=#codigoValidacion#
+    </select>
+    
+    <insert id="insertValidacionSTO" parameterClass="stoValidacion" >		   
+		   insert into STO_PARAM_VALID
+			  (COD_PAIS,
+			   COD_TIPO_DOCU,
+			   COD_VALI,
+			   DES_VALI,
+			   EXE_PROC,
+			   EXE_PROC_APRO,
+			   EXE_PROC_DESA,
+			   COD_MOTI_RECH,
+			   VAL_MENS_RECH,
+			   IND_GEST,
+			   IND_CONT,
+			   IND_RECH_AUTO,
+			   IND_HIST_EXCE,
+			   IND_RECH_GEST,
+			   IND_MODI_CODI_CLIE,
+			   IND_EXCL_VALID,
+			   IND_OBSE_MENS,
+			   IND_VIEW_MOTI_GEST,
+			   IND_FORZ_ENVI_ERRO,
+			   USU_DIGI,
+		   	   FEC_DIGI)
+			values
+			  (#codigoPais#,
+			   #tipoDocumento#,
+			   #codigoValidacion#,
+			   #descripcionValidacion#,
+			   #procesoValidacion#,
+			   #procesoAprobar#,
+			   #procesoDesaprobar#,
+			   #motivoRechazo#,
+			   #mensajeRechazo#,
+			   #indicadorGestionable#,
+			   #indicadorContinuacion#,
+			   #indicadorRechazoAutomatico#,
+			   #indicadorHistoricoExcepciones#,
+			   #indicadorRechazoGestion#,
+			   #indicadorModificacionConsultora#,
+			   #indicadorExcepcionValidacion#,
+			   #indicadorMensajeAdicionalError#,
+			   #indicadorVisualizarMotivoGestion#,
+			   #indicadorForzarValidacion#,
+			   #auditInfo.createdBy#,
+		       #auditInfo.created#)	   
+	</insert>
+	
+	<update id="updateValidacionSTO" parameterClass="stoValidacion">
+		UPDATE STO_PARAM_VALID
+		   SET COD_PAIS = #codigoPais#,
+		       COD_TIPO_DOCU           = #tipoDocumento#,
+		       COD_VALI           = #codigoValidacion#,
+		       DES_VALI           = #descripcionValidacion#,
+		       EXE_PROC           = #procesoValidacion#,
+		       EXE_PROC_APRO       = #procesoAprobar#,
+		       EXE_PROC_DESA  = #procesoDesaprobar#,
+		       COD_MOTI_RECH       = #motivoRechazo#,
+		       VAL_MENS_RECH       = #mensajeRechazo#,
+		       IND_GEST       = #indicadorGestionable#,
+		       IND_CONT       = #indicadorContinuacion#,
+		       IND_RECH_AUTO = #indicadorRechazoAutomatico#,
+		       IND_HIST_EXCE = #indicadorHistoricoExcepciones#,
+		       IND_RECH_GEST           = #indicadorRechazoGestion#,
+		       IND_MODI_CODI_CLIE           = #indicadorModificacionConsultora#	,       
+		       IND_EXCL_VALID = #indicadorExcepcionValidacion#,
+		       IND_OBSE_MENS           = #indicadorMensajeAdicionalError#,
+		       IND_VIEW_MOTI_GEST           = #indicadorVisualizarMotivoGestion#,
+		       IND_FORZ_ENVI_ERRO = #indicadorForzarValidacion#,
+		       USU_MODI           = #auditInfo.updatedBy#,
+		       FEC_MODI           = #auditInfo.lastUpdated#
+		       
+		 WHERE COD_PAIS = #codigoPais#
+		   AND COD_VALI = #codigoValidacion#             
+	</update>
+	
+	<resultMap id="mensajeValidacionSTOResultMap" class="java.util.HashMap">	
+	    <result property="codigo" 		column="CODIGO" />
+    	<result property="descripcionDocumento" 		column="DESCRIPCION_DOCUM" />
+    	<result property="descripcionValidacion" 		column="DES_VALI" />   	
+    	<result property="codigoMensaje" 			column="COD_MENS" />    	
+    	<result property="descripcionCortaMensaje" 		column="DES_CORT_MENS" />
+    	<result property="descripcionLargaMensaje"	    column="DES_LARG_MENS" />
+    	<result property="descripcionWebMensaje"	    column="DES_WEB_MENS" />
+    	<result property="indicadorTipoMensaje"	    column="IND_TIPO_MENS" />
+    </resultMap>
+	
+	<select id="getMensajeValidacionListSTO" parameterClass="java.util.Map" resultMap="mensajeValidacionSTOResultMap">	
+		  SELECT 
+		  
+		  		 A.COD_MENS||'|'||A.COD_VALI CODIGO,
+		  		  (select x.des_tipo_docu
+		            from sto_tipo_docum_digit x
+		           where x.cod_tipo_docu = A.cod_tipo_docu) DESCRIPCION_DOCUM,
+		           B.DES_VALI,
+		           A.COD_MENS,
+		           A.DES_CORT_MENS,
+		           A.DES_LARG_MENS,
+		           A.DES_WEB_MENS,
+		           A.IND_TIPO_MENS
+		    FROM STO_MENSA_VALID A
+		    INNER JOIN STO_PARAM_VALID B
+		    ON A.COD_VALI=B.COD_VALI 
+		    WHERE 1=1     
+				
+		<isNotEmpty property="codigoPais">
+	        AND A.COD_PAIS = #codigoPais#
+	    </isNotEmpty>
+		
+		<isNotEmpty property="tipoDocumento">
+	        AND B.COD_TIPO_DOCU=#tipoDocumento# 
+	    </isNotEmpty>
+	    <isNotEmpty property="codigoValidacion">
+	        AND B.COD_VALI=#codigoValidacion#
+	    </isNotEmpty>
+	     <isNotEmpty property="codigoMensaje">
+	        AND A.COD_MENS=#codigoMensaje#
+	    </isNotEmpty>
+	</select>
+	
+	
+	<delete id="deleteMensajeValidacionSTO" parameterClass="java.util.Map">
+		delete STO_MENSA_VALID where cod_vali=#codigoValidacion#
+		and COD_MENS=#codigoMensaje#
+	</delete>	
+	
+	
+	<resultMap id="stoMensajeValidacionResult" class="stoMensajeValidacion">
+
+		<result property ="codigoMensaje"      column = "COD_MENS"/>
+		<result property ="codigoPais"          column = "COD_PAIS"/> 
+		<result property ="codigoIdioma"          column = "COD_IDIO"/> 
+		<result property ="codigoValidacion"     column = "COD_VALI"/> 
+		<result property ="descripcionCortaMensaje"      column = "DES_CORT_MENS"/>
+		<result property ="descripcionLargaMensaje"      column = "DES_LARG_MENS"/>
+		<result property ="tipoDocumento"     column = "COD_TIPO_DOCU"/>  	
+		<result property ="descripcionWebMensaje"      column = "DES_WEB_MENS"/>
+		<result property ="indicadorTipoMensaje"      column = "IND_TIPO_MENS"/>	
+		<result property ="descripcionDocumento"     column = "DESCRIPCION_DOCUM"/>  		
+		<result property ="descripcionValidacion"      column = "DES_VALI"/>
+		
+  	    	
+	</resultMap>
+	
+	<select id="getMensajeValidacionSTO" parameterClass="stoMensajeValidacion" resultMap="stoMensajeValidacionResult">
+
+	     select A.COD_MENS,
+		       A.COD_PAIS,
+		       A.COD_IDIO,
+		       A.COD_VALI,
+		       A.DES_CORT_MENS,
+		       A.DES_LARG_MENS,
+		       A.COD_TIPO_DOCU,
+		       A.DES_WEB_MENS,
+		       A.IND_TIPO_MENS,
+		       (select x.des_tipo_docu
+		          from sto_tipo_docum_digit x
+		         where x.cod_tipo_docu = A.cod_tipo_docu) DESCRIPCION_DOCUM,
+		       B.DES_VALI
+		  from STO_MENSA_VALID A
+		 INNER JOIN STO_PARAM_VALID B
+		    ON A.COD_VALI = B.COD_VALI
+		 WHERE A.COD_MENS =  #codigoMensaje#
+		   AND A.COD_VALI = #codigoValidacion#
+
+    </select>
+    
+    <insert id="insertMensajeValidacionSTO" parameterClass="stoMensajeValidacion" >		   
+		       
+		       insert into STO_MENSA_VALID
+				  (COD_MENS,
+				   COD_PAIS,
+				   COD_IDIO,
+				   COD_VALI,
+				   DES_CORT_MENS,
+				   DES_LARG_MENS,
+				   COD_TIPO_DOCU,
+				   DES_WEB_MENS,
+				   IND_TIPO_MENS)
+				values
+				  (#codigoMensaje#,
+				   #codigoPais#,
+				   #codigoIdioma#,
+				   #codigoValidacion#,
+				   #descripcionCortaMensaje#,
+				   #descripcionLargaMensaje#,
+				   #tipoDocumento#,
+				   #descripcionWebMensaje#,
+				   #indicadorTipoMensaje#)
+		        
+	</insert>
+	
+	<update id="updateMensajeValidacionSTO" parameterClass="stoMensajeValidacion">
+		UPDATE STO_MENSA_VALID
+		   SET 
+		   	   COD_MENS = #codigoMensaje#,		  
+		   	   COD_PAIS = #codigoPais#,
+		   	   COD_IDIO = #codigoIdioma#,
+		   	   COD_VALI           = #codigoValidacion#,
+		   	   DES_CORT_MENS           = #descripcionCortaMensaje#,
+		   	   DES_LARG_MENS           = #descripcionLargaMensaje#,
+		   	   COD_TIPO_DOCU           = #tipoDocumento#,
+		   	   DES_WEB_MENS           = #descripcionWebMensaje#,
+		   	   IND_TIPO_MENS           = #indicadorTipoMensaje#
+		       
+		 WHERE COD_PAIS = #codigoPais#
+		   AND COD_VALI = #codigoValidacion#            
+		   AND COD_MENS = #codigoMensaje#             
+	</update>
+	
+	<resultMap id="getValidacionesByCriteriaResultMap" class="secuenciaValidacion">
+    	<result property="codigo"			column="cod_vali" />		
+    	<result property="validacion" 		column="des_vali" />
+    	<result property="secuenciaNueva" 		column="num_secu" />
+    	<result property="secuenciaOriginal" 		column="num_secu" />
+    	<result property="estado"			column="est_regi" />
+    	<result property="codigoPais"			column="cod_pais" />
+    	<result property="codigoTipoDocumento"			column="cod_tipo_docu" />
+    </resultMap>
+	
+	<select id="getValidacionesByCriteria" parameterClass="java.util.Map" resultMap="getValidacionesByCriteriaResultMap">
+
+		 SELECT v.cod_vali,v.des_vali, 
+		       nvl(s.num_secu, 99) num_secu,
+		       NVL(est_regi, 0) est_regi,
+		       s.cod_pais,
+		       s.cod_tipo_docu
+			  FROM sto_param_valid       v,
+			       sto_param_secue_valid s,
+			       sto_tipo_docum_digit t
+			 WHERE s.cod_vali = v.cod_vali
+			   AND s.cod_tipo_docu = v.cod_tipo_docu
+		   and t.cod_tipo_docu = v.cod_tipo_docu
+		   <isNotEmpty property="codigoDocumento">
+		   	and (t.cod_tipo_docu = #codigoDocumento# OR t.cod_tipo_docu_cabe = #codigoDocumento#)
+		   </isNotEmpty>
+		   and t.cod_pais = #codigoPais#
+		 order by est_regi desc, num_secu
+
+	</select>
+	
+	<resultMap id="baseResult" class="base">														
+    	<result property="codigo" 		column="CODIGO"/>											
+    	<result property="descripcion" 	column="DESCRIPCION"/>													
+  	</resultMap>
+  
+	<select id="getTipoDocumentoList" parameterClass="java.util.Map" resultMap="baseResult">
+		SELECT cod_tipo_docu CODIGO,
+		       des_tipo_docu DESCRIPCION
+		  FROM sto_tipo_docum_digit t
+		  where t.ind_cabe='1'
+		    and t.cod_pais = #codigoPais#	
+   	</select>
+   	
+   	<delete id="deletePametroSecuenciaValidacionSTO" parameterClass="secuenciaValidacion">
+		   
+		   Delete sto_param_secue_valid
+			where NUM_SECU = #secuenciaOriginal#
+		    and  COD_VALI  = #codigo#
+		    and  COD_TIPO_DOCU =  #codigoTipoDocumento#
+		    and  COD_PAIS = #codigoPais#
+		   
+	</delete>
+	
+	 <insert id="insertPametroSecuenciaValidacionSTO" parameterClass="secuenciaValidacion" >		   
+		       
+		     insert into STO_PARAM_SECUE_VALID
+			  (COD_PAIS,
+			   COD_TIPO_DOCU,
+			   COD_VALI,
+			   NUM_SECU,
+			   FEC_DIGI,
+			   USU_DIGI,
+			   EST_REGI)
+			values
+			  (#codigoPais#,
+			   #codigoTipoDocumento#,
+			   #codigo#,
+			   #secuenciaNueva#,
+			   #auditInfo.lastUpdated#,
+			   #auditInfo.updatedBy#,
+			   #estado#)
+
+	</insert>
+
+	<update id="updatePametroSecuenciaValidacionSTO" parameterClass="secuenciaValidacion">
+		update sto_param_secue_valid
+			set NUM_SECU = #secuenciaNueva#,
+			    est_regi = #estado#,
+			    FEC_DIGI = #auditInfo.lastUpdated#,
+			    USU_DIGI = #auditInfo.updatedBy#
+			where NUM_SECU = #secuenciaOriginal# 
+			      AND COD_VALI  = #codigo#
+			      AND COD_TIPO_DOCU = #codigoTipoDocumento#
+			      AND COD_PAIS = #codigoPais#             
+	</update>
+	
+
+	
+	<select id="validaPametroSecuenciaValidacionSTO" parameterClass="secuenciaValidacion" resultClass="java.lang.Integer">   	       
+        select count(*)
+		  from STO_PARAM_SECUE_VALID
+		 where cod_tipo_docu =  #codigoTipoDocumento#
+		   and num_secu = #secuenciaNueva#   
+   	</select>
+   	
+   	 	
+   	<resultMap id="getProcesosEjecutadosRechazoDocumentoByCriteriaResultMap" class="java.util.HashMap">
+    	<result property="numeroProceso"			column="proc_num_proc" />		
+    	<result property="fechaInicio" 			    column="fec_ipro" />
+    	<result property="fechaFin" 				column="fec_fpro" />
+    	<result property="codigoUsuario" 			column="usu_proc" />
+    	<result property="codigoDocumento"			column="docu_cod_tipo_docu" />
+    	<result property="codigoAccion"				column="cod_acci" />
+    	<result property="descDocumento"			column="tipo_docu" />
+    	<result property="descAccion"				column="accion" />
+    	<result property="numeroRegistroCabecera"			column="num_regi_cabe" />
+    	<result property="numeroRegistroDeta"			column="num_regi_deta" />
+    </resultMap>
+	
+	<select id="getProcesosEjecutadosRechazoDocumentoByCriteria" parameterClass="java.util.Map" resultMap="getProcesosEjecutadosRechazoDocumentoByCriteriaResultMap">
+
+		 SELECT proc_num_proc,
+       fec_ipro,
+       fec_fpro,
+       usu_proc,
+       h.docu_cod_tipo_docu,
+       h.cod_acci,
+       h.docu_cod_tipo_docu || '-' ||
+       (SELECT des_tipo_docu
+          FROM sto_tipo_docum_digit t
+         WHERE t.cod_tipo_docu = h.docu_cod_tipo_docu) tipo_docu,
+       (SELECT a.des_acci
+          FROM sto_accio_gesti a
+         WHERE a.cod_acci = h.cod_acci) accion,
+       (SELECT COUNT(1)
+          FROM sto_audit_excep au
+         WHERE au.proc_num_proc = h.proc_num_proc
+           AND au.cod_tipo_docu = h. docu_cod_tipo_docu) num_regi_cabe,
+       (SELECT COUNT(1)
+          FROM sto_audit_excep au
+         WHERE au.proc_num_proc = h.proc_num_proc
+           AND au.cod_tipo_docu IN
+               (SELECT cod_tipo_docu
+                  FROM sto_tipo_docum_digit
+                 WHERE cod_tipo_docu_cabe = h. docu_cod_tipo_docu)) num_regi_deta
+		  FROM sto_histo_proce h
+		 WHERE h.cod_acci IN ('RE', 'RET') 
+		 <isNotEmpty property="codigoAccion">
+	         AND h.cod_acci = #codigoAccion# 
+	     </isNotEmpty>
+	     
+	      <isNotEmpty property="codigoUsuario">
+	         AND h.usu_proc = #codigoUsuario#
+	     </isNotEmpty>
+		 
+		 <isNotEmpty property="fecha">
+	        AND trunc(h.fec_ipro) = to_date(#fecha#, 'DD/MM/YYYY')
+	     </isNotEmpty>
+		  
+		  <isNotEmpty property="codigoDocumento">
+	        AND h.docu_cod_tipo_docu = #codigoDocumento#
+	     </isNotEmpty>
+		   
+		   
+
+	</select>
+	
+	<resultMap id="stoMotivoRechazoResult" class="stoMotivoRechazo">
+		<result property ="codigoPais"          column = "COD_PAIS"/>  
+		<result property ="tipoDocumento"          column = "COD_TIPO_DOCU"/> 
+		<result property ="descripcionTipoDocumento"          column = "DES_TIPO_DOCU"/>         
+		<result property ="codigoMotRechazo"     column = "COD_MOTI_RECH"/>   
+		<result property ="descripcionMotRechazo"     column = "DES_MOTI_RECH"/>   
+		<result property ="codigoModulo"      column = "COD_MODU"/> 
+		<result property ="indRechazo"      column = "IND_AUTO"/> 
+	</resultMap>
+
+	<select id="getMotivoRechazoList" parameterClass="java.util.Map" resultMap="stoMotivoRechazoResult">
+		SELECT COD_PAIS,
+		COD_TIPO_DOCU,
+		(select x.DES_TIPO_DOCU from STO_TIPO_DOCUM_DIGIT x 
+        where x.COD_TIPO_DOCU = #tipoDocumento# and x.COD_PAIS = #codigoPais# ) as DES_TIPO_DOCU,
+		COD_MOTI_RECH,
+		DES_MOTI_RECH,
+		COD_MODU,
+		IND_AUTO
+		FROM STO_RECHA_MOTIV s
+		WHERE  1=1
+		<isNotEmpty prepend="AND" property="codigoPais">
+			s.COD_PAIS = #codigoPais#
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="tipoDocumento">
+			s.cod_tipo_docu = #tipoDocumento#
+		</isNotEmpty>
+	</select>
+	
+	<select id="getMotivoRechazo" parameterClass="java.util.Map" resultMap="stoMotivoRechazoResult">
+		select COD_PAIS,
+		COD_TIPO_DOCU,
+		(select x.DES_TIPO_DOCU from STO_TIPO_DOCUM_DIGIT x 
+        where x.COD_TIPO_DOCU = #tipoDocumento# and x.COD_PAIS = #codigoPais# ) as DES_TIPO_DOCU,
+		COD_MOTI_RECH,
+		DES_MOTI_RECH,
+		COD_MODU,
+		IND_AUTO from STO_RECHA_MOTIV
+		WHERE 1=1
+		<isNotEmpty prepend="AND" property="codigoPais">
+			COD_PAIS = #codigoPais#
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="tipoDocumento">
+			COD_TIPO_DOCU = #tipoDocumento#
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="codigoRechazo">
+			COD_MOTI_RECH = #codigoRechazo#
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="codigoModulo">
+			COD_MODU = #codigoModulo#
+		</isNotEmpty>
+	</select>
+	
+	 <insert id="insertMotivoRechazo" parameterClass="stoMotivoRechazo">
+		INSERT INTO STO_RECHA_MOTIV(COD_PAIS, COD_TIPO_DOCU, COD_MOTI_RECH, DES_MOTI_RECH, 
+			COD_MODU, IND_AUTO, USU_REGI, FEC_REGI)
+		VALUES(#codigoPais#, #tipoDocumento#, #codigoMotRechazo#, 
+			   #descripcionMotRechazo#, #codigoModulo#, #indRechazo#,
+			   #auditInfo.createdBy#, SYSDATE)
+	</insert>
+	
+	<update id="updateMotivoRechazo" parameterClass="java.util.Map">
+		UPDATE STO_RECHA_MOTIV
+		SET 
+		  COD_TIPO_DOCU = #tipoDocumento#,
+          DES_MOTI_RECH = #descripcionMotRechazo#,
+          COD_MODU = #codigoModulo#,
+          IND_AUTO = #indRechazo#,
+          USU_MODI = #usuarioModi#,
+  		  FEC_MODI = SYSDATE
+		WHERE COD_PAIS = #codigoPais# 
+		AND COD_MOTI_RECH = #codigoMotRechazo#
+		AND  COD_MODU = #codigoModuloAnterior#
+    	AND COD_TIPO_DOCU = #tipoDocumentoAnterior#
+	</update>
+	
+	<delete id="deleteMotivoRechazo" parameterClass="java.util.Map">
+		DELETE STO_RECHA_MOTIV
+		WHERE COD_PAIS = #codigoPais# 
+		AND COD_MOTI_RECH = #codigoMotRechazo#
+		AND COD_MODU = #codigoModulo#	
+		AND  COD_TIPO_DOCU = #tipoDocumento#
+	</delete>	
+
+</sqlMap>

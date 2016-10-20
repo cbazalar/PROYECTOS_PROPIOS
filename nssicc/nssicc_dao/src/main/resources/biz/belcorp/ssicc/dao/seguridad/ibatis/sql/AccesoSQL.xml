@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="AccesoSQL">
+
+    <typeAlias alias="acceso" type="biz.belcorp.ssicc.dao.model.Acceso"/>
+    <typeAlias alias="accesoPK" type="biz.belcorp.ssicc.dao.model.AccesoPK"/>
+    
+    <resultMap id="accesoResult" class="acceso">
+        <result property="codigoMenu" column="MENU_COD_MENU"/>
+        <result property="codigoPais" column="PAIS_COD_PAIS"/>
+        <result property="codigoRol" column="ROL_COD_ROL"/>
+        <result property="estado" column="EST_MROL"/>
+        <result property="auditInfo.createdBy" column="USU_DIGI"/>
+        <result property="auditInfo.created" column="FEC_DIGI"/>
+        <result property="auditInfo.updatedBy" column="USU_MODI"/>
+        <result property="auditInfo.lastUpdated" column="FEC_MODI"/>
+    </resultMap>
+    
+
+      <resultMap id="accesoMapResult" class="java.util.HashMap">
+        <result property="rnum" column="rnum"/>
+         <result property="codigoMenu" column="menu_cod_menu"/>
+        <result property="codigoRol" column="rol_cod_rol"/>
+        <result property="descripcionMenu" column="des_menu"/>
+        <result property="onombre" column="opcionesnombre"/>
+        <result property="ocodigo" column="opcionescodigo"/>
+        <result property="disponibles" column="disponibles"/>
+        <result property="activos" column="activos"/>
+    </resultMap>
+
+
+    <resultMap id="accesoDetalleResult" class="acceso" extends="accesoResult">
+        <result property="menu.codigo" column="MENU_COD_MENU"/>
+        <result property="menu.descripcion" column="DES_MENU"/>
+    </resultMap>
+    
+	<insert id="insertAcceso" parameterClass="acceso">
+    <![CDATA[
+        INSERT INTO SEG_MENU_ROL (
+        MENU_COD_MENU, 
+        PAIS_COD_PAIS, 
+        ROL_COD_ROL,
+        EST_MROL, 
+        USU_DIGI, 
+        FEC_DIGI) 
+        VALUES ( 
+        #codigoMenu#, 
+        #codigoPais#, 
+        #codigoRol#,
+        #estado#, 
+        #auditInfo.createdBy#, 
+        #auditInfo.created#)
+    ]]>
+    </insert>
+    
+	<update id="updateAcceso" parameterClass="acceso">
+    <![CDATA[
+        UPDATE SEG_MENU_ROL SET 
+        EST_MROL = #estado#, 
+        USU_MODI = #auditInfo.updatedBy#, 
+        FEC_MODI = #auditInfo.lastUpdated# 
+        WHERE MENU_COD_MENU = #codigoMenu#
+        AND PAIS_COD_PAIS = #codigoPais#
+        AND ROL_COD_ROL = #codigoRol#
+    ]]>
+    </update>
+    
+	<select id="getAcceso" parameterClass="accesoPK" resultMap="accesoResult">
+    <![CDATA[
+        SELECT 
+        MENU_COD_MENU, 
+        PAIS_COD_PAIS, 
+        ROL_COD_ROL, 
+        EST_MROL, 
+        USU_DIGI, 
+        FEC_DIGI, 
+        USU_MODI, 
+        FEC_MODI
+        FROM SEG_MENU_ROL
+        WHERE MENU_COD_MENU = #codigoMenu#
+        AND PAIS_COD_PAIS = #codigoPais#
+        AND ROL_COD_ROL = #codigoRol#
+    ]]>
+    </select>
+
+	<delete id="removeAcceso" parameterClass="accesoPK">
+    <![CDATA[
+        DELETE FROM SEG_MENU_ROL 
+        WHERE MENU_COD_MENU = #codigoMenu#
+        AND PAIS_COD_PAIS = #codigoPais#
+        AND ROL_COD_ROL = #codigoRol#
+    ]]>
+    </delete>
+    
+    <select id="getAccesosByRol" parameterClass="map" resultMap="accesoDetalleResult">
+        SELECT
+        R.MENU_COD_MENU,
+        R.PAIS_COD_PAIS,
+        R.ROL_COD_ROL,
+        R.EST_MROL,
+        R.USU_DIGI,
+        R.FEC_DIGI,
+        R.USU_MODI,
+        R.FEC_MODI,
+        D.DES_MENU
+        FROM SEG_MENU_ROL R, SEG_MENU M, SEG_DESCR_MENU D
+        WHERE R.MENU_COD_MENU = M.COD_MENU
+        AND  M.COD_MENU = D.MENU_COD_MENU
+        AND R.PAIS_COD_PAIS = #codigoPais#
+        AND R.ROL_COD_ROL = #codigoRol#
+        AND D.IDIO_COD_IDIO = #codigoIdioma#
+        ORDER BY R.MENU_COD_MENU
+    </select>
+
+
+    <select id="getAccesosMap" parameterClass="map" resultMap="accesoMapResult">
+    <![CDATA[   
+    
+    
+        select * from (select  rownum as rnum, a.* from (
+             select distinct sm.cod_menu as MENU_COD_MENU, r.cod_rol as ROL_COD_ROL, sd.des_menu as DES_MENU, 
+	         SEG_PKG_ACCES.SEG_FN_DEVUE_CADEN_COLUM_TRANS('select cod_opci||des_opci from seg_opcio') as opcionesNombre, 
+	         SEG_PKG_ACCES.SEG_FN_DEVUE_CADEN_COLUM_TRANS('select cod_opci from seg_opcio') as opcionesCodigo, 
+	         SEG_PKG_ACCES.SEG_FN_DEVUE_CADEN_COLUM_TRANS('select opci_cod_opci from seg_opcio_menu where menu_cod_menu='||sm.cod_menu) as disponibles, 
+           SEG_PKG_ACCES.SEG_FN_CADEN_COLUM_TRANS_CONCA('menu_cod_menu', 'pais_cod_pais', 'rol_cod_rol',sm.cod_menu, b.cod_pais, r.cod_rol, 'opci_cod_opci', 'seg_opcio_menu_rol') as activos   
+           from bas_pais b, 
+           seg_rol r, 
+           seg_menu_rol sr, 
+           seg_menu sm,
+            seg_descr_menu sd
+           , seg_opcio_menu se, 
+           seg_opcio so
+           where sr.pais_cod_pais=b.cod_pais and sr.rol_cod_rol=r.cod_rol 
+	         and sr.menu_cod_menu=sm.cod_menu and sm.cod_menu=sd.menu_cod_menu and 
+            se.opci_cod_opci=so.cod_opci and sm.cod_menu=se.menu_cod_menu
+           and b.cod_pais=#codigoLenguaje# 
+	         and r.cod_rol=#codigoRol# AND sm.est_menu!='9' group  by  sm.cod_menu, r.cod_rol, sd.des_menu, rownum, 
+           SEG_PKG_ACCES.SEG_FN_CADEN_COLUM_TRANS_CONCA('menu_cod_menu', 'pais_cod_pais', 'rol_cod_rol',sm.cod_menu, b.cod_pais, r.cod_rol, 'opci_cod_opci', 'seg_opcio_menu_rol') 
+	         order by sm.cod_menu
+           
+           ) a where rownum>0) where rnum>0
+         
+    ]]>
+    </select>
+    
+    
+    	<delete id="removeOpcioMenuRol" parameterClass="accesoPK">
+    <![CDATA[
+    
+      delete  from seg_opcio_menu_rol
+        where pais_cod_pais=#codigoPais# 
+        and rol_cod_rol=#codigoRol#
+    ]]>
+    </delete>
+    
+    
+    
+    <insert id="insertOpcioMenuRol" parameterClass="acceso">
+    <![CDATA[
+    
+             insert into ssicc_comun.seg_opcio_menu_rol
+          (opci_cod_opci, menu_cod_menu, pais_cod_pais, rol_cod_rol, ind_opc)
+        values
+          (#menu.codigoOpciones#, #codigoMenu#, #codigoPais#, #codigoRol#, '1')
+    ]]>
+    </insert>
+    
+    
+    
+</sqlMap>

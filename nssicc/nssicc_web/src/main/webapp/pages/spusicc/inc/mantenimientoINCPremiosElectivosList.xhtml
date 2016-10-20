@@ -1,0 +1,544 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" 
+      xmlns:h="http://java.sun.com/jsf/html" 
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:c="http://java.sun.com/jsp/jstl/core"
+      xmlns:ui="http://java.sun.com/jsf/facelets"       
+      xmlns:p="http://primefaces.org/ui"      
+      xmlns:ssicc="http://java.sun.com/jsf/composite/componentes/ssicc">
+
+<body>
+<ui:composition template="/templates/templateMantenimientoSearch.xhtml">
+  <ui:param name="mAlias" value="#{mantenimientoINCPremiosElectivosSearchAction}"/>
+  
+  <ui:define name="titulo_Pantalla">
+        <h:outputText value="#{i18n['mantenimientoINCPremiosElectivosSearchForm.title']}" styleClass="clsEncabezadoPantalla" />        
+  </ui:define>
+  
+  <ui:define name="body_toolbar_adicionales">
+  <ssicc:link value=""
+  			  mostrarTexto="false"
+  			  title="#{i18n['button.save']}"
+  			  icon="#{resource['images:saveForm.png']}"
+              width="34"
+              height="34"
+              partialSubmit="true"
+	          actualizarForm="true"
+  			  actionMethod="#{mantenimientoINCPremiosElectivosSearchAction.grabar}"
+  			  visible="#{mAlias.mostrarDatosConsultora == false ? false : true}"
+  			  ></ssicc:link>		     			
+  </ui:define>
+  
+  <ui:define name="body_busqueda_popup">
+        <ssicc:linkPopupCrearAjax id="buscarCliente"
+								  managePopup="#{mAlias.busquedaClientesPOPUPSearchAction}"
+								  accionAceptar="#{mantenimientoINCPremiosElectivosSearchAction.aceptarPopup}"
+								  accionSalir="#{mantenimientoINCPremiosElectivosSearchAction.salirPopup}"
+								  parametroAccion="POPUP_CLIENTE"
+								  visible="#{mAlias.mostrarPopupCliente}"
+								  paginaxhtml="/pages/popup/searchPOPUPEjecutiva.xhtml"			
+								  update=":principalForm:codigoClienteBuscar:input"
+								  title="#{i18n['button.search']}" />
+     
+  </ui:define>
+  
+  <ui:define name="body_criterio_busqueda">
+  
+    <h:panelGrid id="idPanelCriterioBusqueda" columns="2" >
+                 
+      <ssicc:label key="#{i18n['mantenimientoINCPremiosElectivosSearchForm.codigoPais']}" required="true"/> 
+      <ssicc:label value="#{mPantallaPrincipalBean.currentUser.pais.descripcion}"/>   
+      
+	  <ssicc:label key="#{i18n['mantenimientoINCPremiosElectivosSearchForm.oidConcurso']}" required="true" />    
+      <ssicc:selectMenu id="oidMensaje" value="#{mAlias.formBusqueda.oidConcurso}" required="true" disabled="#{mAlias.mostrarDatosConsultora == false ? false : true}">
+             <f:selectItems value="#{mAlias.mantenimientoINCConcursoElectivosList}" var="lista" 
+             				itemLabel="#{lista.descripcion}" itemValue="#{lista.codigo}" ></f:selectItems>
+      </ssicc:selectMenu>
+
+      <ssicc:label key="#{i18n['mantenimientoINCPremiosElectivosSearchForm.codigoClienteBuscar']}" required="true"/>    
+      <h:panelGroup>
+      
+      <ssicc:inputText id="codigoClienteBuscar" value="#{mAlias.formBusqueda.codigoClienteBuscar}" size="15" maxlength="15" 
+      				   esNumerico="true" 
+      				   listener="true"
+      	 			   accionListener="#{mantenimientoINCPremiosElectivosSearchAction.loadDataInput}" 
+      	 			   update=":principalForm:mensajesGrowl"  
+      	 			   required="true"
+      	 			   deshabilitado="#{mAlias.mostrarDatosConsultora == false ? false : true}"
+      	 			   /> 
+      <ssicc:linkPopupInvocarAjax accion="#{mantenimientoINCPremiosElectivosSearchAction.invocarPopup}" 
+						       	     parametroAccion="POPUP_CLIENTE" process="@this" visible="#{mAlias.mostrarDatosConsultora == false ? true : false}"/>	
+	  </h:panelGroup>
+	  <h:panelGroup id="idOutResultCliente" layout="block">
+	       <h:inputHidden id="idLongitudCodigoCliente" value="#{mAlias.formBusqueda.longitudCodigoCliente}" />
+	  </h:panelGroup>	
+	  <script type="text/javascript">
+		       var codigoClienteBuscar = document.getElementById("codigoClienteBuscar:input");
+	           var longitudCodigoCliente = document.getElementById("idLongitudCodigoCliente").value;
+		       codigoClienteBuscar.onchange = function(){
+		           codigoClienteBuscar.value = completarCaracteres(codigoClienteBuscar.value, longitudCodigoCliente, "0");
+		       };
+		       
+		       
+		       function completarCaracteres(valor, longitud, caracter){
+					var valorAux = new String("");
+					
+					if (valor.length != 0) {
+						var faltante = parseInt(longitud) - valor.length;
+						var valorAux = new String("");
+						
+						if (faltante >= 0) {
+							for (var i = 0; i &lt; faltante; i++) {
+								valorAux = valorAux + caracter;
+							}
+							valorAux = valorAux + valor;
+						}
+						else {
+						
+							var faltante = valor.length - longitud;
+							valorAux = valor.substr(faltante, longitud);
+						}
+					}
+					
+					return valorAux;
+				}
+				
+				  function ejecutarPopup(paginaPopup) {
+			           var win  = window.open(paginaPopup, "",
+					        "dependent=yes,status=0,scrollbars=1,toolbar=0,menubar=0,location=0,directories=0,resizable=0,width=800 height=400");
+			        	return true;
+					}   
+					
+					var objectFila;
+
+					function disableStyleCheckBox(fila){
+						validarCheckbox([{ name:'index', value: fila }]);
+						/* var checkBox = document.getElementById('idListaPremios:'+fila+':selectedItems:selectBooleanCheckbox');
+				    	var divStateActive = $(checkBox).children('div');
+				    	if(divStateActive.hasClass("ui-state-active")){
+				    		divStateActive.removeClass('ui-state-active');
+					    }
+					    var spanCheck = divStateActive.children('span');
+				    	if(spanCheck.hasClass("ui-icon-check")){
+				    		spanCheck.removeClass('ui-icon-check');
+				    		spanCheck.addClass('ui-icon-blank');
+				    	} */
+				    }
+
+				    function mostrarMensaje(idComponenteHidden){
+				    	PF('principalFormAlert_alertDialog').show();
+                        var sms = document.getElementById(idComponenteHidden).value;
+                        document.getElementById("principalFormAlert:textoMensajeAlerta").innerHTML=sms;
+				    }
+					
+					function verificaSeleccionNiveles(fila){
+
+					  var hdTipoPremio = document.getElementById('idListaPremios:'+fila+':hdTipoPremio');
+					  var hdNumNivel = document.getElementById('idListaPremios:'+fila+':hdNumNivel');
+					  var indice = document.getElementById('idListaPremios:'+fila+':selectedItems:selectBooleanCheckbox_input');
+					  var hdIndicadorPremioAcum =document.getElementById('idListaPremios:'+fila+':hdIndicadorPremioAcum');
+					  
+					  objectFila= new Array();
+					  setNumFilasPorNIvel(objectFila);
+					  
+					  if(hdTipoPremio.value == '2'){//tipo de premio por niveles
+						  //alert(hdIndicadorPremioAcum.value);
+						  
+						 if(hdIndicadorPremioAcum.value=='1'){//seleccion de premios es acumularivo 
+						  //solo se permite la seleccion unica por nivel
+						  cont = getNumFilasSeleccionadasPorNivel(hdNumNivel.value);
+					      if(cont > 1){
+					    	  indice.checked = false;
+					    	  // Desactivamos los estilos del checkbox
+					    	  disableStyleCheckBox(fila);
+					    	  mostrarMensaje("idPremioNiveles");
+                               //alert('mantenimientoINCPremiosElectivosSearchForm.tipo.premio.niveles');
+					          return false; 
+					      }
+						 }else{
+							 //solo se permite selccion de un solo premio entre todos los nivels
+							 cont=getNumFilasSeleccionadas();
+							 if(cont>1){
+							  indice.checked = false;
+							  // Desactivamos los estilos del checkbox
+					    	  disableStyleCheckBox(fila);
+					    	  mostrarMensaje("idPremioUnicaNiveles");
+					    	 //alert('mantenimientoINCPremiosElectivosSearchForm.tipo.premio.unica.niveles');
+							  return false;
+							 }
+						 } 
+					  }
+					  
+					  return true;
+					}
+					
+				/*retorna el num de filas seleccionadas que se tiene por nivel*/
+				function getNumFilasSeleccionadasPorNivel(nivel){
+					
+					var n=0;
+					for (var i = 0; i &lt; objectFila.length; i++) {
+						if (objectFila[i].nivel == nivel) {
+							n=objectFila[i].numFilaSeleccionadas;  
+							break;			 
+						}  
+					}	
+					return n;
+				}			
+					
+				/*retorm a el numero de filas seleccionadas en todos los niveles*/
+				function getNumFilasSeleccionadas(){
+					var n=0;
+					for (var i = 0; i &lt; objectFila.length; i++) {		
+							n=n+objectFila[i].numFilaSeleccionadas;  		  
+					}	
+					return n;
+				}	
+					
+				function setNumFilasPorNIvel(objectFila){
+					 
+					var rows = parseInt(document.getElementById('countRows').value);
+					 
+					var numNiveles = getNumNiveles();
+					console.log("numNiveles :"+numNiveles);
+				    //inicializando arreglo
+					for(k=1;k&lt;=numNiveles;k++)
+					 objectFila[k-1]=new FilaNivel(k,0);
+				
+					for(j=1;j&lt;=numNiveles;j++){
+						numFilas=0;
+				     	for (i=0; i&lt;rows; i++){	
+				     	    var hdNumNivel = document.getElementById('idListaPremios:'+i+':hdNumNivel');
+					 		var indice = document.getElementById('idListaPremios:'+i+':selectedItems:selectBooleanCheckbox_input');
+				     	    
+				     	    nivel=hdNumNivel.value;
+				         	if(indice.checked==true &amp;&amp; nivel==j)
+				     		{		
+				     		 objectFila[j-1].numFilaSeleccionadas =++numFilas;
+				     		}
+				     	}
+					  }
+				}
+					
+				function FilaNivel(nivel,numFilaSeleccionadas){
+					this.nivel=nivel;
+					this.numFilaSeleccionadas=numFilaSeleccionadas;
+				}
+					
+					
+				function getNumNiveles(){
+					var hdNumNivelFirst = document.getElementById('idListaPremios:0:hdNumNivel');
+					var rows = parseInt(document.getElementById('countRows').value);
+					 
+					var nivel=-1;
+					var num=1;
+					if(rows>0) 
+					    nivel=hdNumNivelFirst.value;
+					    
+					for (i=0; i&lt;rows; i++){	
+					   var hdNumNivel = document.getElementById('idListaPremios:'+i+':hdNumNivel');
+					
+					   if(hdNumNivel.value!=nivel){
+				 		   nivel=hdNumNivel.value;
+				          ++num;
+				 	    }             
+				 	}
+				 	return num;
+				}
+
+				  function validar(index){
+			          if(verificaSeleccionNiveles(index)){
+			        	  actualizaPuntajesFila(index);
+			          }
+					}
+
+				function actualizaPuntajesFila(fila){
+					  var indicadorNoValidaPuntaje = document.getElementById("indicadorNoValidaPuntaje").value;
+
+					  if(indicadorNoValidaPuntaje=='0'){
+						  if(isPremioNivelAcumularivo(fila))
+							  actualizaPuntajesMaximoNivel(fila);	  
+						  else	  	
+							actualizaPuntajes(fila);
+					  }		 	    	
+					}
+
+
+					function isPremioNivelAcumularivo(fila){
+						  var hdTipoPremio = document.getElementById('idListaPremios:'+fila+':hdTipoPremio');
+						  var hdIndicadorPremioAcum =document.getElementById('idListaPremios:'+fila+':hdIndicadorPremioAcum');
+						   if(hdTipoPremio.value == '2'){//tipo de premio por niveles
+							 	if(hdIndicadorPremioAcum.value=='1'){//seleccion de premios es acumularivo
+								 	return true; 
+							 	}else
+								 	return false;
+							} 	
+					}
+
+
+					function actualizaPuntajesMaximoNivel(fila){
+						//obtenemos el maximo nivel, y el maximo costo a descontar 
+						//descontamos solo para el nivel obtenido 
+						//para los demas niveles inferiores no hay dscto
+						  var hdNumNivel = document.getElementById('idListaPremios:'+fila+':hdNumNivel');
+						  var indice = document.getElementById('idListaPremios:'+fila+':selectedItems:selectBooleanCheckbox_input');
+				     	    
+						  var hdCostePuntos = document.getElementById('idListaPremios:'+fila+':hdCostePuntos');
+						  var valorCanjeado = parseInt(document.getElementById('puntajeCanjeado').innerHTML);
+						  var valorObtenido = parseInt(document.getElementById('puntajeObtenido').innerHTML);
+						  var unidadesItems = document.getElementById('idListaPremios:'+fila+':unidadesItems');
+						  var hdIndicadorPendiente   = document.getElementById('idListaPremios:'+fila+':hdIndicadorPendiente');
+						  var hdIndicadorNivelDiferido   = document.getElementById('idListaPremios:'+fila+':hdIndicadorNivelDiferido');
+
+						  var rows = parseInt(document.getElementById('countRows').value);
+						  
+						  var maxNivel = document.getElementById('idListaPremios:'+(rows-1)+':hdNumNivel').value;
+						  var maxCosto  = document.getElementById('idListaPremios:'+(rows-1)+':hdCostePuntos').value;
+						  var valorDisponible = parseInt(document.getElementById('puntajeDisponible').innerHTML);
+						  var valor=0;
+
+						    var nivelDiferido = parseInt(hdIndicadorNivelDiferido.value);
+						    if(nivelDiferido == 1) {
+						        return false;
+						    }
+						  //si nos encontramos en el maximo level	 
+						       if(hdNumNivel.value== maxNivel){  
+						    	  if(indice.checked==true &amp;&amp; hdIndicadorPendiente.value=='1' ){
+								    valor1 = (hdCostePuntos.value)*1;
+									valor2 = (unidadesItems.value)*1;  
+									valor =  (valor1*valor2);
+
+									if(valor*1 &lt;= (valorObtenido*1 - valorCanjeado*1)){
+										if(valorDisponible*1>0){
+										 document.getElementById('puntajeComprometido').innerHTML= valor*1;
+										 document.getElementById('puntajeDisponible').innerHTML= valorObtenido*1 - valor*1 - valorCanjeado*1;
+										}else{
+											 unidadesItems.value=1;
+										     indice.checked=false;
+										     disableStyleCheckBox(fila);
+										     mostrarMensaje("idNoExistePuntajeDisponible");
+											 //alert('mantenimientoINCPremiosElectivosSearchForm.not.existe.puntaje.disponible');
+											 return false;
+										}
+									}else{
+
+										     unidadesItems.value=1;
+										     indice.checked=false;
+										     disableStyleCheckBox(fila);
+											 mostrarMensaje("idNoExistePuntajeDisponible");
+										     //alert('mantenimientoINCPremiosElectivosSearchForm.not.existe.puntaje.disponible');
+											 return false;
+									}	 
+									document.getElementById('puntajeComprometido').innerHTML=valor*1;
+									document.getElementById('puntajeDisponible').innerHTML= valorObtenido*1 - valor*1 - valorCanjeado*1;
+						    	  }else{
+						    	    document.getElementById('puntajeComprometido').innerHTML=valor*1;
+						    		document.getElementById('puntajeDisponible').innerHTML= valorObtenido*1 - valor*1 - valorCanjeado*1;		    	  
+						    	  }	
+						       }	  
+					}
+
+
+					function actualizaPuntajes(fila){
+
+						var indice = document.getElementById('idListaPremios:'+fila+':selectedItems:selectBooleanCheckbox_input');
+						var unidadesItems = document.getElementById('idListaPremios:'+fila+':unidadesItems');
+						var valorComprometido = parseInt(document.getElementById('puntajeComprometido').innerHTML);
+						var valorCanjeado = parseInt(document.getElementById('puntajeCanjeado').innerHTML);
+						var valorObtenido = parseInt(document.getElementById('puntajeObtenido').innerHTML);
+						var valorDisponible = parseInt(document.getElementById('puntajeDisponible').innerHTML);
+					    var valor=0;
+						var hdIndicadorNivelDiferido   = document.getElementById('idListaPremios:'+fila+':hdIndicadorNivelDiferido');
+					    var rows = parseInt(document.getElementById('countRows').value);
+
+				
+					    var nivelDiferido = parseInt(hdIndicadorNivelDiferido.value);
+					    if(nivelDiferido == 1) {
+					        return false;
+					    }            
+					  
+					    /*sumarizando el total*/
+						for(i=0;i&lt;rows;i++){
+							var indice = document.getElementById('idListaPremios:'+i+':selectedItems:selectBooleanCheckbox_input');
+							var hdIndicadorPendiente   = document.getElementById('idListaPremios:'+i+':hdIndicadorPendiente');
+							var hdCostePuntos = document.getElementById('idListaPremios:'+i+':hdCostePuntos');
+							var unidadesItems = document.getElementById('idListaPremios:'+i+':unidadesItems');
+							
+							if(indice.checked==true &amp;&amp; hdIndicadorPendiente.value=='1'){
+								valor1 = (hdCostePuntos.value)*1;
+								valor2 = (unidadesItems.value)*1;  
+								valor = valor + (valor1*valor2);
+							}
+						}
+						
+					  // alert('tempComprometido '+valor + 'valorDisponible  '+(valorObtenido*1 + valorCanjeado*1));
+						if(valor*1 &lt;= (valorObtenido*1 - valorCanjeado*1)){
+							if(valorDisponible*1>=0){
+							 document.getElementById('puntajeComprometido').innerHTML=valor*1;
+							 document.getElementById('puntajeDisponible').innerHTML= valorObtenido*1 - valor*1 - valorCanjeado*1;
+							}else{
+								 unidadesItems.value=1;
+							     indice.checked=false;
+							     disableStyleCheckBox(fila);
+								 mostrarMensaje("idNoExistePuntajeDisponible");
+								 //alert('mantenimientoINCPremiosElectivosSearchForm.not.existe.puntaje.disponible');
+								 return false;
+							}
+						}else{
+
+							     unidadesItems.value=1;
+							     indice.checked=false;
+							     disableStyleCheckBox(fila);
+								 mostrarMensaje("idNoExistePuntajeDisponible");
+							     //alert('mantenimientoINCPremiosElectivosSearchForm.not.existe.puntaje.disponible');
+								 return false;
+						}	 
+					  
+					}
+				</script>
+	 
+    </h:panelGrid>         
+    
+  </ui:define>  
+  
+       
+  <ui:define name="body_final_busqueda">     	
+            <h:panelGrid id="idPanelCabecera" columns="7" style="width:65%;border:2px solid #65B2FF;margin-left:6px;padding:5px;" rendered="#{mAlias.mostrarDatosConsultora}" >
+                 
+                 <h:inputHidden id="indicadorNoValidaPuntaje" value="#{mAlias.formBusqueda.indicadorNoValidaPuntaje}" />
+ 				 <h:inputHidden id="countRows" value="#{mAlias.countRows}" />
+ 				 <h:inputHidden value="#{mAlias.formBusqueda.msgPremioNiveles}" id="idPremioNiveles" />
+                 <h:inputHidden value="#{mAlias.formBusqueda.msgPremioUnicaNiveles}" id="idPremioUnicaNiveles" />
+     			 <h:inputHidden value="#{mAlias.formBusqueda.msgNoExistePuntajeDisponible}" id="idNoExistePuntajeDisponible" />
+    			 <ssicc:labelBlank/>
+ 				 <ssicc:labelBlank/>
+ 				 
+ 				 
+                 <h:outputText value="#{i18n['mantenimientoINCPremiosElectivosSearchForm.nombreConsultora']}:"  styleClass="clsLabelIzquierdaKey" />
+      			 <ssicc:label value="#{mAlias.formBusqueda.nombreConsultora}"/>   
+                 
+	     		 <h:outputText value="#{i18n['mantenimientoINCPremiosElectivosSearchForm.meta']}:"  rendered="#{mAlias.formBusqueda.meta > 0 ? true : false}" styleClass="clsLabelIzquierdaKey" />
+	     		 <ssicc:label value="#{mAlias.formBusqueda.meta}" rendered="#{mAlias.formBusqueda.meta > 0 ? true : false}" />
+
+                 <ssicc:labelBlank rendered="#{mAlias.formBusqueda.meta > 0 ? false : true}" />
+                 <ssicc:labelBlank rendered="#{mAlias.formBusqueda.meta > 0 ? false : true}" />
+                 <ssicc:labelBlank/>
+                 <ssicc:labelBlank/>
+                 <ssicc:labelBlank/>
+                 
+                 <h:outputText value="#{i18n['mantenimientoINCPremiosElectivosSearchForm.puntaje']}:"  styleClass="clsLabelIzquierdaKey" />
+      			 <ssicc:labelBlank/>   
+                 <ssicc:labelBlank/>
+                 <ssicc:labelBlank/>
+                 <ssicc:labelBlank/>
+                 <ssicc:labelBlank/>
+                 <ssicc:labelBlank/>
+                 
+                 <h:outputText value="#{i18n['mantenimientoINCPremiosElectivosSearchForm.puntajeObtenido']}:"  styleClass="clsLabelIzquierdaKey" />
+      			 <h:outputText id="puntajeObtenido" value="#{mAlias.formBusqueda.puntajeObtenido}" style="font-family: Tahoma; font-size: 12px;font-weight: bold; color: #355A8F;" />
+                 
+                 <h:outputText value="#{i18n['mantenimientoINCPremiosElectivosSearchForm.puntajeCanjeado']}:"  styleClass="clsLabelIzquierdaKey" /> 
+      			 <h:outputText id="puntajeCanjeado" value="#{mAlias.formBusqueda.puntajeCanjeado}" style="font-family: Tahoma; font-size: 12px;font-weight: bold; color: #355A8F;" />
+                 <ssicc:labelBlank/>
+                 <ssicc:labelBlank/>
+                 <ssicc:labelBlank/>
+            
+                 <h:outputText value="#{i18n['mantenimientoINCPremiosElectivosSearchForm.puntajeSaldo']}:"  styleClass="clsLabelIzquierdaKey" /> 
+      			 <h:outputText id="puntajeSaldo" value="#{mAlias.formBusqueda.puntajeSaldo}" style="font-family: Tahoma; font-size: 12px;font-weight: bold; color: #355A8F;" />
+                 
+                 <h:outputText value="#{i18n['mantenimientoINCPremiosElectivosSearchForm.puntajeComprometido']}:"  styleClass="clsLabelIzquierdaKey" />  
+      			 <h:outputText id="puntajeComprometido" value="#{mAlias.formBusqueda.puntajeComprometido}" style="font-family: Tahoma; font-size: 12px;font-weight: bold; color: #355A8F;" />
+                 <h:outputText value="&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" />
+                 <c:if test="#{mAlias.formBusqueda.numeroPeriodos != 0}" >
+ 		       	     <h:outputText value="* #{i18n['mantenimientoINCPremiosElectivosSearchForm.puntajeDisponible']}:"  styleClass="clsLabelIzquierdaKey" /> 
+	        	 </c:if>
+	        	 <c:if test="#{mAlias.formBusqueda.numeroPeriodos == 0}">
+	        	     <h:outputText value="#{i18n['mantenimientoINCPremiosElectivosSearchForm.puntajeDisponible']}:"  styleClass="clsLabelIzquierdaKey" />
+	        	 </c:if>
+      			 <h:outputText id="puntajeDisponible" value="#{mAlias.formBusqueda.puntajeDisponible}" style="font-family: Tahoma; font-size: 12px;font-weight: bold; color: #355A8F;" />
+				 
+            </h:panelGrid>   
+            
+             <h:panelGrid id="idPanelDetalle" columns="1" rendered="#{mAlias.mostrarDatosConsultora}">
+      
+                 <p:fieldset legend="Lista de Premios">
+                        <p:dataTable id="idListaPremios" value="#{mAlias.dataModelDetalle}"
+                        selection="#{mAlias.beanRegistroSeleccionado}" 
+	             		var="lista"
+	          		 	rowIndexVar="rowIndex"
+	          		 	emptyMessage="#{msg['dataTable.noExistenRegistrosFiltro']}"
+	             	>
+			        <p:column width="30" >  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['premiosElectivosList.numNivel']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.numNivel}" />
+			        </p:column>  
+			  
+			        <p:column width="40" style="text-align:center;" >  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['premiosElectivosList.numPremio']}" />
+			            </f:facet>
+			              <p:commandLink actionListener="#{mantenimientoINCPremiosElectivosSearchAction.viewPopup}"
+			            			   oncomplete="ejecutarPopup('#{facesContext.externalContext.requestContextPath}/pages/spusicc/inc/mantenimientoINCPremiosElectivosPopup.xhtml')"
+			            			   style="text-decoration: underline;"	
+			                     >
+			            	<h:outputText value="#{lista.numPremio}" />
+			            </p:commandLink>
+			        </p:column>  
+			        
+			        <p:column width="150">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['premiosElectivosList.descripcionProducto']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.descripcionProducto}" />  
+			        </p:column>
+			        
+			        <p:column width="50">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['premiosElectivosList.costoPuntos']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.costoPuntos}" />  
+			        </p:column>
+			        
+			         <p:column width="50">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['premiosElectivosList.numUnidades']}" />
+			            </f:facet> 
+			            <h:inputText id="unidadesItems" value="#{mAlias.unidadesItems[rowIndex]}" onkeypress="return soloNumero(event);"
+			            			maxlength="4" size="6"  disabled="#{(lista.indicadorPendiente == 0 || lista.tipoPremio == 2) ? true : false}"
+			            			onchange="actualizaPuntajesFila(#{rowIndex});" onkeyup="actualizaPuntajesFila(#{rowIndex});"
+			                 >
+			           </h:inputText>
+			            
+			            <h:inputHidden id="hdIndicadorElegido" value="#{lista.indicadorElegido}" />
+			            <h:inputHidden id="hdNumUnidades" value="#{lista.numUnidades}" />
+			            <h:inputHidden id="hdCostePuntos" value="#{lista.costoPuntos}" />
+			            <h:inputHidden id="hdIndicadorPendiente" value="#{lista.indicadorPendiente}" />
+			            <h:inputHidden id="hdTipoPremio" value="#{lista.tipoPremio}" />
+			            <h:inputHidden id="hdIndicadorPremioAcum" value="#{lista.indicadorPremioAcum}" />
+			            <h:inputHidden id="hdNumNivel" value="#{lista.numNivel}" />
+			            <h:inputHidden id="hdIndicadorNivelDiferido" value="#{lista.indicadorNivelDiferido}" />
+ 
+			        </p:column>
+			        
+			        <p:column width="40">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['premiosElectivosList.indicadorElegido']}" />
+			            </f:facet>
+			            <p:remoteCommand name="validarCheckbox"
+									actionListener="#{mantenimientoINCPremiosElectivosSearchAction.validarCheckbox}"
+									update=":principalForm:idListaPremios" />
+						<ssicc:selectBooleanCheckbox id="selectedItems" value="#{lista.selectedItems}"  
+			            		disabled="#{lista.indicadorPendiente==0 ? true : false}" 
+			            		onchange="validar(#{rowIndex});"> 
+			            </ssicc:selectBooleanCheckbox>	
+			     
+			        </p:column>
+	            </p:dataTable>
+                 </p:fieldset>
+            </h:panelGrid>   
+   </ui:define>         
+   
+</ui:composition>
+</body>
+</html>

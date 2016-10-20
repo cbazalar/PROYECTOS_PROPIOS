@@ -1,0 +1,950 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteINCGanadorasConcursoVentasPendientesPDF"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Landscape"
+		 pageWidth="790"
+		 pageHeight="595"
+		 columnWidth="790"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="codigoConcurso" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoConcurso")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoMarca" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoMarca")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoCanal" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoCanal")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicionRegion" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicionRegion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicionZona" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicionZona")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoTerritorio" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoTerritorio")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoConsultora" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoConsultora")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="titulo" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("titulo")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[select
+    cpg.num_conc
+    ,cpg.val_nomb
+    ,r.des_regi
+    ,z.cod_zona
+    ,mi.num_docu_iden
+    ,sc.perd_oid_peri
+    ,c.cod_clie
+    ,TRIM(c.val_nom1) || ' ' || TRIM(c.val_nom2) || ' ' || TRIM(c.val_ape1) || ' ' || TRIM(c.val_ape2) nombres
+    ,t.cod_terr
+    ,(select pnpx.num_nive
+      from
+          inc_concu_param_gener cpgx
+          ,inc_param_gener_premi pgpx
+          ,inc_param_nivel_premi pnpx
+          ,inc_premi_artic pax
+          ,inc_lote_premi_artic lpax
+          ,inc_artic_lote alx
+      where
+          cpgx.oid_para_gral = cpg.oid_para_gral
+      and cpgx.oid_para_gral = pgpx.copa_oid_para_gral
+      and pgpx.oid_para_gene_prem = pnpx.pagp_oid_para_gene_prem
+      and pnpx.oid_para_nive_prem = pax.panp_oid_para_nive_prem
+      and pax.oid_prem_arti = lpax.prar_oid_prem_arti
+      and lpax.num_prem = sc.num_prem
+      and lpax.oid_lote_prem_arti = alx.lopa_oid_lote_prem_arti
+      and alx.prod_oid_prod = p.oid_prod
+     union
+      select pnpx.num_nive
+      from
+          inc_concu_param_gener cpgx
+          ,inc_param_gener_premi pgpx
+          ,inc_param_nivel_premi pnpx
+          ,inc_premi_artic pax
+          ,inc_lote_premi_artic lpax
+          ,inc_artic_lote alx
+          ,inc_reemp_artic_lote ralx
+      where
+          cpgx.oid_para_gral = cpg.oid_para_gral
+      and cpgx.oid_para_gral = pgpx.copa_oid_para_gral
+      and pgpx.oid_para_gene_prem = pnpx.pagp_oid_para_gene_prem
+      and pnpx.oid_para_nive_prem = pax.panp_oid_para_nive_prem
+      and pax.oid_prem_arti = lpax.prar_oid_prem_arti
+      and lpax.num_prem = sc.num_prem
+      and lpax.oid_lote_prem_arti = alx.lopa_oid_lote_prem_arti
+      and ralx.prod_oid_prod = p.oid_prod
+    ) num_nive,
+      puntaje_obt.punt_obte PUNT_OBTE,
+       (select 
+            (SELECT DES_CIUD
+                  FROM ZON_CIUDA
+                 WHERE COD_UGEO_REGI = a.CIUD_COD_UGEO_REGI
+                   AND COD_CIUD = a.CIUD_COD_CIUD) CIUDAD 
+       from mae_clien_direc a
+       where a.clie_oid_clie = c.oid_clie
+       and rownum = 1) CIUDAD,
+       (select  f.VAL_TEXT_COMU from MAE_CLIEN_COMUN f where  f.CLIE_OID_CLIE(+) = c.OID_CLIE AND f.TICM_OID_TIPO_COMU(+) = 1) TELEFONO,
+       (select (CASE WHEN pnpx.num_cant_inic_punt = 0 or pnpx.num_cant_inic_punt = null then
+                pnpx.num_cant_fija_punt
+                else
+                  pnpx.num_cant_inic_punt
+                 end ) PUNTAJE_NIVEL
+          from inc_concu_param_gener cpgx,
+               inc_param_gener_premi pgpx,
+               inc_param_nivel_premi pnpx,
+               inc_premi_artic       pax,
+               inc_lote_premi_artic  lpax,
+               inc_artic_lote        alx
+         where cpgx.oid_para_gral = cpg.oid_para_gral
+           and cpgx.oid_para_gral = pgpx.copa_oid_para_gral
+           and pgpx.oid_para_gene_prem = pnpx.pagp_oid_para_gene_prem
+           and pnpx.oid_para_nive_prem = pax.panp_oid_para_nive_prem
+           and pax.oid_prem_arti = lpax.prar_oid_prem_arti
+           and lpax.num_prem = sc.num_prem
+           and lpax.oid_lote_prem_arti = alx.lopa_oid_lote_prem_arti
+           and alx.prod_oid_prod = p.oid_prod
+           UNION
+           select (CASE WHEN pnpx.num_cant_inic_punt = 0 or pnpx.num_cant_inic_punt = null then
+                pnpx.num_cant_fija_punt
+                else
+                  pnpx.num_cant_inic_punt
+                 end ) PUNTAJE_NIVEL
+          from inc_concu_param_gener cpgx,
+               inc_param_gener_premi pgpx,
+               inc_param_nivel_premi pnpx,
+               inc_premi_artic       pax,
+               inc_lote_premi_artic  lpax,
+               inc_artic_lote        alx,
+               inc_reemp_artic_lote  ralx
+         where cpgx.oid_para_gral = cpg.oid_para_gral
+           and cpgx.oid_para_gral = pgpx.copa_oid_para_gral
+           and pgpx.oid_para_gene_prem = pnpx.pagp_oid_para_gene_prem
+           and pnpx.oid_para_nive_prem = pax.panp_oid_para_nive_prem
+           and pax.oid_prem_arti = lpax.prar_oid_prem_arti
+           and lpax.num_prem = sc.num_prem
+           and lpax.oid_lote_prem_arti = alx.lopa_oid_lote_prem_arti
+           and ralx.prod_oid_prod = p.oid_prod) PUNTAJE_NIVEL,
+       devoluciones.punt_obte  PUNTAJE_DESCONTADO,
+      case when (select count(1) from INC_PREMI_ELEGI where copa_oid_para_GRal=cpg.oid_para_gral and clie_oid_clie=sc.clie_oid_clie) >=1 then
+        (select MAX(pnpx.num_nive)
+          from inc_concu_param_gener cpgx,
+               inc_param_gener_premi pgpx,
+               inc_param_nivel_premi pnpx,
+               inc_premi_artic       pax,
+               inc_lote_premi_artic  lpax,
+               inc_artic_lote        alx,
+               (select elegi.clie_oid_clie,elegi.num_prem,elegi.panp_oid_para_nive_prem 
+                  from INC_PREMI_ELEGI ELEGI
+                 where elegi.copa_oid_para_GRal=$P{codigoConcurso} )elegi
+         where cpgx.oid_para_gral = cpg.oid_para_gral
+           and cpgx.oid_para_gral = pgpx.copa_oid_para_gral
+           and pgpx.oid_para_gene_prem = pnpx.pagp_oid_para_gene_prem
+           and pnpx.oid_para_nive_prem = pax.panp_oid_para_nive_prem
+           and pnpx.oid_para_nive_prem = elegi.panp_oid_para_nive_prem
+           and pax.oid_prem_arti = lpax.prar_oid_prem_arti
+           and lpax.num_prem = elegi.num_prem
+           and lpax.oid_lote_prem_arti = alx.lopa_oid_lote_prem_arti
+           and elegi.clie_oid_clie =c.OID_CLIE)
+         else
+           null 
+         end  NIVEL_CAPTURADO,
+       '' PUNTAJE_BONIFICADO,  
+       retail.punt_obte PUNTAJE_BELCENTER,
+       puntaje.punt_obte PUNTAJE_VTA,
+       (SELECT com.val_text_comu FROM MAE_CLIEN_COMUN com, MAE_TIPO_COMUN tip WHERE com.ticm_oid_tipo_comu = tip.oid_tipo_comu 
+         AND com.clie_oid_clie = c.oid_clie   AND tip.cod_tipo_comu = 'TM') telefono_Celular,
+         DIRECCION.DIRECCION,
+       MPR.COD_SAP COD_SAP, 
+       GPR.VAL_I18N PREMIO,
+       ' ' ESTATUS_RECON
+from 
+    ped_solic_cabec sc
+    ,ped_solic_posic sp
+    ,mae_clien c
+    ,inc_concu_param_gener cpg
+    ,inc_param_gener_premi pgp
+    ,zon_regio r
+    ,zon_zona z
+    ,zon_terri_admin ta
+    ,zon_terri t
+    ,mae_produ p
+    ,(select clie_oid_clie, sum(num_punt) punt_obte
+      from inc_cuent_corri_punto ccp
+      where
+          ccp.copa_oid_para_gral = $P{codigoConcurso} 
+      and ccp.val_desc not like '%Entrega de Premio%'
+    group by ccp.clie_oid_clie) puntaje_obt,
+  (select clie_oid_clie, sum(num_punt) punt_obte
+     from inc_cuent_corri_punto ccp
+    where ccp.copa_oid_para_gral = $P{codigoConcurso}
+      and ccp.tmov_oid_tipo_movi = 2 
+      and ccp.val_desc not like '%Entrega de Premio%'
+      group by ccp.clie_oid_clie ) devoluciones,
+       (select clie_oid_clie, sum(num_punt) punt_obte
+          from inc_cuent_corri_punto ccp
+         where ccp.copa_oid_para_gral = $P{codigoConcurso}
+           and ccp.tmov_oid_tipo_movi = 1 
+           and ccp.val_desc like '%Retail%'
+         group by ccp.clie_oid_clie) retail,
+        (select clie_oid_clie, sum(num_punt) punt_obte
+          from inc_cuent_corri_punto ccp
+         where ccp.copa_oid_para_gral = $P{codigoConcurso}
+           and ccp.tmov_oid_tipo_movi = 1
+           and ccp.val_desc like '%Venta Directa%'
+         group by ccp.clie_oid_clie) puntaje,       
+       mae_clien_ident mi,
+       MAE_PRODU              MPR,
+       (SELECT * FROM GEN_I18N_SICC_PAIS 
+          WHERE  ATTR_ENTI = 'MAE_PRODU')   GPR,
+         (
+select COD_CLIE,DES_ABRV_TIPO_VIA || ' ' || VAL_NOMB_VIA || ' ' || NUM_PPAL || ' ' || VAL_OBSE || ' ' ||
+       nivel_1
+       || DECODE(nivel_2, NULL, '', '/' || nivel_2)
+       || DECODE(nivel_3, NULL, '', '/' || nivel_3)
+       || DECODE(nivel_4, NULL, '', '/' || nivel_4)
+       || DECODE(nivel_5, NULL, '', '/' || nivel_5)
+       || DECODE(nivel_6, NULL, '', '/' || nivel_6)
+       || DECODE(nivel_7, NULL, '', '/' || nivel_7)
+       || DECODE(nivel_8, NULL, '', '/' || nivel_8)
+       || DECODE(nivel_9, NULL, '', '/' || nivel_9) AS DIRECCION
+   FROM (SELECT D.COD_CLIE,
+   mcd.OID_CLIE_DIRE OID,
+               c.DES_ABRV_TIPO_VIA,
+               mcd.VAL_NOMB_VIA,
+               mcd.NUM_PPAL,
+               mcd.VAL_OBSE,
+               mcd.VAL_BARR,
+               t.COD_TERR,
+               (SELECT DES_CIUD
+                  FROM ZON_CIUDA
+                 WHERE COD_UGEO_REGI = mcd.CIUD_COD_UGEO_REGI
+                   AND COD_CIUD = mcd.CIUD_COD_CIUD) DES_CIUD,
+               mcd.DES_VILLA_POBL,
+               (SELECT des_geog
+                  FROM zon_valor_estru_geopo
+                 WHERE pais_oid_pais = d.pais_oid_pais
+                   AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                   AND orde_2 IS NULL) AS nivel_1,
+               (SELECT des_geog
+                  FROM zon_valor_estru_geopo
+                 WHERE pais_oid_pais = d.pais_oid_pais
+                   AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                   AND orde_2 = SUBSTR(mcd.cod_unid_geog, 7, 6)
+                   AND orde_3 IS NULL) AS nivel_2,
+               (SELECT des_geog
+                  FROM zon_valor_estru_geopo
+                 WHERE pais_oid_pais = d.pais_oid_pais
+                   AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                   AND orde_2 = SUBSTR(mcd.cod_unid_geog, 7, 6)
+                   AND orde_3 = SUBSTR(mcd.cod_unid_geog, 13, 6)
+                   AND orde_4 IS NULL) AS nivel_3,
+               CASE
+                 WHEN LENGTH(mcd.cod_unid_geog) > 18
+                  THEN
+                  (SELECT des_geog
+                     FROM zon_valor_estru_geopo
+                    WHERE pais_oid_pais =
+                          d.pais_oid_pais
+                      AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                      AND orde_2 = SUBSTR(mcd.cod_unid_geog, 7, 6)
+                      AND orde_3 = SUBSTR(mcd.cod_unid_geog, 13, 6)
+                      AND orde_4 = SUBSTR(mcd.cod_unid_geog, 19, 6)
+                      AND orde_5 IS NULL)
+                 ELSE
+                  NULL
+               END AS nivel_4,
+               CASE
+                 WHEN LENGTH(mcd.cod_unid_geog) > 24
+                  THEN
+                  (SELECT des_geog
+                     FROM zon_valor_estru_geopo
+                    WHERE pais_oid_pais = d.pais_oid_pais
+                      AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                      AND orde_2 = SUBSTR(mcd.cod_unid_geog, 7, 6)
+                      AND orde_3 = SUBSTR(mcd.cod_unid_geog, 13, 6)
+                      AND orde_4 = SUBSTR(mcd.cod_unid_geog, 19, 6)
+                      AND orde_5 = SUBSTR(mcd.cod_unid_geog, 25, 6)
+                      AND orde_6 IS NULL)
+                 ELSE
+                  NULL
+               END AS nivel_5,
+               CASE
+                 WHEN LENGTH(mcd.cod_unid_geog) > 30
+                  THEN
+                  (SELECT des_geog
+                     FROM zon_valor_estru_geopo
+                    WHERE pais_oid_pais = d.pais_oid_pais
+                      AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                      AND orde_2 = SUBSTR(mcd.cod_unid_geog, 7, 6)
+                      AND orde_3 = SUBSTR(mcd.cod_unid_geog, 13, 6)
+                      AND orde_4 = SUBSTR(mcd.cod_unid_geog, 19, 6)
+                      AND orde_5 = SUBSTR(mcd.cod_unid_geog, 25, 6)
+                      AND orde_6 = SUBSTR(mcd.cod_unid_geog, 31, 6)
+                      AND orde_7 IS NULL)
+                 ELSE
+                  NULL
+               END AS nivel_6,
+               CASE
+                 WHEN LENGTH(mcd.cod_unid_geog) > 36
+                  THEN
+                  (SELECT des_geog
+                     FROM zon_valor_estru_geopo
+                    WHERE pais_oid_pais =  d.pais_oid_pais
+                      AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                      AND orde_2 = SUBSTR(mcd.cod_unid_geog, 7, 6)
+                      AND orde_3 = SUBSTR(mcd.cod_unid_geog, 13, 6)
+                      AND orde_4 = SUBSTR(mcd.cod_unid_geog, 19, 6)
+                      AND orde_5 = SUBSTR(mcd.cod_unid_geog, 25, 6)
+                      AND orde_6 = SUBSTR(mcd.cod_unid_geog, 31, 6)
+                      AND orde_7 = SUBSTR(mcd.cod_unid_geog, 37, 6)
+                      AND orde_8 IS NULL)
+                 ELSE
+                  NULL
+               END AS nivel_7,
+               CASE
+                 WHEN LENGTH(mcd.cod_unid_geog) > 42
+                  THEN
+                  (SELECT des_geog
+                     FROM zon_valor_estru_geopo
+                    WHERE pais_oid_pais = d.pais_oid_pais
+                      AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                      AND orde_2 = SUBSTR(mcd.cod_unid_geog, 7, 6)
+                      AND orde_3 = SUBSTR(mcd.cod_unid_geog, 13, 6)
+                      AND orde_4 = SUBSTR(mcd.cod_unid_geog, 19, 6)
+                      AND orde_5 = SUBSTR(mcd.cod_unid_geog, 25, 6)
+                      AND orde_6 = SUBSTR(mcd.cod_unid_geog, 31, 6)
+                      AND orde_7 = SUBSTR(mcd.cod_unid_geog, 37, 6)
+                      AND orde_8 = SUBSTR(mcd.cod_unid_geog, 43, 6)
+                      AND orde_9 IS NULL)
+                 ELSE
+                  NULL
+               END AS nivel_8,
+               CASE
+                 WHEN LENGTH(mcd.cod_unid_geog) > 48
+                  THEN
+                  (SELECT des_geog
+                     FROM zon_valor_estru_geopo
+                    WHERE pais_oid_pais = d.pais_oid_pais
+                      AND orde_1 = SUBSTR(mcd.cod_unid_geog, 1, 6)
+                      AND orde_2 = SUBSTR(mcd.cod_unid_geog, 7, 6)
+                      AND orde_3 = SUBSTR(mcd.cod_unid_geog, 13, 6)
+                      AND orde_4 = SUBSTR(mcd.cod_unid_geog, 19, 6)
+                      AND orde_5 = SUBSTR(mcd.cod_unid_geog, 25, 6)
+                      AND orde_6 = SUBSTR(mcd.cod_unid_geog, 31, 6)
+                      AND orde_7 = SUBSTR(mcd.cod_unid_geog, 37, 6)
+                      AND orde_8 = SUBSTR(mcd.cod_unid_geog, 43, 6)
+                      AND orde_9 = SUBSTR(mcd.cod_unid_geog, 49, 6))
+                 ELSE
+                  NULL
+               END AS nivel_9
+          FROM MAE_CLIEN_DIREC mcd,
+               MAE_TIPO_DIREC mtd,
+               SEG_TIPO_VIA c,
+               MAE_CLIEN d,
+               ZON_TERRI t
+         WHERE d.OID_CLIE = mcd.CLIE_OID_CLIE
+           AND mcd.IND_ELIM = 0
+           AND mtd.OID_TIPO_DIRE = mcd.TIDC_OID_TIPO_DIRE
+           AND c.OID_TIPO_VIA = mcd.TIVI_OID_TIPO_VIA
+           AND mcd.IND_DIRE_PPAL = 1
+           AND mcd.TERR_OID_TERR = t.OID_TERR(+)
+         ORDER BY mcd.OID_CLIE_DIRE DESC)
+         ) DIRECCION
+    ,inc_bolsa_falta bf
+where
+ sc.copa_oid_para_gene = $P{codigoConcurso}
+ $P!{condicionRegion}
+ $P!{condicionZona}
+ and ($P{codigoConsultora} IS NULL OR c.cod_clie= $P{codigoConsultora})
+ and ($P{codigoTerritorio} IS NULL OR t.cod_terr = $P{codigoTerritorio})  
+ AND CPG.MARC_OID_MARC=gen_pkg_gener.gen_fn_devuelve_id_marca($P{codigoMarca})
+ AND CPG.CANA_OID_CANA=gen_pkg_gener.gen_fn_devuelve_id_canal($P{codigoCanal})    
+ AND sc.oid_soli_cabe = sp.soca_oid_soli_cabe
+and sc.fec_fact is not null
+and sc.grpr_oid_grup_proc = 5
+and sc.tspa_oid_tipo_soli_pais in ( select oid_tipo_soli_pais
+                                    from ped_tipo_solic_pais tsp
+                                    ,ped_tipo_solic ts
+                                    ,ped_clase_solic cs
+                                    where cs.cod_clas_soli = 'I1'
+                                    and cs.oid_clas_soli = ts.clso_oid_clas_soli
+                                    and ts.oid_tipo_soli = tsp.tsol_oid_tipo_soli
+                                    and ind_soli_nega = 0 )
+and sc.clie_oid_clie = c.oid_clie
+and sc.copa_oid_para_gene = cpg.oid_para_gral
+and cpg.oid_para_gral = pgp.copa_oid_para_gral
+and sc.zzon_oid_zona = z.oid_zona
+and z.zorg_oid_regi = r.oid_regi
+and sc.ztad_oid_terr_admi = ta.oid_terr_admi
+and ta.terr_oid_terr = t.oid_terr
+and sp.prod_oid_prod = p.oid_prod
+and sp.oid_soli_posi = bf.sopo_oid_soli_posi
+and (bf.fec_solu IS NULL or SOPO_OID_SOLI_POSI_REEM is not null)
+and puntaje.clie_oid_clie(+) = sc.clie_oid_clie
+and devoluciones.clie_oid_clie(+) = sc.clie_oid_clie
+and retail.clie_oid_clie(+) = sc.clie_oid_clie
+and  puntaje_obt.clie_oid_clie (+) =sc.clie_oid_clie
+and (sp.num_unid_aten = 0 or (sp.num_unid_aten < sp.num_unid_dema_real) or
+(sp.num_unid_aten is null))
+and c.oid_clie=mi.clie_oid_clie 
+    and mi.val_iden_docu_prin=1
+      AND MPR.OID_PROD(+) = sp.prod_oid_prod
+  AND GPR.VAL_OID(+) = sp.prod_oid_prod 
+  AND C.COD_CLIE = DIRECCION.COD_CLIE
+group by r.des_regi,
+          z.cod_zona,
+          c.cod_clie,
+          c.val_nom1,
+          c.val_nom2,
+          c.val_ape1,
+          c.val_ape2,
+          cpg.num_conc,
+          cpg.val_nomb,
+          t.cod_terr,
+          cpg.oid_para_gral,          
+          c.oid_clie,
+          sc.num_prem,
+          pgp.perd_oid_peri,
+          sc.fec_fact,
+          sc.perd_oid_peri,
+          p.oid_prod,
+          p.cod_sap,
+          puntaje_obt.punt_obte,
+          puntaje.punt_obte,
+          devoluciones.punt_obte,
+          retail.punt_obte,
+          sc.clie_oid_clie,       
+          mi.num_docu_iden,
+          MPR.COD_SAP , 
+          GPR.VAL_I18N,
+          DIRECCION.DIRECCION]]></queryString>
+
+	<field name="DES_REGI" class="java.lang.String"/>
+	<field name="COD_ZONA" class="java.lang.String"/>
+	<field name="COD_CLIE" class="java.lang.String"/>
+	<field name="NOMBRES" class="java.lang.String"/>
+	<field name="NUM_CONC" class="java.lang.String"/>
+	<field name="VAL_NOMB" class="java.lang.String"/>
+	<field name="COD_TERR" class="java.lang.String"/>
+	<field name="NUM_NIVE" class="java.lang.String"/>
+	<field name="COD_SAP" class="java.lang.String"/>
+	<field name="NUM_DOCU_IDEN" class="java.lang.String"/>
+	<field name="CIUDAD" class="java.lang.String"/>
+	<field name="TELEFONO" class="java.lang.String"/>
+	<field name="PUNTAJE_NIVEL" class="java.lang.String"/>
+	<field name="PUNTAJE_DESCONTADO" class="java.lang.String"/>
+	<field name="PUNTAJE_BONIFICADO" class="java.lang.String"/>
+	<field name="PUNTAJE_BELCENTER" class="java.lang.String"/>
+	<field name="PUNTAJE_VTA" class="java.lang.String"/>
+	<field name="TELEFONO_CELULAR" class="java.lang.String"/>
+	<field name="DIRECCION" class="java.lang.String"/>
+	<field name="PREMIO" class="java.lang.String"/>
+	<field name="ESTATUS_RECON" class="java.lang.String"/>
+
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="38"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="3"
+						width="66"
+						height="35"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-4"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCGanadorasConcursoForm.region}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="66"
+						y="3"
+						width="42"
+						height="35"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-5"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCGanadorasConcursoForm.zona}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="171"
+						y="3"
+						width="192"
+						height="35"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-7"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCGanadorasConcursoForm.consultora}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="523"
+						y="3"
+						width="33"
+						height="35"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-9"/>
+					<box leftPadding="2" rightPadding="2">					<pen lineWidth="0.0" lineStyle="Solid"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCGanadorasConcursoForm.nivel}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="108"
+						y="3"
+						width="63"
+						height="35"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-16"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCGanadorasConcursoForm.codigo}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="363"
+						y="3"
+						width="67"
+						height="35"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-22"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCGanadorasConcursoForm.numDocumento}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="430"
+						y="3"
+						width="93"
+						height="35"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-24"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCGanadorasConcursoForm.telefono}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="556"
+						y="3"
+						width="58"
+						height="35"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-25"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCGanadorasConcursoForm.puntajeNivel}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="614"
+						y="3"
+						width="58"
+						height="35"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-26"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCGanadorasConcursoForm.puntajeDescontado}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="672"
+						y="3"
+						width="58"
+						height="35"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-27"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCGanadorasConcursoForm.puntajeBonificado}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="730"
+						y="3"
+						width="58"
+						height="35"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-28"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCGanadorasConcursoForm.puntajeBelcenter}]]></textFieldExpression>
+				</textField>
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="16"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Transparent"
+						x="0"
+						y="0"
+						width="66"
+						height="16"
+						key="textField-18"
+						stretchType="RelativeToBandHeight"
+						positionType="Float"
+						isPrintInFirstWholeBand="true"/>
+					<box>					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica" size="7" isBold="false"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{DES_REGI}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Transparent"
+						x="66"
+						y="0"
+						width="42"
+						height="16"
+						key="textField-19"
+						stretchType="RelativeToBandHeight"
+						positionType="Float"
+						isPrintInFirstWholeBand="true"/>
+					<box>					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica" size="7" isBold="false"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_ZONA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Transparent"
+						x="108"
+						y="0"
+						width="63"
+						height="16"
+						key="textField-20"
+						stretchType="RelativeToBandHeight"
+						positionType="Float"
+						isPrintInFirstWholeBand="true"/>
+					<box>					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica" size="7" isBold="false"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_CLIE}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Transparent"
+						x="171"
+						y="0"
+						width="192"
+						height="16"
+						key="textField-21"
+						stretchType="RelativeToBandHeight"
+						positionType="Float"
+						isPrintInFirstWholeBand="true"/>
+					<box>					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica" size="7" isBold="false"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{NOMBRES}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Transparent"
+						x="523"
+						y="0"
+						width="33"
+						height="16"
+						key="textField-23"
+						stretchType="RelativeToBandHeight"
+						positionType="Float"
+						isPrintInFirstWholeBand="true"/>
+					<box>					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica" size="7" isBold="false"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{NUM_NIVE}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Transparent"
+						x="363"
+						y="0"
+						width="67"
+						height="16"
+						key="textField-29"
+						stretchType="RelativeToBandHeight"
+						positionType="Float"
+						isPrintInFirstWholeBand="true"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica" size="7" isBold="false"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{NUM_DOCU_IDEN}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Transparent"
+						x="430"
+						y="0"
+						width="93"
+						height="16"
+						key="textField-31"
+						stretchType="RelativeToBandHeight"
+						positionType="Float"
+						isPrintInFirstWholeBand="true"/>
+					<box>					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica" size="7" isBold="false"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{TELEFONO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Transparent"
+						x="556"
+						y="0"
+						width="58"
+						height="16"
+						key="textField-32"
+						stretchType="RelativeToBandHeight"
+						positionType="Float"
+						isPrintInFirstWholeBand="true"/>
+					<box>					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica" size="7" isBold="false"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{PUNTAJE_NIVEL}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Transparent"
+						x="614"
+						y="0"
+						width="58"
+						height="16"
+						key="textField-33"
+						stretchType="RelativeToBandHeight"
+						positionType="Float"
+						isPrintInFirstWholeBand="true"/>
+					<box>					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica" size="7" isBold="false"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{PUNTAJE_DESCONTADO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Transparent"
+						x="672"
+						y="0"
+						width="58"
+						height="16"
+						key="textField-34"
+						stretchType="RelativeToBandHeight"
+						positionType="Float"
+						isPrintInFirstWholeBand="true"/>
+					<box>					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica" size="7" isBold="false"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{PUNTAJE_BONIFICADO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Transparent"
+						x="730"
+						y="0"
+						width="58"
+						height="16"
+						key="textField-35"
+						stretchType="RelativeToBandHeight"
+						positionType="Float"
+						isPrintInFirstWholeBand="true"/>
+					<box>					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica" size="7" isBold="false"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{PUNTAJE_BELCENTER}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

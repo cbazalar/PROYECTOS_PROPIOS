@@ -1,0 +1,113 @@
+DROP MATERIALIZED VIEW SOA_MV_PRODU_COMER;
+CREATE MATERIALIZED VIEW SOA_MV_PRODU_COMER
+REFRESH FORCE ON DEMAND
+AS
+SELECT prod.cod_sap,
+       det.val_codi_vent,
+       PQ_APL_AUX.VALOR_GEN_I18N_SICC(1,prod.oid_prod, 'MAE_PRODU') des_prod,
+       mprod.cod_marc_prod,
+       pais.cod_pais,
+       imp_prec_cata / val_fact_repe val_prec_cata,
+       prod.val_prec_cont val_prec_valo,
+       det.ind_digi,
+       0 ind_prem,
+       peri.cod_peri,
+       CAST(SYS_EXTRACT_UTC(SYSTIMESTAMP) AS DATE) fec_utc_carga
+  FROM seg_pais              pais,
+       pre_matri_factu       matriz,
+       pre_ofert             pof,
+       pre_ofert_detal       det,
+       pre_tipo_ofert        ofer,
+       mae_produ             prod,
+       seg_marca_produ       mprod,
+       seg_perio_corpo       peri,
+       pre_matri_factu_cabec cab,
+       cra_perio             cp
+ WHERE pais.oid_pais = prod.pais_oid_pais
+   AND matriz.ofde_oid_deta_ofer = det.oid_deta_ofer
+   AND det.tofe_oid_tipo_ofer = ofer.oid_tipo_ofer
+   AND det.ofer_oid_ofer = pof.oid_ofer
+   AND det.prod_oid_prod = prod.oid_prod
+   AND prod.mapr_oid_marc_prod = mprod.oid_marc_prod
+   AND matriz.mfca_oid_cabe = cab.oid_cabe
+   AND det.val_codi_vent IS NOT NULL
+   AND cab.perd_oid_peri = cp.oid_peri
+   AND cp.peri_oid_peri = peri.oid_peri  
+UNION
+SELECT prod.cod_sap codprod,
+       cupo.cod_cupon codcupon,
+       PQ_APL_AUX.VALOR_GEN_I18N_SICC(1,prod.oid_prod, 'MAE_PRODU') des_prod,
+       mprod.cod_marc_prod,
+       pais.cod_pais codpais,
+       round(det.imp_prec_cata / det.val_fact_repe,
+             2) precprod,
+       prod.val_prec_cont,
+       1 ind_digi,
+       0 ind_prem,
+       peri.cod_peri,
+       CAST(SYS_EXTRACT_UTC(SYSTIMESTAMP) AS DATE) fec_utc_carga
+  FROM seg_pais              pais,
+       mae_produ             prod,
+       pre_matri_factu_cabec cab,
+       pre_matri_factu       matriz,
+       pre_ofert             pof,
+       pre_ofert_detal       det,
+       pre_tipo_ofert        ofer,
+       seg_marca_produ       mprod,
+       cup_equiv_matr        cupo,
+       seg_perio_corpo       peri,
+       cra_perio             cp
+ WHERE pais.oid_pais = prod.pais_oid_pais
+   AND matriz.ofde_oid_deta_ofer = det.oid_deta_ofer
+   AND det.tofe_oid_tipo_ofer = ofer.oid_tipo_ofer
+   AND det.ofer_oid_ofer = pof.oid_ofer
+   AND det.prod_oid_prod = prod.oid_prod
+   AND prod.mapr_oid_marc_prod = mprod.oid_marc_prod
+   AND cupo.cod_pais = pais.cod_pais
+   AND cupo.cod_peri = peri.cod_peri
+   AND cupo.cod_venta = det.val_codi_vent
+   AND matriz.mfca_oid_cabe = cab.oid_cabe
+   AND cab.perd_oid_peri = cp.oid_peri
+   AND cp.peri_oid_peri = peri.oid_peri
+   AND det.val_codi_vent IS NOT NULL
+UNION
+SELECT prod.cod_sap,
+       a.cod_vent_fict,
+       PQ_APL_AUX.VALOR_GEN_I18N_SICC(1,prod.oid_prod, 'MAE_PRODU') des_prod,
+       smp.cod_marc_prod,
+       pais.cod_pais,
+       0                 precprod,
+       a.imp_prec_publ,
+       1                 ind_digi,
+       1                 ind_prem,
+       spc.cod_peri,
+       CAST(SYS_EXTRACT_UTC(SYSTIMESTAMP) AS DATE) fec_utc_carga
+  FROM inc_artic_lote        a,
+       inc_lote_premi_artic  b,
+       inc_premi_artic       c,
+       inc_param_nivel_premi d,
+       inc_param_gener_premi e,
+       inc_concu_param_gener f,
+       seg_pais              pais,
+       mae_produ             prod,
+       seg_marca_produ       smp,
+       seg_perio_corpo       spc,
+       cra_perio             cp
+ WHERE a.lopa_oid_lote_prem_arti = b.oid_lote_prem_arti
+   AND a.prod_oid_prod = prod.oid_prod
+   AND prod.pais_oid_pais = pais.oid_pais
+   AND prod.mapr_oid_marc_prod = smp.oid_marc_prod
+   AND b.prar_oid_prem_arti = c.oid_prem_arti
+   AND c.panp_oid_para_nive_prem = d.oid_para_nive_prem
+   AND d.pagp_oid_para_gene_prem = e.oid_para_gene_prem
+   AND e.copa_oid_para_gral = f.oid_para_gral
+   AND f.ind_acti = 1
+   AND f.bcal_oid_base_calc IN (1,
+                                2)
+   AND length(a.cod_vent_fict) = 5
+   AND e.ind_prem_elec = 1
+   AND f.perd_oid_peri_desd <= cp.oid_peri
+   AND e.perd_oid_peri >= cp.oid_peri   
+   AND spc.oid_peri = cp.peri_oid_peri;
+
+

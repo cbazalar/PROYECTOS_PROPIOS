@@ -1,0 +1,834 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteMAEEstadisticoClienteTerritorioPDF"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Portrait"
+		 pageWidth="651"
+		 pageHeight="842"
+		 columnWidth="651"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 whenResourceMissingType="Empty">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="region" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("region")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoPeriodo" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPeriodo")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="zona" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("zona")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="seccion" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("seccion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="territorio" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("territorio")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[select activas.COD_REGI,
+       activas.COD_ZONA,
+       activas.cod_secc,
+       activas.cod_terr,
+       activas.Activas,
+       conmail.ConMail,
+       (case
+         when activas.Activas > 0 then
+          (conmail.ConMail / activas.Activas * 100)
+       end) porcmail,
+       cambioD.CambioDireccion,
+       (case
+         when activas.Activas > 0 then
+          (cambioD.CambioDireccion / activas.Activas * 100)
+       end) porcambiod,
+       contlf.ConTelefono,
+       (case
+         when activas.Activas > 0 then
+          (conTlf.ConTelefono / activas.Activas * 100)
+       end) porctlf
+  from ------------------------
+       ---ACTIVAS
+       ------------------------
+        (select ZON_REGIO.cod_REGI,
+                ZON_ZONA.cod_ZONA,
+                ZON_SECCI.cod_secc,
+                ZON_TERRI.cod_terr,
+                count(*) Activas
+           from MAE_CLIEN,
+                MAE_CLIEN_UNIDA_ADMIN,
+                ZON_TERRI_ADMIN,
+                ZON_TERRI,
+                ZON_SECCI,
+                ZON_ZONA,
+                ZON_REGIO
+          where MAE_CLIEN_UNIDA_ADMIN.CLIE_OID_CLIE = MAE_CLIEN.OID_CLIE
+            and MAE_CLIEN_UNIDA_ADMIN.ZTAD_OID_TERR_ADMI =
+                ZON_TERRI_ADMIN.OID_TERR_ADMI
+            and ZON_TERRI_ADMIN.TERR_OID_TERR = ZON_TERRI.OID_TERR
+            and ZON_TERRI_ADMIN.ZSCC_OID_SECC = ZON_SECCI.OID_SECC
+            and ZON_SECCI.ZZON_OID_ZONA = ZON_ZONA.OID_ZONA
+            and ZON_ZONA.ZORG_OID_REGI = ZON_REGIO.OID_REGI
+            AND ((MAE_CLIEN_UNIDA_ADMIN.PERD_OID_PERI_INI <= $P{codigoPeriodo} AND
+                MAE_CLIEN_UNIDA_ADMIN.PERD_OID_PERI_FIN >= $P{codigoPeriodo}) OR
+                (MAE_CLIEN_UNIDA_ADMIN.PERD_OID_PERI_INI <= $P{codigoPeriodo} AND
+                MAE_CLIEN_UNIDA_ADMIN.PERD_OID_PERI_FIN IS NULL))
+            and exists
+          (select null
+                   from MAE_CLIEN_HISTO_ESTAT histo, gen_i18n_sicc_comun ea
+                  where MAE_CLIEN.OID_CLIE = histo.clie_oid_clie
+                    and histo.ESTA_OID_ESTA_CLIE in (2, 3, 4, 6, 8)
+                    and (((histo.perd_oid_peri >= $P{codigoPeriodo}) and
+                        (histo.perd_oid_peri_peri_fin <= $P{codigoPeriodo})) or
+                        ((histo.perd_oid_peri <= $P{codigoPeriodo}) and
+                        (histo.perd_oid_peri_peri_fin is null)))
+                    and ea.attr_enti = 'MAE_ESTAT_CLIEN'
+                    and histo.ESTA_OID_ESTA_CLIE = ea.VAL_OID)
+            and exists
+          (select null
+                   from MAE_CLIEN_TIPO_SUBTI
+                  where MAE_CLIEN.OID_CLIE =
+                        MAE_CLIEN_TIPO_SUBTI.CLIE_OID_CLIE
+                    and MAE_CLIEN_TIPO_SUBTI.SBTI_OID_SUBT_CLIE in (1, 21)
+                    and MAE_CLIEN_TIPO_SUBTI.TICL_OID_TIPO_CLIE in (2))
+            $P!{region}
+            $P!{zona}
+            $P!{seccion}
+            $P!{territorio}
+          group by ZON_REGIO.cod_REGI,
+                   ZON_ZONA.cod_ZONA,
+                   ZON_SECCI.cod_secc,
+                   ZON_TERRI.cod_terr) activas,
+       ------------------------
+       ---CON MAIL
+       ------------------------
+       (select ZON_REGIO.cod_REGI,
+               ZON_ZONA.cod_ZONA,
+               ZON_SECCI.cod_secc,
+               ZON_TERRI.cod_terr,
+               count(*) ConMail
+          from MAE_CLIEN,
+               MAE_CLIEN_UNIDA_ADMIN,
+               ZON_TERRI_ADMIN,
+               ZON_TERRI,
+               ZON_SECCI,
+               ZON_ZONA,
+               ZON_REGIO,
+               mae_clien_comun mcc,
+               (select val_i18n, val_oid
+                  from gen_i18n_sicc_comun
+                 where attr_enti = 'MAE_TIPO_COMUN') co
+         where MAE_CLIEN_UNIDA_ADMIN.CLIE_OID_CLIE = MAE_CLIEN.OID_CLIE
+           and MAE_CLIEN_UNIDA_ADMIN.ZTAD_OID_TERR_ADMI =
+               ZON_TERRI_ADMIN.OID_TERR_ADMI
+           and ZON_TERRI_ADMIN.TERR_OID_TERR = ZON_TERRI.OID_TERR
+           and ZON_TERRI_ADMIN.ZSCC_OID_SECC = ZON_SECCI.OID_SECC
+           and ZON_SECCI.ZZON_OID_ZONA = ZON_ZONA.OID_ZONA
+           and ZON_ZONA.ZORG_OID_REGI = ZON_REGIO.OID_REGI
+           AND ((MAE_CLIEN_UNIDA_ADMIN.PERD_OID_PERI_INI <= $P{codigoPeriodo} AND
+               MAE_CLIEN_UNIDA_ADMIN.PERD_OID_PERI_FIN >= $P{codigoPeriodo}) OR
+               (MAE_CLIEN_UNIDA_ADMIN.PERD_OID_PERI_INI <= $P{codigoPeriodo} AND
+               MAE_CLIEN_UNIDA_ADMIN.PERD_OID_PERI_FIN IS NULL))
+           and exists
+         (select null
+                  from MAE_CLIEN_HISTO_ESTAT histo, gen_i18n_sicc_comun ea
+                 where MAE_CLIEN.OID_CLIE = histo.clie_oid_clie
+                   and histo.ESTA_OID_ESTA_CLIE in (2, 3, 4, 6, 8)
+                   and (((histo.perd_oid_peri >= $P{codigoPeriodo}) and
+                       (histo.perd_oid_peri_peri_fin <= $P{codigoPeriodo})) or
+                       ((histo.perd_oid_peri <= $P{codigoPeriodo}) and
+                       (histo.perd_oid_peri_peri_fin is null)))
+                   and ea.attr_enti = 'MAE_ESTAT_CLIEN'
+                   and histo.ESTA_OID_ESTA_CLIE = ea.VAL_OID)
+           and exists
+         (select null
+                  from MAE_CLIEN_TIPO_SUBTI
+                 where MAE_CLIEN.OID_CLIE =
+                       MAE_CLIEN_TIPO_SUBTI.CLIE_OID_CLIE
+                   and MAE_CLIEN_TIPO_SUBTI.SBTI_OID_SUBT_CLIE in (1, 21)
+                   and MAE_CLIEN_TIPO_SUBTI.TICL_OID_TIPO_CLIE in (2))
+           and MAE_CLIEN.OID_CLIE = mcc.clie_oid_clie
+           and mcc.ticm_oid_tipo_comu = co.VAL_OID
+           and mcc.ticm_oid_tipo_comu =
+               (select tc.oid_tipo_comu
+                  from mae_tipo_comun tc
+                 where tc.cod_tipo_comu = 'ML')
+           $P!{region}
+           $P!{zona}
+           $P!{seccion}
+           $P!{territorio}
+         group by ZON_REGIO.cod_REGI,
+                  ZON_ZONA.cod_ZONA,
+                  ZON_SECCI.cod_secc,
+                  ZON_TERRI.cod_terr) conmail,
+       ------------------------
+       ---CON TELEFONO
+       ------------------------
+       (select ZON_REGIO.cod_REGI,
+               ZON_ZONA.cod_ZONA,
+               ZON_SECCI.cod_secc,
+               ZON_TERRI.cod_terr,
+               count(distinct(MAE_CLIEN.OID_CLIE)) ConTelefono
+          from MAE_CLIEN,
+               MAE_CLIEN_UNIDA_ADMIN,
+               ZON_TERRI_ADMIN,
+               ZON_TERRI,
+               ZON_SECCI,
+               ZON_ZONA,
+               ZON_REGIO,
+               mae_clien_comun mcc,
+               (select val_i18n, val_oid
+                  from gen_i18n_sicc_comun
+                 where attr_enti = 'MAE_TIPO_COMUN') co
+         where MAE_CLIEN_UNIDA_ADMIN.CLIE_OID_CLIE = MAE_CLIEN.OID_CLIE
+           and MAE_CLIEN_UNIDA_ADMIN.ZTAD_OID_TERR_ADMI =
+               ZON_TERRI_ADMIN.OID_TERR_ADMI
+           and ZON_TERRI_ADMIN.TERR_OID_TERR = ZON_TERRI.OID_TERR
+           and ZON_TERRI_ADMIN.ZSCC_OID_SECC = ZON_SECCI.OID_SECC
+           and ZON_SECCI.ZZON_OID_ZONA = ZON_ZONA.OID_ZONA
+           and ZON_ZONA.ZORG_OID_REGI = ZON_REGIO.OID_REGI
+           AND ((MAE_CLIEN_UNIDA_ADMIN.PERD_OID_PERI_INI <= $P{codigoPeriodo} AND
+               MAE_CLIEN_UNIDA_ADMIN.PERD_OID_PERI_FIN >= $P{codigoPeriodo}) OR
+               (MAE_CLIEN_UNIDA_ADMIN.PERD_OID_PERI_INI <= $P{codigoPeriodo} AND
+               MAE_CLIEN_UNIDA_ADMIN.PERD_OID_PERI_FIN IS NULL))
+           and exists
+         (select null
+                  from MAE_CLIEN_HISTO_ESTAT histo, gen_i18n_sicc_comun ea
+                 where MAE_CLIEN.OID_CLIE = histo.clie_oid_clie
+                   and histo.ESTA_OID_ESTA_CLIE in (2, 3, 4, 6, 8)
+                   and (((histo.perd_oid_peri >= $P{codigoPeriodo}) and
+                       (histo.perd_oid_peri_peri_fin <= $P{codigoPeriodo})) or
+                       ((histo.perd_oid_peri <= $P{codigoPeriodo}) and
+                       (histo.perd_oid_peri_peri_fin is null)))
+                   and ea.attr_enti = 'MAE_ESTAT_CLIEN'
+                   and histo.ESTA_OID_ESTA_CLIE = ea.VAL_OID)
+           and exists
+         (select null
+                  from MAE_CLIEN_TIPO_SUBTI
+                 where MAE_CLIEN.OID_CLIE =
+                       MAE_CLIEN_TIPO_SUBTI.CLIE_OID_CLIE
+                   and MAE_CLIEN_TIPO_SUBTI.SBTI_OID_SUBT_CLIE in (1, 21)
+                   and MAE_CLIEN_TIPO_SUBTI.TICL_OID_TIPO_CLIE in (2))
+           and MAE_CLIEN.OID_CLIE = mcc.clie_oid_clie
+           and mcc.ticm_oid_tipo_comu = co.VAL_OID
+           and mcc.ticm_oid_tipo_comu in
+               (select tc.oid_tipo_comu
+                  from mae_tipo_comun tc
+                 where tc.cod_tipo_comu in ('TF', 'TM', 'TT'))
+           $P!{region}
+           $P!{zona}
+           $P!{seccion}
+           $P!{territorio}
+         group by ZON_REGIO.cod_REGI,
+                  ZON_ZONA.cod_ZONA,
+                  ZON_SECCI.cod_secc,
+                  ZON_TERRI.cod_terr) contlf,
+       ------------------------
+       ---CON CAMMBIO DE DIRECC
+       ------------------------
+       (select ZON_REGIO.cod_REGI,
+               ZON_ZONA.cod_ZONA,
+               ZON_SECCI.cod_secc,
+               ZON_TERRI.cod_terr,
+               count(*) CambioDireccion
+          from MAE_CLIEN,
+               MAE_CLIEN_UNIDA_ADMIN,
+               ZON_TERRI_ADMIN,
+               ZON_TERRI,
+               ZON_SECCI,
+               ZON_ZONA,
+               ZON_REGIO,
+               mae_clien_direc dir,
+               (select oid_peri, fec_inic, fec_fina
+                  from cra_perio
+                 where oid_peri = $P{codigoPeriodo}) cra
+         where MAE_CLIEN_UNIDA_ADMIN.CLIE_OID_CLIE = MAE_CLIEN.OID_CLIE
+           and MAE_CLIEN_UNIDA_ADMIN.ZTAD_OID_TERR_ADMI =
+               ZON_TERRI_ADMIN.OID_TERR_ADMI
+           and ZON_TERRI_ADMIN.TERR_OID_TERR = ZON_TERRI.OID_TERR
+           and ZON_TERRI_ADMIN.ZSCC_OID_SECC = ZON_SECCI.OID_SECC
+           and ZON_SECCI.ZZON_OID_ZONA = ZON_ZONA.OID_ZONA
+           and ZON_ZONA.ZORG_OID_REGI = ZON_REGIO.OID_REGI
+           AND ((MAE_CLIEN_UNIDA_ADMIN.PERD_OID_PERI_INI <= $P{codigoPeriodo} AND
+               MAE_CLIEN_UNIDA_ADMIN.PERD_OID_PERI_FIN >= $P{codigoPeriodo}) OR
+               (MAE_CLIEN_UNIDA_ADMIN.PERD_OID_PERI_INI <= $P{codigoPeriodo} AND
+               MAE_CLIEN_UNIDA_ADMIN.PERD_OID_PERI_FIN IS NULL))
+           and exists
+         (select null
+                  from MAE_CLIEN_HISTO_ESTAT histo, gen_i18n_sicc_comun ea
+                 where MAE_CLIEN.OID_CLIE = histo.clie_oid_clie
+                   and histo.ESTA_OID_ESTA_CLIE in (2, 3, 4, 6, 8)
+                   and (((histo.perd_oid_peri >= $P{codigoPeriodo}) and
+                       (histo.perd_oid_peri_peri_fin <= $P{codigoPeriodo})) or
+                       ((histo.perd_oid_peri <= $P{codigoPeriodo}) and
+                       (histo.perd_oid_peri_peri_fin is null)))
+                   and ea.attr_enti = 'MAE_ESTAT_CLIEN'
+                   and histo.ESTA_OID_ESTA_CLIE = ea.VAL_OID)
+           and exists
+         (select null
+                  from MAE_CLIEN_TIPO_SUBTI
+                 where MAE_CLIEN.OID_CLIE =
+                       MAE_CLIEN_TIPO_SUBTI.CLIE_OID_CLIE
+                   and MAE_CLIEN_TIPO_SUBTI.SBTI_OID_SUBT_CLIE in (1, 21)
+                   and MAE_CLIEN_TIPO_SUBTI.TICL_OID_TIPO_CLIE in (2))
+           and MAE_CLIEN.OID_CLIE = dir.clie_oid_clie
+           and dir.ind_elim = 0
+           and dir.ind_dire_ppal = 1
+           and ((TRUNC(to_date(dir.fec_ulti_actu)) >= to_date(cra.fec_inic)) and
+               (TRUNC(to_date(dir.fec_ulti_actu)) <= to_date(cra.fec_fina)))
+           $P!{region}
+           $P!{zona}
+           $P!{seccion}
+           $P!{territorio}
+         group by ZON_REGIO.cod_REGI,
+                  ZON_ZONA.cod_ZONA,
+                  ZON_SECCI.cod_secc,
+                  ZON_TERRI.cod_terr) cambioD
+ where
+-----
+ activas.cod_regi = conmail.cod_regi(+)
+ and activas.cod_zona = conmail.cod_zona(+)
+ and activas.cod_secc = conmail.cod_secc(+)
+ and activas.cod_terr = conmail.cod_terr(+)
+------
+ and activas.cod_regi = contlf.cod_regi(+)
+ and activas.cod_zona = contlf.cod_zona(+)
+ and activas.cod_secc = contlf.cod_secc(+)
+ and activas.cod_terr = contlf.cod_terr(+)
+-----
+ and activas.cod_regi = cambioD.cod_regi(+)
+ and activas.cod_zona = cambioD.cod_zona(+)
+ and activas.cod_secc = cambioD.cod_secc(+)
+ and activas.cod_terr = cambioD.cod_terr(+)
+----
+ order by activas.cod_regi,
+          activas.cod_zona,
+          activas.cod_secc,
+          activas.cod_terr]]></queryString>
+
+	<field name="COD_REGI" class="java.lang.String"/>
+	<field name="ACTIVAS" class="java.math.BigDecimal"/>
+	<field name="CONMAIL" class="java.math.BigDecimal"/>
+	<field name="PORCMAIL" class="java.math.BigDecimal"/>
+	<field name="CAMBIODIRECCION" class="java.math.BigDecimal"/>
+	<field name="PORCAMBIOD" class="java.math.BigDecimal"/>
+	<field name="CONTELEFONO" class="java.math.BigDecimal"/>
+	<field name="PORCTLF" class="java.math.BigDecimal"/>
+	<field name="COD_ZONA" class="java.lang.String"/>
+	<field name="COD_SECC" class="java.lang.String"/>
+	<field name="COD_TERR" class="java.lang.String"/>
+
+		<background>
+			<band height="23"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="38"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="237"
+						y="0"
+						width="59"
+						height="38"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Trebuchet MS" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteMAEEstadisticoClienteForm.activas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="296"
+						y="0"
+						width="118"
+						height="17"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-91"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Trebuchet MS" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteMAEEstadisticoClienteForm.conMail}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="414"
+						y="0"
+						width="118"
+						height="17"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-92"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Trebuchet MS" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteMAEEstadisticoClienteForm.cambioDireccion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="532"
+						y="0"
+						width="118"
+						height="17"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-93"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Trebuchet MS" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteMAEEstadisticoClienteForm.ConTelefono}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1"
+						y="0"
+						width="59"
+						height="38"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-94"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Trebuchet MS" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteMAEEstadisticoClienteForm.codRegi}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="296"
+						y="17"
+						width="59"
+						height="21"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-95"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Trebuchet MS" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteMAEEstadisticoClienteForm.cantidad}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="414"
+						y="17"
+						width="59"
+						height="21"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-96"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Trebuchet MS" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteMAEEstadisticoClienteForm.cantidad}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="532"
+						y="17"
+						width="59"
+						height="21"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-97"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Trebuchet MS" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteMAEEstadisticoClienteForm.cantidad}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="355"
+						y="17"
+						width="59"
+						height="21"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-98"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Trebuchet MS" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteMAEEstadisticoClienteForm.porc}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="473"
+						y="17"
+						width="59"
+						height="21"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-99"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Trebuchet MS" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteMAEEstadisticoClienteForm.porc}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="591"
+						y="17"
+						width="59"
+						height="21"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-100"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Trebuchet MS" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteMAEEstadisticoClienteForm.porc}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="60"
+						y="0"
+						width="59"
+						height="38"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-101"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Trebuchet MS" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteMAEEstadisticoClienteForm.codZona}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="119"
+						y="0"
+						width="59"
+						height="38"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-102"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Trebuchet MS" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteMAEEstadisticoClienteForm.codSecc}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="178"
+						y="0"
+						width="59"
+						height="38"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-103"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Trebuchet MS" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteMAEEstadisticoClienteForm.codTerr}]]></textFieldExpression>
+				</textField>
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="15"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="2"
+						y="0"
+						width="59"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement>
+						<font fontName="Verdana" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_REGI}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="238"
+						y="0"
+						width="59"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement textAlignment="Right">
+						<font fontName="Verdana" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{ACTIVAS}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="297"
+						y="0"
+						width="59"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement textAlignment="Right">
+						<font fontName="Verdana" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{CONMAIL}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="###0.00;-###0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="356"
+						y="0"
+						width="59"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement textAlignment="Right">
+						<font fontName="Verdana" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{PORCMAIL}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="415"
+						y="0"
+						width="59"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement textAlignment="Right">
+						<font fontName="Verdana" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{CAMBIODIRECCION}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="###0.00;-###0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="474"
+						y="0"
+						width="59"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement textAlignment="Right">
+						<font fontName="Verdana" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{PORCAMBIOD}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="533"
+						y="0"
+						width="59"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement textAlignment="Right">
+						<font fontName="Verdana" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{CONTELEFONO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="###0.00;-###0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="592"
+						y="0"
+						width="59"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement textAlignment="Right">
+						<font fontName="Verdana" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{PORCTLF}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="61"
+						y="0"
+						width="59"
+						height="15"
+						key="textField-7"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement>
+						<font fontName="Verdana" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_ZONA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="120"
+						y="0"
+						width="59"
+						height="15"
+						key="textField-10"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement>
+						<font fontName="Verdana" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_SECC}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="179"
+						y="0"
+						width="59"
+						height="15"
+						key="textField-13"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+					<bottomPen lineWidth="0.0" lineColor="#CCCCCC"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#CCCCCC"/>
+</box>
+					<textElement>
+						<font fontName="Verdana" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_TERR}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

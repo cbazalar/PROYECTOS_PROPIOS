@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteCOMComisionPagoEjecutivasSuspendidas"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Portrait"
+		 pageWidth="676"
+		 pageHeight="842"
+		 columnWidth="676"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 whenResourceMissingType="Empty"
+		 isIgnorePagination="true">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="codigoPais" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPais")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoComision" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoComision")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoPeriodo" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPeriodo")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="comisionIngresos" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("comisionIngresos")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[SELECT ML.COD_PROV AS PROVEEDOR, 
+             MC.VAL_NOM1||' '||MC.VAL_NOM2||','||MC.VAL_APE1||' '|| MC.VAL_APE2 AS NOMBRE, 
+             COM_PKG_REPOR.COM_FN_DEVUE_MONTO_COMIS($P{codigoPais},$P{codigoComision},CLIENTES.COD_CLIE,$P{codigoPeriodo}) AS IMPORTE,
+             ML.NUM_LIAH AS NUMEROCUENTA,
+             COM_PKG_REPOR.COM_FN_DEVUE_COMIS_INGRE_EJECU(CLIENTES.COD_PERI,CLIENTES.COD_CLIE,$P{comisionIngresos})+COM_PKG_REPOR.COM_FN_DEVUE_MONTO_COMIS($P{codigoPais},$P{codigoComision},CLIENTES.COD_CLIE,$P{codigoPeriodo}) as IMPORTETOTAL
+      FROM 
+           MAE_CLIEN_LIDER ML,
+           MAE_CLIEN MC,
+             (select PC.COD_LIDE_SECC COD_CLIE,PC.PERI_COD_PERI COD_PERI from COM_COMIS_PERIO_CALCU PC
+               where PC.PERI_COD_PERI = $P{codigoPeriodo}
+                 and PC.COD_COMI =  $P{comisionIngresos}
+              union 
+              select CM.COD_EJEC COD_CLIE,CM.COD_CAMP COD_PERI from COM_COMIS_EJCAL_CABEC CM
+               where CM.COD_PAIS = $P{codigoPais}
+                 AND CM.COD_CAMP = $P{codigoPeriodo}
+                 AND CM.COD_COMI = $P{codigoComision}
+                 ) CLIENTES
+      WHERE ML.PAIS_COD_PAIS=$P{codigoPais}
+            AND MC.COD_CLIE = ML.COD_CLID
+            AND CLIENTES.COD_CLIE = ML.COD_CLID
+            AND EXISTS (
+              SELECT 1
+                FROM MAE_CLIEN_LIDER_BLOQU LB
+                WHERE LB.COD_CLIB = CLIENTES.COD_CLIE
+                 AND LB.PAIS_COD_PAIS = $P{codigoPais}
+                AND LB.PER_INIC  <= CLIENTES.COD_PERI AND 
+                 ( LB.PER_FINA >= CLIENTES.COD_PERI OR LB.PER_FINA IS NULL )
+                 )
+            AND COM_PKG_REPOR.COM_FN_DEVUE_COMIS_INGRE_EJECU(CLIENTES.COD_PERI,CLIENTES.COD_CLIE,$P{comisionIngresos})+COM_PKG_REPOR.COM_FN_DEVUE_MONTO_COMIS($P{codigoPais},$P{codigoComision},CLIENTES.COD_CLIE,$P{codigoPeriodo}) > 0
+      ORDER BY ML.COD_PROV]]></queryString>
+
+	<field name="PROVEEDOR" class="java.lang.String"/>
+	<field name="NOMBRE" class="java.lang.String"/>
+	<field name="IMPORTE" class="java.math.BigDecimal"/>
+	<field name="NUMEROCUENTA" class="java.lang.String"/>
+	<field name="IMPORTETOTAL" class="java.math.BigDecimal"/>
+
+	<variable name="SUM_IMPORTE_1" class="java.math.BigDecimal" resetType="Page" calculation="Sum">
+		<variableExpression><![CDATA[$F{IMPORTE}]]></variableExpression>
+	</variable>
+	<variable name="SUM_IMPORTE_2" class="java.math.BigDecimal" resetType="Page" calculation="Sum">
+		<variableExpression><![CDATA[$F{IMPORTE}]]></variableExpression>
+	</variable>
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="12"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1"
+						y="0"
+						width="97"
+						height="12"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-1"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#666666"/>
+					<bottomPen lineWidth="0.0" lineColor="#666666"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="9" isBold="true" isItalic="false" isUnderline="false" isPdfEmbedded ="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOMComisionPagoEjecutivasSuspendidasForm.codProveedor}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="99"
+						y="0"
+						width="180"
+						height="12"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-2"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#666666"/>
+					<bottomPen lineWidth="0.0" lineColor="#666666"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="9" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOMComisionPagoEjecutivasSuspendidasForm.nomApellidos}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="279"
+						y="0"
+						width="120"
+						height="12"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-3"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#666666"/>
+					<bottomPen lineWidth="0.0" lineColor="#666666"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="9" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOMComisionPagoEjecutivasSuspendidasForm.importe}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="399"
+						y="0"
+						width="135"
+						height="12"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-4"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#666666"/>
+					<bottomPen lineWidth="0.0" lineColor="#666666"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#666666"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="9" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOMComisionPagoEjecutivasSuspendidasForm.numCuenta}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="534"
+						y="0"
+						width="135"
+						height="12"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-6"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#666666"/>
+					<bottomPen lineWidth="0.0" lineColor="#666666"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#666666"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="9" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOMComisionPagoEjecutivasSuspendidasForm.importeTotal}]]></textFieldExpression>
+				</textField>
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="12"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="97"
+						height="12"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+					<bottomPen lineWidth="0.0" lineColor="#666666"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="SansSerif" size="9"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{PROVEEDOR}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="97"
+						y="0"
+						width="182"
+						height="12"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+					<bottomPen lineWidth="0.0" lineColor="#666666"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+</box>
+					<textElement textAlignment="Left">
+						<font fontName="SansSerif" size="9"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{NOMBRE}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="279"
+						y="0"
+						width="120"
+						height="12"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+					<bottomPen lineWidth="0.0" lineColor="#666666"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="SansSerif" size="9"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{IMPORTE}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="399"
+						y="0"
+						width="135"
+						height="12"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+					<bottomPen lineWidth="0.0" lineColor="#666666"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="SansSerif" size="9"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{NUMEROCUENTA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="#,##0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="534"
+						y="0"
+						width="135"
+						height="12"
+						key="textField-7"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+					<bottomPen lineWidth="0.0" lineColor="#666666"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="SansSerif" size="9"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{IMPORTETOTAL}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="14"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="279"
+						y="2"
+						width="120"
+						height="12"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SUM_IMPORTE_2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="197"
+						y="1"
+						width="81"
+						height="12"
+						forecolor="#000000"
+						backcolor="#FFFFFF"
+						key="textField-5"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCOMComisionPagoEjecutivasForm.total}]]></textFieldExpression>
+				</textField>
+				<line direction="TopDown">
+					<reportElement
+						x="279"
+						y="1"
+						width="119"
+						height="0"
+						key="line-1"/>
+					<graphicElement stretchType="NoStretch"/>
+				</line>
+			</band>
+		</summary>
+</jasperReport>

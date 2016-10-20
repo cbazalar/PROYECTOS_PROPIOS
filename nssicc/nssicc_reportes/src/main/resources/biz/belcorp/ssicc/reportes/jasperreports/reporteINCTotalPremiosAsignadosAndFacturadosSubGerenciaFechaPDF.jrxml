@@ -1,0 +1,594 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteINCTotalPremiosAsignadosAndFacturadosSubGerenciaFechaPDF"
+		 columnCount="1"
+		 printOrder="Horizontal"
+		 orientation="Portrait"
+		 pageWidth="765"
+		 pageHeight="842"
+		 columnWidth="765"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 whenResourceMissingType="Empty">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="oidPeriodo" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("oidPeriodo")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicion" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaInicioFacturacion" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaInicioFacturacion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaFinFacturacion" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaFinFacturacion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoPeriodo" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPeriodo")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[SELECT 
+    t.concurso Concurso,
+    t.nombre_concurso Nombre_Concurso,
+    t.cod_subg_vent,
+    t.fechaDespacho Fecha, 
+    t.fechaAsignacion ,        
+    t.nivel nivel, 
+    t.nro_premio nro_premio, 
+    t.tipo_soli,
+    t.cod_sap,
+    SUM(t.num_unid_dema_real) num_unid_dema_real,
+    SUM(t.num_unid_aten) num_unid_aten,
+    SUM(t.num_unid_falt) num_unid_falt    
+FROM
+( 
+SELECT 
+    d.num_conc Concurso,
+    d.val_nomb Nombre_Concurso,
+       CASE 
+        WHEN ( ts.cod_tipo_soli in ('SINC', 'SING', 'SIPC', 'SICP') ) 
+          THEN a.fec_fact
+        WHEN ( ts.cod_tipo_soli in ('SIFC', 'SIFG') ) 
+          THEN (select min(sc.fec_fact)
+                from inc_bolsa_falta bf, 
+                 ped_solic_cabec sc,
+                 ped_solic_posic sp
+                where bf.fec_solu is not null
+                and bf.sopo_oid_soli_posi = sp.oid_soli_posi 
+                and sp.soca_oid_soli_cabe = sc.oid_soli_cabe
+                and sc.clie_oid_clie = a.clie_oid_clie 
+                and sc.copa_oid_para_gene = a.copa_oid_para_gene
+                and sc.num_prem = a.num_prem)
+        ELSE (select sc2.fec_fact
+              from ped_solic_cabec sc,
+                ped_solic_cabec sc2
+              where sc.oid_soli_cabe = a.oid_soli_cabe 
+               and sc.soca_oid_docu_refe = sc2.oid_soli_cabe)
+        END FechaAsignacion,
+       CASE WHEN (SUM(PSP.NUM_UNID_ATEN)-SUM(PSP.NUM_UNID_DEMA_REAL)= 0) 
+        THEN a.fec_fact 
+        ELSE null
+        END FechaDespacho,
+    zsgv.cod_subg_vent,   
+    f.num_nive nivel, 
+    a.num_prem nro_premio, 
+    gen_pkg_gener.GEN_FN_DEVUE_DESCR_TIPOS_SOLIC( a.tspa_oid_tipo_soli_pais ) as tipo_soli,
+    mp.cod_sap,
+    SUM(psp.num_unid_dema_real) num_unid_dema_real,
+    SUM(psp.num_unid_aten) num_unid_aten,
+    SUM(num_unid_dema_real - num_unid_aten) num_unid_falt    
+FROM
+    ped_solic_cabec a, 
+    zon_zona b,
+    zon_regio c,
+    inc_concu_param_gener d,
+    inc_param_gener_premi e,
+    inc_param_nivel_premi f,
+    inc_premi_artic g,
+    inc_lote_premi_artic h,
+    ped_solic_posic       psp,
+    mae_produ             mp,
+    zon_sub_geren_venta   zsgv, 
+    ped_tipo_solic_pais  tsp,
+    ped_tipo_solic       ts
+WHERE 
+    a.copa_oid_para_gene = d.oid_para_gral
+AND a.copa_oid_para_gene = e.copa_oid_para_gral 
+AND e.oid_para_gene_prem = f.pagp_oid_para_gene_prem
+AND f.oid_para_nive_prem = g.panp_oid_para_nive_prem 
+AND g.oid_prem_arti = h.prar_oid_prem_arti
+AND a.zzon_oid_zona = b.oid_zona
+AND b.zorg_oid_regi = c.oid_regi   
+AND C.zsgv_oid_subg_vent = zsgv.oid_subg_vent    
+AND a.num_prem = h.num_prem 
+AND a.perd_oid_peri = $P{oidPeriodo}
+AND a.fec_fact is not null
+AND a.grpr_oid_grup_proc = 5
+AND a.fec_fact >= decode($P{fechaInicioFacturacion}, '',a.fec_fact, null,a.fec_fact,TO_DATE ($P{fechaInicioFacturacion}, 'dd/MM/yyyy'))
+AND a.fec_fact <= decode($P{fechaFinFacturacion}, '',a.fec_fact, null,a.fec_fact,TO_DATE ($P{fechaFinFacturacion}, 'dd/MM/yyyy'))      
+AND a.oid_soli_cabe = psp.soca_oid_soli_cabe
+AND psp.prod_oid_prod = mp.oid_prod
+AND a.tspa_oid_tipo_soli_pais = tsp.oid_tipo_soli_pais
+AND tsp.tsol_oid_tipo_soli = ts.oid_tipo_soli
+$P!{condicion}   
+GROUP BY 
+    a.oid_soli_cabe,
+    a.copa_oid_para_gene,
+    a.fec_fact,
+    a.clie_oid_clie,
+    d.num_conc,
+    d.val_nomb, 
+    zsgv.cod_subg_vent, 
+    f.num_nive, 
+    a.num_prem,
+    a.tspa_oid_tipo_soli_pais,
+    ts.cod_tipo_soli,
+    mp.cod_sap
+) t
+GROUP BY
+    t.concurso
+    ,t.nombre_concurso
+    ,t.fechaAsignacion
+    ,t.fechaDespacho
+    ,t.cod_subg_vent
+    ,t.nivel 
+    ,t.nro_premio 
+    ,t.tipo_soli
+    ,t.cod_sap
+order by 
+    1, 3, 4, 5, 6, 7]]></queryString>
+
+	<field name="CONCURSO" class="java.lang.String"/>
+	<field name="NOMBRE_CONCURSO" class="java.lang.String"/>
+	<field name="FECHA" class="java.sql.Timestamp"/>
+	<field name="NIVEL" class="java.math.BigDecimal"/>
+	<field name="NRO_PREMIO" class="java.math.BigDecimal"/>
+	<field name="COD_SAP" class="java.lang.String"/>
+	<field name="TIPO_SOLI" class="java.lang.String"/>
+	<field name="NUM_UNID_DEMA_REAL" class="java.lang.Integer"/>
+	<field name="NUM_UNID_ATEN" class="java.lang.Integer"/>
+	<field name="NUM_UNID_FALT" class="java.lang.Integer"/>
+	<field name="COD_SUBG_VENT" class="java.lang.String"/>
+	<field name="FECHAASIGNACION" class="java.sql.Timestamp"/>
+
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="1"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="45"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="21"
+						width="35"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Top" rotation="None" lineSpacing="Single">
+						<font  pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCTotalPremiosFacturadosForm.concurso}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="35"
+						y="21"
+						width="200"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Top" rotation="None" lineSpacing="Single">
+						<font  pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCTotalPremiosFacturadosForm.nomConcurso}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="294"
+						y="21"
+						width="50"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Top" rotation="None" lineSpacing="Single">
+						<font  pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCTotalPremiosFacturadosForm.fechaAsignacion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="394"
+						y="21"
+						width="37"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Top" rotation="None" lineSpacing="Single">
+						<font  pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCTotalPremiosFacturadosForm.nivel}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="431"
+						y="21"
+						width="43"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Top" rotation="None" lineSpacing="Single">
+						<font  pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCTotalPremiosFacturadosForm.premio}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="594"
+						y="21"
+						width="45"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Top" rotation="None" lineSpacing="Single">
+						<font  pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCTotalPremiosFacturadosForm.codigoSap}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="474"
+						y="21"
+						width="120"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-91"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Top" rotation="None" lineSpacing="Single">
+						<font  pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCTotalPremiosFacturadosForm.tipoSolicitud}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="639"
+						y="21"
+						width="40"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-92"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Top" rotation="None" lineSpacing="Single">
+						<font  pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCTotalPremiosFacturadosForm.numUnidDemandaReal}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="679"
+						y="21"
+						width="40"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-93"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Top" rotation="None" lineSpacing="Single">
+						<font  pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCTotalPremiosFacturadosForm.numUnidAtendidas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="719"
+						y="21"
+						width="40"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-94"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Top" rotation="None" lineSpacing="Single">
+						<font  pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCTotalPremiosFacturadosForm.numUnidFaltantes}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="235"
+						y="21"
+						width="59"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-95"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Top" rotation="None" lineSpacing="Single">
+						<font  pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCTotalPremiosFacturadosForm.cod_subG_vent}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="23"
+						y="6"
+						width="55"
+						height="12"
+						key="textField-5"/>
+					<box></box>
+					<textElement verticalAlignment="Top" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCTotalPremiosFacturadosForm.periodo}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="78"
+						y="6"
+						width="100"
+						height="12"
+						key="textField-6"/>
+					<box></box>
+					<textElement lineSpacing="Single">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$P{codigoPeriodo}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="344"
+						y="21"
+						width="50"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-96"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Top" rotation="None" lineSpacing="Single">
+						<font  pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteINCTotalPremiosFacturadosForm.fecha}]]></textFieldExpression>
+				</textField>
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="12"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="35"
+						height="12"
+						forecolor="#000000"
+						key="textField"
+						stretchType="RelativeToBandHeight"/>
+					<box></box>
+					<textElement textAlignment="Center" lineSpacing="Single">
+						<font fontName="Times New Roman" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{CONCURSO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="35"
+						y="0"
+						width="200"
+						height="12"
+						forecolor="#000000"
+						key="textField"
+						stretchType="RelativeToBandHeight"/>
+					<box></box>
+					<textElement lineSpacing="Single">
+						<font fontName="Times New Roman" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{NOMBRE_CONCURSO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="dd/MM/yyyy" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="294"
+						y="0"
+						width="50"
+						height="12"
+						forecolor="#000000"
+						key="textField"
+						stretchType="RelativeToBandHeight"/>
+					<box></box>
+					<textElement lineSpacing="Single">
+						<font fontName="Times New Roman" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.sql.Timestamp"><![CDATA[$F{FECHAASIGNACION}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="394"
+						y="0"
+						width="37"
+						height="12"
+						forecolor="#000000"
+						key="textField"
+						stretchType="RelativeToBandHeight"/>
+					<box></box>
+					<textElement textAlignment="Center" lineSpacing="Single">
+						<font fontName="Times New Roman" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{NIVEL}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="431"
+						y="0"
+						width="43"
+						height="12"
+						forecolor="#000000"
+						key="textField"
+						stretchType="RelativeToBandHeight"/>
+					<box></box>
+					<textElement textAlignment="Right" lineSpacing="Single">
+						<font fontName="Times New Roman" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{NRO_PREMIO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="474"
+						y="0"
+						width="120"
+						height="12"
+						forecolor="#000000"
+						key="textField-1"
+						stretchType="RelativeToBandHeight"/>
+					<box></box>
+					<textElement textAlignment="Left" lineSpacing="Single">
+						<font fontName="Times New Roman" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{TIPO_SOLI}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="594"
+						y="0"
+						width="45"
+						height="12"
+						key="textField"
+						stretchType="RelativeToTallestObject"/>
+					<box></box>
+					<textElement textAlignment="Left">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_SAP}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="639"
+						y="0"
+						width="40"
+						height="12"
+						key="textField"
+						stretchType="RelativeToTallestObject"/>
+					<box></box>
+					<textElement textAlignment="Center">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Integer"><![CDATA[$F{NUM_UNID_DEMA_REAL}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="679"
+						y="0"
+						width="40"
+						height="12"
+						key="textField-2"
+						stretchType="RelativeToTallestObject"/>
+					<box></box>
+					<textElement textAlignment="Center">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Integer"><![CDATA[$F{NUM_UNID_ATEN}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="719"
+						y="0"
+						width="40"
+						height="12"
+						key="textField-3"
+						stretchType="RelativeToTallestObject"/>
+					<box></box>
+					<textElement textAlignment="Center">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Integer"><![CDATA[$F{NUM_UNID_FALT}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="235"
+						y="0"
+						width="59"
+						height="12"
+						forecolor="#000000"
+						key="textField-4"
+						stretchType="RelativeToBandHeight"/>
+					<box></box>
+					<textElement textAlignment="Center" lineSpacing="Single">
+						<font fontName="Times New Roman" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_SUBG_VENT}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="dd/MM/yyyy" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="344"
+						y="0"
+						width="50"
+						height="12"
+						forecolor="#000000"
+						key="textField-7"
+						stretchType="RelativeToBandHeight"/>
+					<box></box>
+					<textElement lineSpacing="Single">
+						<font fontName="Times New Roman" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.sql.Timestamp"><![CDATA[$F{FECHA}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

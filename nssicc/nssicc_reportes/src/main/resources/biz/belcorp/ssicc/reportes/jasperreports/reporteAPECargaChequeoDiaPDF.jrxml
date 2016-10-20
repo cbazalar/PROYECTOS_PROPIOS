@@ -1,0 +1,445 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteAPECargaChequeoDiaPDF"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Landscape"
+		 pageWidth="1000"
+		 pageHeight="1133"
+		 columnWidth="1000"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="NoPages"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="fechaFacturacion" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaFacturacion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoZona" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoZona")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoLinea" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoLinea")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="centro" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoCentro")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[SELECT 
+LISTACAB.ZZON_OID_ZONA ZONA,LISTACAB.LIAR_OID_LINE_ARMA LINEA,
+LISTACAB.CCDI_OID_CONF_CENT_DIST,
+(SELECT 
+         COUNT(LPC.OID_LIST_PICA_CABE) 
+      FROM 
+	      APE_LISTA_PICAD_CABEC LPC 
+      WHERE LPC.FEC_FACTU=to_date($P{fechaFacturacion},'dd/mm/yyyy')
+	  AND LPC.INRE_OID_INDI_REVI IS NOT NULL ) PEDIDOSCH,
+(SELECT 
+         COUNT(LPC.OID_LIST_PICA_CABE) 
+      FROM 
+	      APE_LISTA_PICAD_CABEC LPC 
+      WHERE LPC.FEC_FACTU=to_date($P{fechaFacturacion},'dd/mm/yyyy')) EMBALAR,
+SUM(DETALLE.NUM_UNID_PROD) UNIDADESCH,
+SUM(DETALLE.NUM_UNID_PROD) UNIDADESCHPER,
+(SELECT PARAM.NUM_PEDI_HORA_ARMA FROM APE_PARAM_BALAN_AREA_CHEQU PARAM WHERE PARAM.LIAR_OID_LINE_ARMA=LISTACAB.LIAR_OID_LINE_ARMA AND PARAM.CCDI_OID_CONF_CENT_DIST=LISTACAB.CCDI_OID_CONF_CENT_DIST) PEDHORARM,
+(SELECT PARAM.NUM_UNID_HORA_PERS_CHEQ FROM APE_PARAM_BALAN_AREA_CHEQU PARAM WHERE PARAM.LIAR_OID_LINE_ARMA=LISTACAB.LIAR_OID_LINE_ARMA AND PARAM.CCDI_OID_CONF_CENT_DIST=LISTACAB.CCDI_OID_CONF_CENT_DIST) UNIDADESCHH,
+(SELECT PARAM.NUM_PARA_DIST FROM APE_PARAM_BALAN_AREA_CHEQU PARAM WHERE PARAM.LIAR_OID_LINE_ARMA=LISTACAB.LIAR_OID_LINE_ARMA AND PARAM.CCDI_OID_CONF_CENT_DIST=LISTACAB.CCDI_OID_CONF_CENT_DIST) PARAMDIS,
+ROUND(COUNT(LISTACAB.OID_LIST_PICA_CABE)/(SELECT PARAM.NUM_PEDI_HORA_ARMA+PARAM.NUM_PARA_DIST FROM APE_PARAM_BALAN_AREA_CHEQU PARAM WHERE PARAM.LIAR_OID_LINE_ARMA=LISTACAB.LIAR_OID_LINE_ARMA AND PARAM.CCDI_OID_CONF_CENT_DIST=LISTACAB.CCDI_OID_CONF_CENT_DIST)) PAGINA
+FROM APE_LISTA_PICAD_CABEC LISTACAB,
+PED_SOLIC_CABEC PEDIDO,
+APE_LISTA_PICAD_DETAL DETALLE
+WHERE LISTACAB.FEC_FACTU=to_date($P{fechaFacturacion},'dd/mm/yyyy')
+AND LISTACAB.CCDI_OID_CONF_CENT_DIST=(SELECT CENTRO.OID_CONF_CENT_DIST FROM APP_CONFI_CENTR_DISTR CENTRO WHERE CENTRO.COD_CENT_DIST=$P{centro})
+AND LISTACAB.LIAR_OID_LINE_ARMA=(SELECT LINEA.OID_LINE_ARMA FROM APE_LINEA_ARMAD LINEA WHERE LINEA.NUM_CODI_LINE = $P{codigoLinea})
+AND LISTACAB.SOCA_OID_SOLI_CABE = PEDIDO.OID_SOLI_CABE
+AND PEDIDO.INRE_OID_INDI_REVI IS NOT NULL
+AND LISTACAB.OID_LIST_PICA_CABE = DETALLE.LPCA_OID_LIST_PICA_CABE
+GROUP BY
+LISTACAB.ZZON_OID_ZONA,
+LISTACAB.CCDI_OID_CONF_CENT_DIST,LISTACAB.LIAR_OID_LINE_ARMA
+ORDER BY LISTACAB.ZZON_OID_ZONA]]></queryString>
+
+	<field name="EMBALAR" class="java.lang.Float"/>
+	<field name="PEDHORARM" class="java.lang.Float"/>
+	<field name="PAGINA" class="java.lang.String"/>
+	<field name="LINEA" class="java.lang.String"/>
+	<field name="UNIDADESCH" class="java.math.BigDecimal"/>
+	<field name="PARAMDIS" class="java.lang.String"/>
+	<field name="ZONA" class="java.lang.String"/>
+	<field name="PEDIDOSCH" class="java.lang.String"/>
+	<field name="UNIDADESCHPER" class="java.lang.Integer"/>
+
+	<variable name="PARTIRHOJA" class="java.lang.Float" resetType="Report" calculation="Nothing">
+		<variableExpression><![CDATA[$F{PEDHORARM}]]></variableExpression>
+	</variable>
+	<variable name="ACUMULADASUM" class="java.math.BigDecimal" resetType="Report" calculation="Sum">
+		<variableExpression><![CDATA[$F{UNIDADESCH}]]></variableExpression>
+	</variable>
+	<variable name="PERSONAS" class="java.math.BigDecimal" resetType="Report" calculation="Nothing">
+		<variableExpression><![CDATA[new BigDecimal($V{ACUMULADASUM}.floatValue()/$F{UNIDADESCH}.floatValue())]]></variableExpression>
+	</variable>
+
+		<group  name="PEDIDO" isStartNewPage="true" >
+			<groupExpression><![CDATA[$F{PAGINA}]]></groupExpression>
+			<groupHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+			</groupHeader>
+			<groupFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+			</groupFooter>
+		</group>
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="40"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2"
+						y="6"
+						width="80"
+						height="17"
+						backcolor="#CCCCCC"
+						key="textField-5"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPECargaChequeoDiaForm.linea}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="85"
+						y="6"
+						width="80"
+						height="17"
+						key="textField-7"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{LINEA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="219"
+						y="5"
+						width="80"
+						height="17"
+						backcolor="#CCCCCC"
+						key="textField-9"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPECargaChequeoDiaForm.pedidoha}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="218"
+						y="22"
+						width="224"
+						height="17"
+						backcolor="#CCCCCC"
+						key="textField-10"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPECargaChequeoDiaForm.unidadesch}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="302"
+						y="5"
+						width="80"
+						height="17"
+						key="textField-11"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Float"><![CDATA[$F{PEDHORARM}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="523"
+						y="22"
+						width="80"
+						height="17"
+						key="textField-12"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{UNIDADESCH}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="441"
+						y="5"
+						width="80"
+						height="17"
+						backcolor="#CCCCCC"
+						key="textField-13"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPECargaChequeoDiaForm.paramdis}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="524"
+						y="5"
+						width="80"
+						height="17"
+						key="textField-14"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{PARAMDIS}]]></textFieldExpression>
+				</textField>
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="47"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1"
+						y="12"
+						width="80"
+						height="17"
+						backcolor="#CCCCCC"
+						key="textField-1"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPECargaChequeoDiaForm.zona}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="29"
+						width="80"
+						height="17"
+						key="textField-2"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{ZONA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="81"
+						y="12"
+						width="80"
+						height="17"
+						backcolor="#CCCCCC"
+						key="textField-3"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPECargaChequeoDiaForm.pedidos}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="80"
+						y="29"
+						width="80"
+						height="17"
+						key="textField-4"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Float"><![CDATA[$F{EMBALAR}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="161"
+						y="12"
+						width="80"
+						height="17"
+						backcolor="#CCCCCC"
+						key="textField-15"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPECargaChequeoDiaForm.unidadesach}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="241"
+						y="12"
+						width="80"
+						height="17"
+						backcolor="#CCCCCC"
+						key="textField-16"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPECargaChequeoDiaForm.pedidosch}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="321"
+						y="12"
+						width="80"
+						height="17"
+						backcolor="#CCCCCC"
+						key="textField-17"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPECargaChequeoDiaForm.pedidosemb}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="401"
+						y="12"
+						width="80"
+						height="17"
+						backcolor="#CCCCCC"
+						key="textField-18"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPECargaChequeoDiaForm.unidadesac}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="481"
+						y="12"
+						width="80"
+						height="17"
+						backcolor="#CCCCCC"
+						key="textField-19"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPECargaChequeoDiaForm.personas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="160"
+						y="29"
+						width="80"
+						height="17"
+						key="textField-21"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{UNIDADESCH}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="240"
+						y="29"
+						width="80"
+						height="17"
+						key="textField-22"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{PEDIDOSCH}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="321"
+						y="29"
+						width="80"
+						height="17"
+						key="textField-23"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Float"><![CDATA[$F{EMBALAR}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="401"
+						y="29"
+						width="80"
+						height="17"
+						key="textField-24"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{ACUMULADASUM}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="481"
+						y="29"
+						width="82"
+						height="18"
+						key="textField"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{PERSONAS}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

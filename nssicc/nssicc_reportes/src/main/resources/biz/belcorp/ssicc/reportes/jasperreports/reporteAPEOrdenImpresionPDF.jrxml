@@ -1,0 +1,971 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteAPEOrdenImpresionPDF"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Portrait"
+		 pageWidth="595"
+		 pageHeight="842"
+		 columnWidth="595"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="NoPages"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="fechaFacturacion" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaFacturacion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicionTipoSolicitud" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicionTipoSolicitud")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[SELECT 1,
+       'TODAS LAS LINEAS'  LINEA,
+       orden               ORDEN,
+       cod_region          REGION,
+		   cod_zona            ZONA,
+		   a                   SEC_A,
+		   b                   SEC_B,
+		   c                   SEC_C,
+		   d                   SEC_D,
+		   e                   SEC_E,
+		   f                   SEC_F,
+		   g                   SEC_G,
+		   h                   SEC_H,
+		   i                   SEC_I,
+		   j                   SEC_J,
+		   totalzona           TOT_ZONA,
+       (SELECT TRIM(cliente.val_nom1)|| ' '|| TRIM(cliente.val_nom2) || ' '|| TRIM(cliente.val_ape1) || ' '|| TRIM(cliente.val_ape2)
+          FROM mae_clien cliente 
+         WHERE cliente.oid_clie = impresion.oid_cliente) GERENTE
+  FROM (SELECT secuencia.num_secu_zona_ruta     ORDEN,
+               r.cod_regi                       COD_REGION,
+       				 z.cod_zona                       COD_ZONA,
+       				 z.clie_oid_clie                  OID_CLIENTE,
+       				 SUM(DECODE(cod_secc, 'A', 1,0))  A,
+       				 SUM(DECODE(cod_secc, 'B', 1,0))  B,
+       				 SUM(DECODE(cod_secc, 'C', 1,0))  C,
+       				 SUM(DECODE(cod_secc, 'D', 1,0))  D,
+       				 SUM(DECODE(cod_secc, 'E', 1,0))  E,
+               SUM(DECODE(cod_secc, 'F', 1,0))  F,
+               SUM(DECODE(cod_secc, 'G', 1,0))  G,
+               SUM(DECODE(cod_secc, 'H', 1,0))  H,
+               SUM(DECODE(cod_secc, 'I', 1,0))  I,
+               SUM(DECODE(cod_secc, 'J', 1,0))  J,
+              (SUM(DECODE(cod_secc, 'A', 1,0)) + SUM(DECODE(cod_secc, 'F', 1,0)) +
+               SUM(DECODE(cod_secc, 'B', 1,0)) + SUM(DECODE(cod_secc, 'G', 1,0)) +
+       			   SUM(DECODE(cod_secc, 'C', 1,0)) + SUM(DECODE(cod_secc, 'H', 1,0)) +
+       			   SUM(DECODE(cod_secc, 'D', 1,0)) + SUM(DECODE(cod_secc, 'I', 1,0)) +
+       			   SUM(DECODE(cod_secc, 'E', 1,0)) + SUM(DECODE(cod_secc, 'J', 1,0)) ) TOTALZONA
+          FROM zon_zona z,
+          		 zon_regio r,
+          		 ped_solic_cabec sol,
+          		 zon_secci s,
+          		 ped_tipo_solic_pais tip,
+          		 ped_tipo_solic solic,
+          		 zon_terri_admin ad,
+               seg_subac sub,
+          		 ped_solic_cabec_secue secuencia,
+               ape_lista_picad_cabec lista
+         WHERE z.zorg_oid_regi = r.oid_regi
+           AND sol.zzon_oid_zona = z.oid_zona
+        	 AND sol.ztad_oid_terr_admi = ad.oid_terr_admi
+        	 AND sol.fec_fact = TO_DATE($P{fechaFacturacion},'DD/MM/YYYY')
+        	 AND tip.oid_tipo_soli_pais = sol.tspa_oid_tipo_soli_pais
+         	 AND solic.oid_tipo_soli = tip.tsol_oid_tipo_soli
+        	 AND (sol.num_docu_orig IS NULL OR sol.num_docu_orig = 0)
+           AND ad.zscc_oid_secc = s.oid_secc
+			     AND (sol.num_docu_orig = 0 OR length(sol.num_docu_orig)< 2 OR sol.num_docu_orig IS NULL)
+        	 AND sub.oid_sbac = sol.sbac_oid_sbac
+        	 AND secuencia.soca_oid_soli_cabe = sol.oid_soli_cabe
+           AND sol.oid_soli_cabe = lista.soca_oid_soli_cabe
+          
+           $P!{condicionTipoSolicitud}
+           
+         GROUP BY cod_regi,cod_zona,z.clie_oid_clie,secuencia.num_secu_zona_ruta) IMPRESION
+UNION
+SELECT 2,
+       (SELECT i18.val_i18n
+          FROM gen_i18n_sicc_pais i18
+         WHERE i18.attr_enti = 'APE_LINEA_ARMAD'
+           AND i18.attr_num_atri = 1
+           AND i18.idio_oid_idio = 1
+           AND i18.val_oid = oid_linea) LINEA,
+       orden               ORDEN,
+       cod_region          REGION,
+		   cod_zona            ZONA,
+		   a                   SEC_A,
+		   b                   SEC_B,
+		   c                   SEC_C,
+		   d                   SEC_D,
+		   e                   SEC_E,
+		   f                   SEC_F,
+		   g                   SEC_G,
+		   h                   SEC_H,
+		   i                   SEC_I,
+		   j                   SEC_J,
+		   totalzona           TOT_ZONA,
+       (SELECT TRIM(cliente.val_nom1)|| ' '|| TRIM(cliente.val_nom2) || ' '|| TRIM(cliente.val_ape1) || ' '|| TRIM(cliente.val_ape2)
+          FROM mae_clien cliente 
+         WHERE cliente.oid_clie = impresion.oid_cliente) GERENTE
+  FROM (SELECT secuencia.num_secu_zona_ruta     ORDEN,
+               r.cod_regi                       COD_REGION,
+       				 z.cod_zona                       COD_ZONA,
+       				 z.clie_oid_clie                  OID_CLIENTE,
+               lista.liar_oid_line_arma         OID_LINEA,
+       				 SUM(DECODE(cod_secc, 'A', 1,0))  A,
+       				 SUM(DECODE(cod_secc, 'B', 1,0))  B,
+       				 SUM(DECODE(cod_secc, 'C', 1,0))  C,
+       				 SUM(DECODE(cod_secc, 'D', 1,0))  D,
+       				 SUM(DECODE(cod_secc, 'E', 1,0))  E,
+               SUM(DECODE(cod_secc, 'F', 1,0))  F,
+               SUM(DECODE(cod_secc, 'G', 1,0))  G,
+               SUM(DECODE(cod_secc, 'H', 1,0))  H,
+               SUM(DECODE(cod_secc, 'I', 1,0))  I,
+               SUM(DECODE(cod_secc, 'J', 1,0))  J,
+              (SUM(DECODE(cod_secc, 'A', 1,0)) + SUM(DECODE(cod_secc, 'F', 1,0)) +
+               SUM(DECODE(cod_secc, 'B', 1,0)) + SUM(DECODE(cod_secc, 'G', 1,0)) +
+       			   SUM(DECODE(cod_secc, 'C', 1,0)) + SUM(DECODE(cod_secc, 'H', 1,0)) +
+       			   SUM(DECODE(cod_secc, 'D', 1,0)) + SUM(DECODE(cod_secc, 'I', 1,0)) +
+       			   SUM(DECODE(cod_secc, 'E', 1,0)) + SUM(DECODE(cod_secc, 'J', 1,0)) ) TOTALZONA
+          FROM zon_zona z,
+          		 zon_regio r,
+          		 ped_solic_cabec sol,
+          		 zon_secci s,
+          		 ped_tipo_solic_pais tip,
+          		 ped_tipo_solic solic,
+          		 zon_terri_admin ad,
+               seg_subac sub,
+          		 ped_solic_cabec_secue secuencia,
+               ape_lista_picad_cabec lista
+         WHERE z.zorg_oid_regi = r.oid_regi
+           AND sol.zzon_oid_zona = z.oid_zona
+        	 AND sol.ztad_oid_terr_admi = ad.oid_terr_admi
+        	 AND sol.fec_fact = TO_DATE($P{fechaFacturacion},'DD/MM/YYYY')
+        	 AND tip.oid_tipo_soli_pais = sol.tspa_oid_tipo_soli_pais
+         	 AND solic.oid_tipo_soli = tip.tsol_oid_tipo_soli
+        	 AND (sol.num_docu_orig IS NULL OR sol.num_docu_orig = 0)
+           AND ad.zscc_oid_secc = s.oid_secc
+			     AND (sol.num_docu_orig = 0 OR length(sol.num_docu_orig)< 2 OR sol.num_docu_orig IS NULL)
+        	 AND sub.oid_sbac = sol.sbac_oid_sbac
+        	 AND secuencia.soca_oid_soli_cabe = sol.oid_soli_cabe
+           AND sol.oid_soli_cabe = lista.soca_oid_soli_cabe
+           
+           $P!{condicionTipoSolicitud}
+           
+         GROUP BY cod_regi,cod_zona,z.clie_oid_clie,secuencia.num_secu_zona_ruta, lista.liar_oid_line_arma) IMPRESION
+ORDER BY 1, region, ORDEN]]></queryString>
+
+	<field name="LINEA" class="java.lang.String"/>
+	<field name="ORDEN" class="java.lang.String"/>
+	<field name="REGION" class="java.lang.String"/>
+	<field name="ZONA" class="java.lang.String"/>
+	<field name="SEC_A" class="java.lang.String"/>
+	<field name="SEC_B" class="java.lang.String"/>
+	<field name="SEC_C" class="java.lang.String"/>
+	<field name="SEC_D" class="java.lang.String"/>
+	<field name="SEC_E" class="java.lang.String"/>
+	<field name="SEC_F" class="java.lang.String"/>
+	<field name="SEC_G" class="java.lang.String"/>
+	<field name="SEC_H" class="java.lang.String"/>
+	<field name="SEC_I" class="java.lang.String"/>
+	<field name="SEC_J" class="java.lang.String"/>
+	<field name="TOT_ZONA" class="java.lang.Integer"/>
+	<field name="GERENTE" class="java.lang.String"/>
+
+	<variable name="SUMA" class="java.lang.Integer" resetType="Group" resetGroup="LINEA" calculation="Sum">
+		<variableExpression><![CDATA[$F{TOT_ZONA}]]></variableExpression>
+	</variable>
+
+		<group  name="LINEA" isStartNewPage="true" >
+			<groupExpression><![CDATA[$F{LINEA}]]></groupExpression>
+			<groupHeader>
+			<band height="57"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="6"
+						y="2"
+						width="73"
+						height="12"
+						backcolor="#CCCCCC"
+						key="textField-1"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpersionForm.fecha}]]></textFieldExpression>
+				</textField>
+				<line direction="TopDown">
+					<reportElement
+						x="2"
+						y="22"
+						width="592"
+						height="0"
+						key="line-1"/>
+					<graphicElement stretchType="NoStretch"/>
+				</line>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="81"
+						y="2"
+						width="44"
+						height="12"
+						key="textField-2"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$P{fechaFacturacion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="250"
+						y="2"
+						width="39"
+						height="12"
+						backcolor="#CCCCCC"
+						key="textField-53"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpersionForm.line}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="290"
+						y="2"
+						width="218"
+						height="12"
+						key="textField-54"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{LINEA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="6"
+						y="33"
+						width="44"
+						height="24"
+						backcolor="#CCCCCC"
+						key="textField-55"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.orden}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="50"
+						y="33"
+						width="44"
+						height="24"
+						backcolor="#CCCCCC"
+						key="textField-56"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.region}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="94"
+						y="33"
+						width="44"
+						height="24"
+						backcolor="#CCCCCC"
+						key="textField-57"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.zona}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="138"
+						y="33"
+						width="112"
+						height="24"
+						backcolor="#CCCCCC"
+						key="textField-58"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.gerente}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="250"
+						y="33"
+						width="220"
+						height="12"
+						backcolor="#CCCCCC"
+						key="textField-59"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.secciones}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="250"
+						y="45"
+						width="20"
+						height="12"
+						backcolor="#CCCCCC"
+						key="textField-60"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.sin}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="270"
+						y="45"
+						width="20"
+						height="12"
+						backcolor="#CCCCCC"
+						key="textField-61"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.a}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="290"
+						y="45"
+						width="20"
+						height="12"
+						backcolor="#CCCCCC"
+						key="textField-62"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.b}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="310"
+						y="45"
+						width="20"
+						height="12"
+						backcolor="#CCCCCC"
+						key="textField-63"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.c}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="330"
+						y="45"
+						width="20"
+						height="12"
+						backcolor="#CCCCCC"
+						key="textField-64"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.d}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="350"
+						y="45"
+						width="20"
+						height="12"
+						backcolor="#CCCCCC"
+						key="textField-65"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.e}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="370"
+						y="45"
+						width="20"
+						height="12"
+						backcolor="#CCCCCC"
+						key="textField-66"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.f}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="390"
+						y="45"
+						width="20"
+						height="12"
+						backcolor="#CCCCCC"
+						key="textField-67"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.g}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="410"
+						y="45"
+						width="20"
+						height="12"
+						backcolor="#CCCCCC"
+						key="textField-68"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.h}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="430"
+						y="45"
+						width="20"
+						height="12"
+						backcolor="#CCCCCC"
+						key="textField-69"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.i}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="450"
+						y="45"
+						width="20"
+						height="12"
+						backcolor="#CCCCCC"
+						key="textField-70"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.j}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="470"
+						y="33"
+						width="56"
+						height="24"
+						backcolor="#CCCCCC"
+						key="textField-71"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEOrdenImpresionForm.totalzona}]]></textFieldExpression>
+				</textField>
+			</band>
+			</groupHeader>
+			<groupFooter>
+			<band height="27"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="470"
+						y="0"
+						width="56"
+						height="13"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Integer"><![CDATA[$V{SUMA}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement
+						x="402"
+						y="0"
+						width="68"
+						height="13"
+						key="staticText-1"/>
+					<box></box>
+					<textElement>
+						<font pdfFontName="Helvetica-Bold" isBold="true"/>
+					</textElement>
+				<text><![CDATA[Total Región :]]></text>
+				</staticText>
+			</band>
+			</groupFooter>
+		</group>
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="13"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="6"
+						y="0"
+						width="44"
+						height="13"
+						key="textField-20"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{ORDEN}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="50"
+						y="0"
+						width="44"
+						height="13"
+						key="textField-21"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{REGION}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="94"
+						y="0"
+						width="44"
+						height="13"
+						key="textField-22"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{ZONA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="138"
+						y="0"
+						width="112"
+						height="13"
+						key="textField-23"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{GERENTE}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="250"
+						y="0"
+						width="20"
+						height="13"
+						key="textField-24"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="270"
+						y="0"
+						width="20"
+						height="13"
+						key="textField-25"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{SEC_A}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="290"
+						y="0"
+						width="20"
+						height="13"
+						key="textField-26"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{SEC_B}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="310"
+						y="0"
+						width="20"
+						height="13"
+						key="textField-27"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{SEC_C}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="330"
+						y="0"
+						width="20"
+						height="13"
+						key="textField-28"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{SEC_D}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="350"
+						y="0"
+						width="20"
+						height="13"
+						key="textField-29"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{SEC_E}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="370"
+						y="0"
+						width="20"
+						height="13"
+						key="textField-30"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{SEC_F}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="390"
+						y="0"
+						width="20"
+						height="13"
+						key="textField-31"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{SEC_G}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="410"
+						y="0"
+						width="20"
+						height="13"
+						key="textField-32"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{SEC_H}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="430"
+						y="0"
+						width="20"
+						height="13"
+						key="textField-33"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{SEC_I}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="450"
+						y="0"
+						width="20"
+						height="13"
+						key="textField-34"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{SEC_J}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="470"
+						y="0"
+						width="56"
+						height="13"
+						key="textField-35"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Integer"><![CDATA[$F{TOT_ZONA}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

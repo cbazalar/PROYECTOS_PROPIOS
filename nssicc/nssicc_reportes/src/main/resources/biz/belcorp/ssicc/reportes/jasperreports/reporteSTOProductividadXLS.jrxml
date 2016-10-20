@@ -1,0 +1,595 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteSTOProductividadXLS"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Landscape"
+		 pageWidth="789"
+		 pageHeight="842"
+		 columnWidth="789"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 whenResourceMissingType="Empty">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="codigoPeriodo" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPeriodo")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="tipoDocumento" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("tipoDocumento")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaDesde" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaDesde")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaHasta" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaHasta")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[SELECT usuario,
+       fecha,
+       total_cabecera,
+       cabecera_error,
+       cabecera_atendida,
+       cabecera_rechazada,
+       to_char(hora_minima, 'HH24:MI') hora_minima,
+       to_char(hora_maxima, 'HH24:MI') hora_maxima,
+       round((hora_maxima - hora_minima) * 24, 2) total_horas,
+       round(CASE
+               WHEN round((hora_maxima - hora_minima) * 24, 2) = 0 THEN
+                0
+               ELSE
+                total_cabecera /
+                round((hora_maxima - hora_minima) * 24, 2)
+             END) doc_hora
+  FROM (SELECT erro1.usu_modi usuario,
+               to_char(erro1.fec_modi, 'dd/MM/yyyy') fecha,
+               corr.cab_tot total_cabecera,
+               erro1.cab_err cabecera_error,
+               erro1.cab_ate cabecera_atendida,
+               erro1.cab_rec cabecera_rechazada,
+               (SELECT MIN(e.fec_modi)
+                  FROM sto_docum_digit e
+                 WHERE e.cod_tipo_docu = 'OCC'
+                   AND (e.cod_peri = $P{codigoPeriodo} OR ($P{codigoPeriodo} IS NULL))
+                   AND e.usu_modi = erro1.usu_modi
+                   AND trunc(e.fec_modi) = erro1.fec_modi
+                   AND ((e.fec_modi >=
+                       to_date($P{fechaDesde}, 'DD/MM/YYYY HH24:MI')) OR
+                       ($P{fechaDesde} IS NULL))
+                   AND ((e.fec_modi <=
+                       to_date($P{fechaHasta}, 'DD/MM/YYYY HH24:MI')) OR
+                       ($P{fechaHasta} IS NULL))) hora_minima,
+               (SELECT MAX(e.fec_modi)
+                  FROM sto_docum_digit e
+                 WHERE e.cod_tipo_docu = 'OCC'
+                   AND (e.cod_peri = $P{codigoPeriodo} OR ($P{codigoPeriodo} IS NULL))
+                   AND e.usu_modi = erro1.usu_modi
+                   AND trunc(e.fec_modi) = erro1.fec_modi
+                   AND ((e.fec_modi >=
+                       to_date($P{fechaDesde}, 'DD/MM/YYYY HH24:MI')) OR
+                       ($P{fechaDesde} IS NULL))
+                   AND ((e.fec_modi <=
+                       to_date($P{fechaHasta}, 'DD/MM/YYYY HH24:MI')) OR
+                       ($P{fechaHasta} IS NULL))) hora_maxima
+          FROM (SELECT trunc(erro.fec_modi) fec_modi,
+                       erro.usu_modi,
+                       SUM(decode(erro.cod_tipo_docu, 'OCC', 1, 0)) cab_err,
+                       SUM(decode(erro.cod_tipo_docu, 'OCC',
+                                  erro.ind_envi, 0)) cab_ate,
+                       SUM(decode(erro.cod_tipo_docu, 'OCC',
+                                  erro.ind_rech, 0)) cab_rec
+                  FROM (SELECT trunc(a.fec_modi) fec_modi,
+                               a.usu_modi,
+                               a.cod_tipo_docu,
+                               a.sec_nume_docu,
+                               a.ind_envi,
+                               a.ind_rech
+                          FROM sto_docum_digit a,
+                               sto_audit_excep b
+                         WHERE a.cod_pais = b.cod_pais
+                           AND a.cod_tipo_docu = b.cod_tipo_docu
+                           AND a.num_lote = b.num_lote
+                           AND a.sec_nume_docu = b.sec_nume_docu
+                           AND a.cod_tipo_docu = 'OCC'
+                           AND (a.cod_peri = $P{codigoPeriodo} OR
+                               ($P{codigoPeriodo} IS NULL))
+                           AND ((a.fec_modi >=
+                               to_date($P{fechaDesde}, 'DD/MM/YYYY HH24:MI')) OR
+                               ($P{fechaDesde} IS NULL))
+                           AND ((a.fec_modi <=
+                               to_date($P{fechaHasta}, 'DD/MM/YYYY HH24:MI')) OR
+                               ($P{fechaHasta} IS NULL))
+                         GROUP BY trunc(a.fec_modi),
+                                  a.usu_modi,
+                                  a.cod_tipo_docu,
+                                  a.sec_nume_docu,
+                                  a.ind_envi,
+                                  a.ind_rech) erro
+                 GROUP BY trunc(erro.fec_modi),
+                          erro.usu_modi) erro1,
+               (SELECT trunc(d.fec_modi) fec_modi,
+                       d.usu_modi,
+                       SUM(decode(d.cod_tipo_docu, 'OCC', 1, 0)) cab_tot
+                  FROM sto_docum_digit d
+                 WHERE d.cod_tipo_docu = 'OCC'
+                   AND (d.cod_peri = $P{codigoPeriodo} OR ($P{codigoPeriodo} IS NULL))
+                   AND ((d.fec_modi >=
+                       to_date($P{fechaDesde}, 'DD/MM/YYYY HH24:MI')) OR
+                       ($P{fechaDesde} IS NULL))
+                   AND ((d.fec_modi <=
+                       to_date($P{fechaHasta}, 'DD/MM/YYYY HH24:MI')) OR
+                       ($P{fechaHasta} IS NULL))
+                 GROUP BY trunc(d.fec_modi),
+                          d.usu_modi) corr
+         WHERE erro1.fec_modi = corr.fec_modi
+           AND erro1.usu_modi = corr.usu_modi)
+ ORDER BY usuario,
+          fecha]]></queryString>
+
+	<field name="USUARIO" class="java.lang.String"/>
+	<field name="FECHA" class="java.lang.String"/>
+	<field name="TOTAL_CABECERA" class="java.lang.String"/>
+	<field name="CABECERA_ERROR" class="java.lang.String"/>
+	<field name="CABECERA_ATENDIDA" class="java.lang.String"/>
+	<field name="CABECERA_RECHAZADA" class="java.lang.String"/>
+	<field name="HORA_MINIMA" class="java.lang.String"/>
+	<field name="HORA_MAXIMA" class="java.lang.String"/>
+	<field name="TOTAL_HORAS" class="java.math.BigDecimal"/>
+	<field name="DOC_HORA" class="java.math.BigDecimal"/>
+
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="24"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="true" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="80"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-1"
+						stretchType="RelativeToBandHeight"
+						isPrintWhenDetailOverflows="true"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOProductividadForm.usuario}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="80"
+						y="0"
+						width="80"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-2"
+						stretchType="RelativeToBandHeight"
+						isPrintWhenDetailOverflows="true"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOProductividadForm.totCabeceras}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="160"
+						y="0"
+						width="80"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-3"
+						stretchType="RelativeToBandHeight"
+						isPrintWhenDetailOverflows="true"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOProductividadForm.cabecError}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="240"
+						y="0"
+						width="80"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-4"
+						stretchType="RelativeToBandHeight"
+						isPrintWhenDetailOverflows="true"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOProductividadForm.cabecAtendidas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="320"
+						y="0"
+						width="80"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-5"
+						stretchType="RelativeToBandHeight"
+						isPrintWhenDetailOverflows="true"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOProductividadForm.cabecRechazadas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="400"
+						y="0"
+						width="80"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-6"
+						stretchType="RelativeToBandHeight"
+						isPrintWhenDetailOverflows="true"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOProductividadForm.fecha}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="480"
+						y="0"
+						width="80"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-7"
+						stretchType="RelativeToBandHeight"
+						isPrintWhenDetailOverflows="true"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOProductividadForm.hInicio}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="560"
+						y="0"
+						width="80"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-8"
+						stretchType="RelativeToBandHeight"
+						isPrintWhenDetailOverflows="true"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOProductividadForm.hFin}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="640"
+						y="0"
+						width="80"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-9"
+						stretchType="RelativeToBandHeight"
+						isPrintWhenDetailOverflows="true"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOProductividadForm.totHoras}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="720"
+						y="0"
+						width="69"
+						height="24"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-10"
+						stretchType="RelativeToBandHeight"
+						isPrintWhenDetailOverflows="true"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOProductividadForm.docHoras}]]></textFieldExpression>
+				</textField>
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="12"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="80"
+						height="12"
+						key="textField"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement>
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{USUARIO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="80"
+						y="0"
+						width="80"
+						height="12"
+						key="textField"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{TOTAL_CABECERA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="160"
+						y="0"
+						width="80"
+						height="12"
+						key="textField"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{CABECERA_ERROR}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="240"
+						y="0"
+						width="80"
+						height="12"
+						key="textField"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{CABECERA_ATENDIDA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="320"
+						y="0"
+						width="80"
+						height="12"
+						key="textField"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{CABECERA_RECHAZADA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="400"
+						y="0"
+						width="80"
+						height="12"
+						key="textField"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement>
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{FECHA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="480"
+						y="0"
+						width="80"
+						height="12"
+						key="textField"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{HORA_MINIMA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="560"
+						y="0"
+						width="80"
+						height="12"
+						key="textField"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{HORA_MAXIMA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="640"
+						y="0"
+						width="80"
+						height="12"
+						key="textField"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{TOTAL_HORAS}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="720"
+						y="0"
+						width="69"
+						height="12"
+						key="textField"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right">
+						<font fontName="SansSerif" size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{DOC_HORA}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

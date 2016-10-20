@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.ProcesoSTOHistorico">
+
+<parameterMap id="updateNumeroProcesoParams" class="java.util.Map" >
+		<parameter property="codPais"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codTipoDocu"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroProceso"       jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>
+</parameterMap>
+<procedure id="updateNumeroProceso" parameterMap="updateNumeroProcesoParams">
+		{call STO_PKG_GENER.STO_PR_GENER_NPROCE(?,?,?)}
+</procedure>
+
+<typeAlias alias="historicoTipoDocumento" type="biz.belcorp.ssicc.dao.spusicc.sto.model.HistoricoTipoDocumento"/>
+<typeAlias alias="historicoValidacion" type="biz.belcorp.ssicc.dao.spusicc.sto.model.HistoricoValidacion"/>
+
+<insert id="insertHistoricoProceso" parameterClass="historicoTipoDocumento">
+  INSERT INTO STO_HISTO_PROCE(
+    PAIS_COD_PAIS,
+    DOCU_COD_TIPO_DOCU,
+    PROC_NUM_PROC,
+    FEC_IPRO,
+    FEC_FPRO,
+    IND_LOER,
+    LOG_PROC,
+    USU_PROC,
+    IND_ESPR,
+    REG_PROC,
+    COD_ACCI)
+  VALUES(
+    #codigoPais#,
+    #codTipoDocu#,
+	#numeroProceso#,
+	SYSDATE,
+	NULL,
+	#flagError#,
+	NULL,
+    #usuarioProceso#,
+    #estadoProceso#,
+    #registrosProcesados#,
+    #codigoAccionEjecutada#)
+</insert>	
+	
+<update id="updateFinProceso" parameterClass="historicoTipoDocumento">
+  UPDATE STO_HISTO_PROCE
+     SET FEC_FPRO           = SYSDATE,
+         IND_LOER           = #flagError#,
+         LOG_PROC           = #descripcionError#,
+         IND_ESPR           = #estadoProceso#,
+         REG_PROC           = DECODE(#registrosProcesados#,0,(SELECT COUNT(1) 
+                                 FROM STO_DOCUM_DIGIT 
+                                WHERE COD_PAIS = #codigoPais#
+                                  AND COD_TIPO_DOCU = #codTipoDocu#
+                                  AND NUM_PROC = #numeroProceso#),#registrosProcesados#)
+   WHERE PAIS_COD_PAIS = #codigoPais#
+     AND DOCU_COD_TIPO_DOCU = #codTipoDocu#
+     AND PROC_NUM_PROC = #numeroProceso#
+</update>
+
+<update id="updateInicioHistoricoProceso" parameterClass="historicoTipoDocumento">
+  UPDATE STO_HISTO_PROCE
+     SET FEC_IPRO           = SYSDATE
+   WHERE PAIS_COD_PAIS = #codigoPais#
+     AND DOCU_COD_TIPO_DOCU = #codTipoDocu#
+     AND PROC_NUM_PROC = #numeroProceso#
+</update>
+	
+	<resultMap id="historicoTipoDocumentoResult" class="historicoTipoDocumento">                                      
+    	<result property="codigoPais"                column="PAIS_COD_PAIS" />                    
+    	<result property="codTipoDocu"                column="DOCU_COD_TIPO_DOCU" />              
+    	<result property="numeroProceso"             column="PROC_NUM_PROC" />     
+    	<result property="fechaInicioProceso"     column="FEC_IPRO" />                   
+		<result property="fechaFinProceso"        column="FEC_FPRO" />                   
+		<result property="flagError"          column="IND_LOER" />
+		<result property="descripcionError"          column="LOG_PROC" /> 
+		<result property="usuarioProceso"          column="USU_PROC" />
+		<result property="estadoProceso"          column="IND_ESPR" />
+		<result property="registrosProcesados"          column="REG_PROC" />
+		<result property="codigoAccionEjecutada"          column="COD_ACCI" />
+		<result property="minutosEjecucion"          column="NUM_MINU" />
+		<result property="numeroProcesoPadre"          column="NUM_PROC_PADR" />		
+	</resultMap>   
+	
+	<select id="getProcesoValidacionEjecucionByDocumento" parameterClass="java.util.Map" resultMap="historicoTipoDocumentoResult">
+		SELECT PAIS_COD_PAIS,
+		       DOCU_COD_TIPO_DOCU,
+		       PROC_NUM_PROC,
+		       FEC_IPRO,
+		       FEC_FPRO,
+		       IND_LOER,
+		       LOG_PROC,
+		       USU_PROC,
+		       IND_ESPR,
+		       REG_PROC,
+		       COD_ACCI,
+		       ROUND((SYSDATE - FEC_IPRO)*24*60) NUM_MINU,
+		       NUM_PROC_PADR
+		  FROM STO_HISTO_PROCE      H,
+		       STO_TIPO_DOCUM_DIGIT TD
+		 WHERE H.COD_ACCI IN ('VAM', 'VAA')
+		   AND H.FEC_FPRO IS NULL
+		   AND H.DOCU_COD_TIPO_DOCU = TD.COD_TIPO_DOCU
+		   AND TD.IND_VALI_PROC_GEST = 'S'
+		   AND H.DOCU_COD_TIPO_DOCU = #codTipoDocu#
+	  ORDER BY FEC_IPRO DESC
+	</select>	
+	
+	<select id="getProcesoEjecucionByDocumento" parameterClass="java.util.Map" resultMap="historicoTipoDocumentoResult">
+		SELECT PAIS_COD_PAIS,
+		       DOCU_COD_TIPO_DOCU,
+		       PROC_NUM_PROC,
+		       FEC_IPRO,
+		       FEC_FPRO,
+		       IND_LOER,
+		       LOG_PROC,
+		       USU_PROC,
+		       IND_ESPR,
+		       REG_PROC,
+		       COD_ACCI,
+		       ROUND((SYSDATE - FEC_IPRO) * 24 * 60) NUM_MINU,
+		       NUM_PROC_PADR
+		  FROM STO_HISTO_PROCE H
+		 WHERE H.FEC_FPRO IS NULL
+		   AND H.DOCU_COD_TIPO_DOCU = #codTipoDocu#
+		 ORDER BY FEC_IPRO DESC
+	</select>	
+	
+	<select id="getListaProcesosHijos" parameterClass="historicoTipoDocumento" resultMap="historicoTipoDocumentoResult">
+		SELECT PAIS_COD_PAIS,
+		       DOCU_COD_TIPO_DOCU,
+		       PROC_NUM_PROC,
+		       FEC_IPRO,
+		       FEC_FPRO,
+		       IND_LOER,
+		       LOG_PROC,
+		       USU_PROC,
+		       IND_ESPR,
+		       REG_PROC,
+		       COD_ACCI,
+		       ROUND((SYSDATE - FEC_IPRO)*24*60) NUM_MINU,
+		       NUM_PROC_PADR
+		  FROM STO_HISTO_PROCE
+		 WHERE PAIS_COD_PAIS = #codigoPais#		   
+		   AND DOCU_COD_TIPO_DOCU = #codTipoDocu#
+		   AND NUM_PROC_PADR = #numeroProceso#
+	  ORDER BY FEC_IPRO DESC
+	</select>	
+	
+	
+	<insert id="insertHistoricoValidaciones" parameterClass="historicoTipoDocumento">
+  	INSERT INTO STO_HISTO_VALID
+    (COD_PAIS,
+     COD_TIPO_DOCU,
+     COD_VALI,
+     NUM_PROC,
+     USU_PROC,
+     NUM_SECU,
+     IND_GEST,
+     IND_CONT_ERRO,
+     EXE_PROC)
+    SELECT COD_PAIS,
+           COD_TIPO_DOCU,
+           COD_VALI,
+           #numeroProceso# NUM_PROC,
+           #usuarioProceso# USU_PROC,
+           ROWNUM NUM_SECU,
+           IND_GEST,
+           IND_CONT,
+           EXE_PROC
+      FROM (SELECT S.COD_PAIS,
+                   S.COD_TIPO_DOCU,
+                   S.COD_VALI,
+                   P.IND_GEST,
+                   P.IND_CONT,
+                   P.EXE_PROC
+              FROM STO_PARAM_SECUE_VALID S,
+                   STO_PARAM_VALID       P,
+                   STO_TIPO_DOCUM_DIGIT  T
+             WHERE T.COD_PAIS = P.COD_PAIS
+               AND T.COD_TIPO_DOCU = P.COD_TIPO_DOCU
+               AND P.COD_PAIS = S.COD_PAIS
+               AND P.COD_TIPO_DOCU = S.COD_TIPO_DOCU
+               AND P.COD_VALI = S.COD_VALI
+               AND (T.COD_TIPO_DOCU = #codTipoDocu# OR T.COD_TIPO_DOCU_CABE = #codTipoDocu#)
+               AND T.COD_PAIS = #codigoPais#
+               AND S.EST_REGI = '1'
+             ORDER BY S.NUM_SECU) TEMP	
+	</insert>	
+	<insert id="insertHistoricoValidacionesOnline" parameterClass="historicoTipoDocumento">
+  	INSERT INTO STO_HISTO_VALID
+    (COD_PAIS,
+     COD_TIPO_DOCU,
+     COD_VALI,
+     NUM_PROC,
+     USU_PROC,
+     NUM_SECU,
+     IND_GEST,
+     IND_CONT_ERRO,
+     EXE_PROC)
+    SELECT COD_PAIS,
+           COD_TIPO_DOCU,
+           COD_VALI,
+           #numeroProceso# NUM_PROC,
+           #usuarioProceso# USU_PROC,
+           ROWNUM NUM_SECU,
+           IND_GEST,
+           IND_CONT,
+           EXE_PROC
+      FROM (SELECT S.COD_PAIS,
+                   S.COD_TIPO_DOCU,
+                   S.COD_VALI,
+                   P.IND_GEST,
+                   P.IND_CONT,
+                   P.EXE_PROC
+              FROM STO_PARAM_SECUE_VALID S,
+                   STO_PARAM_VALID       P,
+                   STO_TIPO_DOCUM_DIGIT  T
+             WHERE T.COD_PAIS = P.COD_PAIS
+               AND T.COD_TIPO_DOCU = P.COD_TIPO_DOCU
+               AND P.COD_PAIS = S.COD_PAIS
+               AND P.COD_TIPO_DOCU = S.COD_TIPO_DOCU
+               AND P.COD_VALI = S.COD_VALI
+               AND (T.COD_TIPO_DOCU = #codTipoDocu# OR T.COD_TIPO_DOCU_CABE = #codTipoDocu#)
+               AND T.COD_PAIS = #codigoPais#
+               AND S.EST_REGI = '1'
+               AND NOT EXISTS (SELECT 1
+                    FROM STO_EXCLU_VALID E
+                   WHERE E.COD_PAIS = S.COD_PAIS
+                     AND E.COD_TIPO_DOCU = S.COD_TIPO_DOCU
+                     AND E.COD_VALI = S.COD_VALI
+                     AND E.COD_ORIG = 'OL')
+             ORDER BY S.NUM_SECU) TEMP	
+	</insert>
+	
+	<parameterMap id="updateHistoricoValidacionParams" class="historicoValidacion" >
+		<parameter property="codPais"		jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codTipoDocu"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codVali"		jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numProc"		jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>    
+		<parameter property="flagError"		jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>  
+  		<parameter property="logError"		jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	
+	 <procedure id="updateHistoricoValidacion" parameterMap="updateHistoricoValidacionParams" >
+		{call STO_PKG_GENER.sto_pr_updat_histo_valid(?,?,?,?,?,?)}
+    </procedure> 
+    
+    	<update id="updateInicioValidacion" parameterClass="historicoValidacion">
+		  UPDATE sto_histo_valid
+		     SET FEC_IPRO = SYSDATE
+		   WHERE COD_PAIS = #codPais#
+		     AND COD_TIPO_DOCU = #codTipoDocu#
+		     AND NUM_PROC = #numProc#
+		     AND COD_VALI = #codVali#
+	</update>
+	
+	<update id="updateFinValidacion" parameterClass="historicoValidacion">
+		  UPDATE sto_histo_valid
+		     SET FEC_FPRO = SYSDATE,
+		         IND_LOER = #flagError#,
+		         LOG_VALI = #logError#,
+		         REG_PROC = (SELECT COUNT(1)
+                                FROM sto_docum_digit
+                               WHERE cod_ulti_vali_ejec = #codVali#
+                                 AND num_proc = #numProc#
+                                 AND cod_tipo_docu = #codTipoDocu#)
+		   WHERE COD_PAIS = #codPais#
+		     AND COD_TIPO_DOCU = #codTipoDocu#
+		     AND NUM_PROC = #numProc#
+		     AND COD_VALI = #codVali#
+	</update>
+
+</sqlMap>

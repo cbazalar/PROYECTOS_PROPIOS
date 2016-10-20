@@ -1,0 +1,42 @@
+DROP MATERIALIZED VIEW SOA_MV_DOCUM_IDENT_DUPLA;
+CREATE MATERIALIZED VIEW SOA_MV_DOCUM_IDENT_DUPLA
+REFRESH FORCE ON DEMAND
+AS
+SELECT pq_apl_aux.valor_gen_i18n_sicc(1,
+                                      mci.tdoc_oid_tipo_docu,
+                                      'MAE_TIPO_DOCUM') val_tipo_docu,
+       sp.cod_pais,
+       mci.num_docu_iden,
+       mci.val_iden_docu_prin,
+       mad.cod_clie,
+       CAST(SYS_EXTRACT_UTC(SYSTIMESTAMP) AS DATE) fec_utc_carga
+  FROM mae_clien             mc,
+       mae_clien_tipo_subti  ct,
+       mae_tipo_clien        tc,
+       mae_subti_clien       sc,
+       mae_clien_comun       co,
+       mae_clien_datos_adici ca,
+       mae_clien_vincu       cv,
+       mae_tipo_vincu        tv,
+       mae_estat_clien       ec,
+       mae_clien_prime_conta pc,
+       mae_clien             mad,
+       seg_pais              sp,
+       mae_clien_ident       mci
+ WHERE mc.oid_clie = ct.clie_oid_clie
+   AND ct.ticl_oid_tipo_clie = tc.oid_tipo_clie
+   AND tc.cod_tipo_clie = '10' -- Hija Dupla
+   AND ct.sbti_oid_subt_clie = sc.oid_subt_clie
+   AND sc.cod_subt_clie = '01' -- Subtipo Hija Dupla
+   AND mc.oid_clie = ca.clie_oid_clie(+)
+   AND mc.oid_clie = co.clie_oid_clie(+)
+   AND co.ind_comu_ppal(+) = 1
+   AND mc.oid_clie = cv.clie_oid_clie_vndo
+   AND ca.esta_oid_esta_clie = ec.oid_esta_clie(+)
+   AND mad.oid_clie = cv.clie_oid_clie_vnte
+   AND cv.tivc_oid_tipo_vinc = tv.oid_tipo_vinc
+   AND cv.fec_hast is null
+   AND tv.cod_tipo_vinc = '01' -- DuplaCyzone
+   AND mc.oid_clie = pc.clie_oid_clie(+)
+   AND sp.oid_pais = mc.pais_oid_pais
+   AND mci.clie_oid_clie = mc.oid_clie;

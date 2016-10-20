@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="sicc.MantenimientoSICCSQL">
+  	<typeAlias alias="baseGenericoSICC"         type="biz.belcorp.ssicc.dao.sisicc.model.Base"/>
+  	<typeAlias alias="rolSICC"    type="biz.belcorp.ssicc.dao.spusicc.sicc.model.RolSICC"/>
+  	<typeAlias alias="opcionesSICC"    type="biz.belcorp.ssicc.dao.spusicc.sicc.model.OpcionesSICC"/>
+    
+    <resultMap id="baseResultSICC" class="baseGenericoSICC">
+    	<result property="codigo" 		column="CODIGO" 	/>
+    	<result property="descripcion" 	column="DESCRIPCION"/>
+    </resultMap>  
+    
+    <resultMap id="rolSICCResult" class="rolSICC">
+		<result property="oid" 		    column="IDPRINCIPAL"/>
+		<result property="descripcion" 	column="NAME"/>
+    </resultMap>
+    
+    <resultMap id="opcionesSICCResult" class="opcionesSICC">
+		<result property="oid" 		      column="OID_FUNC"/>
+		<result property="indicadorNivel" column="IND_NIVE"/>
+		<result property="oidPadre"       column="FUNC_OID_FUNC"/>
+		<result property="descripcion"    column="VAL_I18N"/>
+		<result property="valorAcceso"    column="IND_ACCE"/>
+		<result property="ramaMenu"    column="VAL_RAMA_MENU"/>
+    </resultMap>
+    
+    <select id="getListaRolSICCByCriteria" parameterClass="java.util.Map" resultMap="rolSICCResult">
+  		SELECT idprincipal, name 
+		FROM 
+			principals 
+		WHERE idprincipal IN( select idrole from memberof) 
+	  	  AND adminrole=0
+          AND name not in (select to_char(oid_func) from men_funci)
+          <isNotEmpty prepend="AND" property="descripcion">
+			   	  name LIKE #descripcion# 
+	      </isNotEmpty>
+	    ORDER BY name  
+    </select>
+    
+    <select id="getRolSICCByCriteria" parameterClass="java.util.Map" resultMap="rolSICCResult">
+  		SELECT idprincipal, name 
+		FROM 
+			principals 
+		WHERE idprincipal IN( select idrole from memberof) 
+	  	  AND adminrole=0
+          AND name not in (select to_char(oid_func) from men_funci)
+          <isNotEmpty prepend="AND" property="oid">
+			   	  idprincipal = #oid# 
+	      </isNotEmpty>
+          <isNotEmpty prepend="AND" property="descripcion">
+			   	  name LIKE #descripcion# 
+	      </isNotEmpty>
+    </select>
+    
+    <select id="getListaOpcionesSICCByCriteria" parameterClass="java.util.Map" resultMap="opcionesSICCResult">
+  		SELECT oid_func, ind_nive, func_oid_func, val_i18n, ind_acce, val_rama_menu 
+  		FROM 
+  		    TABLE(sic_pkg_mante.SIC_FN_OBTIE_LISTA_MENUS)
+    </select>
+    
+    <select id="getListaOpcionesRolSICCByCriteria" parameterClass="java.util.Map" resultMap="opcionesSICCResult">
+  		SELECT oid_func, ind_nive, func_oid_func, val_i18n, ind_acce, val_rama_menu 
+  		FROM 
+  		    TABLE(sic_pkg_mante.SIC_FN_OBTIE_LISTA_MENUS_ROL(#oid#))
+    </select>
+    
+    <select id="getSecuenciaRolSICCByCriteria" parameterClass="java.util.Map" resultClass="long">
+		SELECT
+			principals_seq.nextval 
+		FROM
+			DUAL
+	</select>
+  	
+  	<insert id="insertRolSICC" parameterClass="java.util.Map">	
+  		INSERT INTO PRINCIPALS ( IDPRINCIPAL, NAME, TYPE, DESCRIPTION ) VALUES ( 
+		#oid#, #descripcion#, NULL, NULL) 
+  	</insert>	
+  	
+  	<insert id="insertRolMemberSICC" parameterClass="java.util.Map">	
+  	    insert into memberof (idrole, idmember) 
+  		values (#oid#, 4)  		 
+  	</insert>	
+  	
+  	<insert id="insertOpcionRolSICC" parameterClass="java.util.Map">
+  		insert into memberof (idrole, idmember) 
+  			(select idprincipal, #oid#  from principals where name= #oidOpcion#)
+  	</insert>
+  	
+  	<update id="updateRolSICC" parameterClass="java.util.Map">	
+  		UPDATE PRINCIPALS
+  		SET NAME = #descripcion#
+  		WHERE IDPRINCIPAL = #oid# 
+  	</update>
+  	
+  	<delete id="deleteOpcionRolSICC" parameterClass="java.util.Map">
+  		delete from memberof where idmember=#oid#
+  	</delete>	
+  	
+  	<delete id="deleteRolMemberSICC" parameterClass="java.util.Map">
+  		delete from memberof where idrole=#oid#
+  	</delete>
+  	
+  	<delete id="deleteRolSICC" parameterClass="java.util.Map">
+  		delete from PRINCIPALS where IDPRINCIPAL = #oid# 
+  	</delete>
+  			
+    <typeAlias alias="usuarioSICC"    type="biz.belcorp.ssicc.dao.spusicc.sicc.model.UsuarioSICC"/>
+    
+  	<resultMap id="usuarioSICCResult" class="usuarioSICC">                                      
+    	<result property="oid"                column="ID" />                    
+    	<result property="login"                column="LOGI" />              
+    	<result property="apellidoPaterno"             column="APE_PATE" />     
+    	<result property="apellidoMaterno"     column="APE_MATE" />                   
+		<result property="primerNombre"        column="PRI_NOMB" />                   
+		<result property="segundoNombre"          column="SEG_NOMB" />
+		<result property="email"          column="VAL_EMAI" /> 
+		<result property="telefono"          column="VAL_TELE" />
+		<result property="clave"          column="BLOCKED" nullValue="0" />
+	</resultMap>   
+  	
+  	<select id="getListaSICCUsuarioByCriteria" parameterClass="java.util.Map" resultMap="usuarioSICCResult">
+		SELECT P.IDPRINCIPAL ID,
+		       P.NAME LOGI,
+		       SIC_PKG_MANTE.SIC_FN_DEVUE_DATOS_BYUSU(P.IDPRINCIPAL, 2) APE_PATE,
+		       SIC_PKG_MANTE.SIC_FN_DEVUE_DATOS_BYUSU(P.IDPRINCIPAL, 3) APE_MATE,
+		       SIC_PKG_MANTE.SIC_FN_DEVUE_DATOS_BYUSU(P.IDPRINCIPAL, 5) PRI_NOMB,
+		       SIC_PKG_MANTE.SIC_FN_DEVUE_DATOS_BYUSU(P.IDPRINCIPAL, 6) SEG_NOMB,
+		       SIC_PKG_MANTE.SIC_FN_DEVUE_DATOS_BYUSU(P.IDPRINCIPAL, 7) VAL_EMAI,
+		       SIC_PKG_MANTE.SIC_FN_DEVUE_DATOS_BYUSU(P.IDPRINCIPAL, 8) VAL_TELE,
+		       (SELECT BLOCKED FROM USERS WHERE IDUSER=P.IDPRINCIPAL) AS BLOCKED
+		  FROM PRINCIPALS P
+		 WHERE IDPRINCIPAL NOT IN (SELECT IDROLE FROM MEMBEROF)
+		   AND ADMINROLE = 0
+		   AND NAME NOT IN (SELECT TO_CHAR(OID_FUNC) FROM MEN_FUNCI)
+		   <isNotEmpty prepend="AND" property="oid">
+		     IDPRINCIPAL = #oid#
+		   </isNotEmpty>
+		   <isNotEmpty prepend="AND" property="login">
+		     UPPER(NAME) LIKE  #login#|| '%'
+		   </isNotEmpty>
+		   <isNotEmpty prepend="AND" property="apellidoPaterno">
+		     IDPRINCIPAL IN (SELECT IDPRINCIPAL
+		                         FROM PROPERTYVALUES
+		                        WHERE IDPROPERTY = 2
+		                          AND UPPER(STRINGVALUE) LIKE  #apellidoPaterno#|| '%')
+		   </isNotEmpty>
+		   <isNotEmpty prepend="AND" property="apellidoMaterno">                       
+		     IDPRINCIPAL IN (SELECT IDPRINCIPAL
+		                         FROM PROPERTYVALUES
+		                        WHERE IDPROPERTY = 3
+		                          AND UPPER(STRINGVALUE) LIKE  #apellidoMaterno#|| '%')
+		   </isNotEmpty>
+		   <isNotEmpty prepend="AND" property="primerNombre">                       
+		     IDPRINCIPAL IN (SELECT IDPRINCIPAL
+		                         FROM PROPERTYVALUES
+		                        WHERE IDPROPERTY = 5
+		                          AND UPPER(STRINGVALUE) LIKE  #primerNombre#|| '%')
+		   </isNotEmpty>
+		   <isNotEmpty prepend="AND" property="segundoNombre">
+		     IDPRINCIPAL IN (SELECT IDPRINCIPAL
+		                         FROM PROPERTYVALUES
+		                        WHERE IDPROPERTY = 6
+		                          AND UPPER(STRINGVALUE) LIKE  #segundoNombre#|| '%')
+		   </isNotEmpty>
+		   <isNotEmpty prepend="AND" property="email">
+		     IDPRINCIPAL IN (SELECT IDPRINCIPAL
+		                         FROM PROPERTYVALUES
+		                        WHERE IDPROPERTY = 7
+		                          AND UPPER(STRINGVALUE) LIKE  UPPER(#email#)|| '%')
+		   </isNotEmpty>
+		   <isNotEmpty prepend="AND" property="telefono">                       
+		     IDPRINCIPAL IN
+		       (SELECT IDPRINCIPAL
+		          FROM PROPERTYVALUES
+		         WHERE IDPROPERTY = 8
+		           AND UPPER(STRINGVALUE) LIKE UPPER( #telefono#|| '%'))
+		   </isNotEmpty>  
+		   ORDER BY 2
+    </select>		
+    
+    <resultMap id="rolUsuarioSICCResult" class="java.util.HashMap">                                      
+    	<result property="oidRol"                column="ID" />                    
+		<result property="descripcionRol"          column="DES_PERF" /> 
+		<result property="indPerfilAsignado"          column="IND_PERF_ASIG" />
+	</resultMap>   
+	
+  	<select id="getListaSICCRolUsuarioByCriteria" parameterClass="java.util.Map" resultMap="rolUsuarioSICCResult">
+		SELECT AA.IDPRINCIPAL ID,
+		       AA.NAME DES_PERF,
+		       DECODE(BB.IDPRINCIPAL, NULL, '0', '1') IND_PERF_ASIG
+		  FROM (SELECT IDPRINCIPAL, NAME
+		          FROM PRINCIPALS
+		         WHERE IDPRINCIPAL IN (SELECT IDROLE FROM MEMBEROF)
+		           AND ADMINROLE = 0
+		           AND NAME NOT IN (SELECT TO_CHAR(OID_FUNC) FROM MEN_FUNCI)) AA,
+		       (SELECT IDPRINCIPAL, NAME
+		          FROM PRINCIPALS
+		         WHERE IDPRINCIPAL IN
+		               (SELECT IDROLE FROM MEMBEROF WHERE IDMEMBER = #oid#)) BB
+		 WHERE AA.IDPRINCIPAL = BB.IDPRINCIPAL(+)
+		 ORDER BY 2
+    </select>		
+	<delete id="deleteSICCUsuarioRoles" parameterClass="java.util.Map">
+  		DELETE FROM MEMBEROF WHERE IDMEMBER =#oid#
+  	</delete>	
+  	<delete id="deleteSICCUsuarioDatosSecundarios" parameterClass="java.util.Map">
+  		DELETE FROM PROPERTYVALUES WHERE IDPRINCIPAL =#oid#
+  	</delete>
+  	<delete id="deleteSICCUsuarioDatosPrincipales" parameterClass="java.util.Map">
+  		DELETE FROM PRINCIPALS WHERE IDPRINCIPAL =#oid#
+  	</delete>
+  	<delete id="deleteSICCUsuarioRECAutor" parameterClass="java.util.Map">
+  		DELETE REC_AUTOR WHERE USER_OID_USER = #oid#
+  	</delete>
+  	<delete id="deleteSICCUsuarioBloqueado" parameterClass="java.util.Map">
+  		DELETE FROM mae_usuar_bloqu WHERE user_oid_user =#oid#
+  	</delete>
+  	<delete id="deleteSICCUsuarioCreadenciales" parameterClass="java.util.Map">
+  		DELETE FROM oldcredentials WHERE iduser =#oid#
+  	</delete>
+  	<delete id="deleteSICCUsuarioUsuarios" parameterClass="java.util.Map">
+  		DELETE FROM users WHERE iduser =#oid#
+  	</delete>
+    
+   <parameterMap id="insertSICCUsuarioParams" class="usuarioSICC" >
+		<parameter property="login"            jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="apellidoPaterno"	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="apellidoMaterno"	    jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="primerNombre"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>    
+		<parameter property="segundoNombre"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>    
+		<parameter property="email"	    jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>  
+  		<parameter property="telefono"	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="clave"	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>  
+	</parameterMap>	  
+	
+    <procedure id="insertSICCUsuario"  parameterMap="insertSICCUsuarioParams" >
+		{call SIC_PKG_MANTE.SIC_PR_INSER_DATOS_USUAR(?,?,?,?,?,?,?,?)}
+    </procedure> 
+    
+    <parameterMap id="updateSICCUsuarioParams" class="usuarioSICC" >
+		<parameter property="oid"            jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="apellidoPaterno"	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="apellidoMaterno"	    jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="primerNombre"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>    
+		<parameter property="segundoNombre"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>    
+		<parameter property="email"	    jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>  
+  		<parameter property="telefono"	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>  	  
+	</parameterMap>	  
+  
+    <procedure id="updateSICCUsuario"  parameterMap="updateSICCUsuarioParams" >
+		{call SIC_PKG_MANTE.SIC_PR_ACTUA_DATOS_USUAR(?,?,?,?,?,?,?)}
+    </procedure>
+    
+    <insert id="insertSICCRolUsuario" parameterClass="java.util.HashMap">
+  		INSERT INTO MEMBEROF (IDROLE, IDMEMBER) VALUES (#oidRol#, (SELECT p.idprincipal FROM principals p WHERE upper(NAME) = upper(#login#)))
+  	</insert>
+    
+     <parameterMap id="updateSICCUsuarioDatosMasivosParams" class="usuarioSICC" >
+		<parameter property="oid"            jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>	   
+	</parameterMap>	  
+  
+    <procedure id="updateSICCUsuarioDatosMasivos"  parameterMap="updateSICCUsuarioDatosMasivosParams" >
+		{call SIC_PKG_MANTE.SIC_PR_ACTUA_DATOS_MASIV(?)}
+    </procedure>
+     <parameterMap id="updateSICCUsuarioResetClaveParams" class="usuarioSICC" >
+		<parameter property="oid"            jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="clave"	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>  	  
+	</parameterMap>	  
+  
+    <procedure id="updateSICCUsuarioResetClave"  parameterMap="updateSICCUsuarioResetClaveParams" >
+		{call SIC_PKG_MANTE.SIC_PR_RESTB_USUAR(?,?)}
+    </procedure>
+    
+    <!-- getListaSICCUsuariosRolByCriteria .................................................... -->
+    <!-- ...................................................................................... -->
+    <resultMap id="usuariosRolSICCResult" class="java.util.HashMap">                                      
+    	<result property="descripcionRol"             column="PERFIL" />                    
+		<result property="descripcionUsuario"         column="USUARIO" /> 
+	</resultMap>   
+    
+    <select id="getListaSICCUsuariosRolByCriteria" parameterClass="java.util.Map" resultMap="usuariosRolSICCResult">
+		select    a.name PERFIL, 
+		          (select name from principals where idprincipal=b.IDmember) USUARIO  
+		from      principals a, memberof b
+		where     a.idprincipal in (
+		            select idrole from memberof where idmember=4
+		          )
+		and       a.idprincipal=b.idrole
+		<![CDATA[		
+		and       b.idmember<>4
+		]]>		
+		AND       A.IDPRINCIPAL = #oid# 
+		order by  1,2
+    </select>		
+    
+    <!-- updateSICCUsuarioBlocked ............................................................. -->
+    <!-- ...................................................................................... -->
+    <parameterMap id="updateSICCUsuarioBlockedParams" class="java.util.Map" >
+		<parameter property="oid"     jdbcType="VARCHAR2" javaType="java.lang.String"   mode="IN"/>
+	    <parameter property="accion"  jdbcType="NUMBER"   javaType="java.lang.Integer"  mode="IN"/>  	  
+	</parameterMap>	  
+  
+    <procedure id="updateSICCUsuarioBlocked"  parameterMap="updateSICCUsuarioBlockedParams" >
+		{call SIC_PKG_MANTE.SEG_PR_BLOQU_DESBL_USUAR(?,?)}
+    </procedure>
+    
+    
+</sqlMap>

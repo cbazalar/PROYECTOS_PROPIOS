@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.ProcesosVENSQL">
+    <typeAlias alias="bcalendario" type="biz.belcorp.ssicc.dao.sisicc.model.Calendario"/>
+	<typeAlias alias="bferiadoZona" type="biz.belcorp.ssicc.dao.sisicc.model.FeriadoZona"/>
+
+    <resultMap id="calendarioMapResult" class="bcalendario">    
+	    <result property="codigoAnio"           column="COD_ANIO"/>
+	    <result property="fechaCalendario"      column="FEC_CALE"/>
+	    <result property="posicionSemana"       column="NUM_POSI_SEMA"/>
+	    <result property="indicadorFeriado"     column="IND_FERI"/>	 
+		<result property="descIndicadorFeriado" column="DES_IND_FERI"/>	    
+	    <result property="descripcion"          column="NOM_DESC"/>
+	</resultMap>
+
+    <resultMap id="feriadoZonaMapResult" class="bferiadoZona">    
+	    <result property="codigoAnio"           column="COD_ANIO"/>
+		<result property="codigoZona"           column="COD_ZONA"/>	
+	    <result property="fechaCalendario"      column="FEC_CALE"/>
+		<result property="descripcionZona"      column="DES_ZONA"/>
+	    <result property="descripcion"          column="NOM_DESC"/>
+	</resultMap>
+
+	<parameterMap id="paramProcesoVENCalculoRecuperacionCobranza" class="map" >
+		<parameter property="codigoPais"     jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="codigoMarca"    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="codigoCanal"    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoSociedad" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="tipoSeleccion"  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+
+	<procedure id="procesoVENCalculoRecuperacionCobranza" parameterMap="paramProcesoVENCalculoRecuperacionCobranza" >
+		{call APP_PKG_REPOR.PER_PR_CALCU_RECUP_COBRAN(? ,?, ?, ?, ?, ? )}
+	</procedure>
+
+    <parameterMap id="paramGenerarCalendario" class="map" >
+		<parameter property="codigoAnio" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="error" jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>
+	</parameterMap>
+
+	<procedure id="executeGenerarCalendario" parameterMap="paramGenerarCalendario" >
+		{call GEN_PKG_GENER.GEN_PR_GENER_CALEN(? , ?, ?  )}
+	</procedure>
+	
+	<select id="getCalendarios" parameterClass="map" resultMap="calendarioMapResult">
+		SELECT
+		   COD_ANIO , 
+		   FEC_CALE , 
+		   NUM_POSI_SEMA, 
+		   IND_FERI , 
+		   decode(IND_FERI,'S','SI','NO') as DES_IND_FERI,
+		   NOM_DESC 
+		FROM 
+		   BAS_CALEN A
+		WHERE
+		   A.COD_ANIO = #codigoAnio# 
+		   <isNotEmpty prepend="AND" property="fechaCalendario">
+		      A.FEC_CALE = TO_DATE(#fechaCalendario#,'DD/MM/YYYY')
+           </isNotEmpty>
+		ORDER BY 
+		   A.FEC_CALE   
+		
+	</select>	
+	
+	<update id="updateCalendario" parameterClass="bcalendario">
+		UPDATE BAS_CALEN
+		SET USU_MODI = #auditInfo.updatedBy#,
+        	FEC_MODI = #auditInfo.lastUpdated#
+			<isNotEmpty prepend="," property="indicadorFeriado">
+				IND_FERI = #indicadorFeriado#
+			</isNotEmpty>
+			<isNotEmpty prepend="," property="descripcion">
+				NOM_DESC = #descripcion#
+			</isNotEmpty>
+		WHERE
+		   COD_ANIO = #codigoAnio# AND
+	       FEC_CALE = #fechaCalendario#
+    </update>   
+	
+
+   <select id="getFeriadoZona" parameterClass="map" resultMap="feriadoZonaMapResult">
+		SELECT
+		   A.COD_ANIO , 
+		   B.COD_ZONA,
+		   B.DES_ZONA,
+		   A.FEC_CALE , 
+		   A.NOM_DESC 
+		FROM 
+		   VEN_FERIA_ZONA A,
+		   ZON_ZONA  B
+		WHERE
+		   B.COD_ZONA = A.COD_ZONA AND
+		   A.COD_ANIO = #codigoAnio# 
+		   <isNotEmpty prepend="AND" property="codigoZona">
+			  B.COD_ZONA = #codigoZona#    
+		   </isNotEmpty>
+		   <isNotEmpty prepend="AND" property="fechaCalendario">
+		      A.FEC_CALE = TO_DATE(#fechaCalendario#,'DD/MM/YYYY')
+           </isNotEmpty>
+		ORDER BY 
+		   A.FEC_CALE   
+		
+	</select>	
+
+	
+	<update id="updateFeriadoZona" parameterClass="bferiadoZona">
+		UPDATE VEN_FERIA_ZONA
+		SET USU_MODI = #auditInfo.updatedBy#,
+        	FEC_MODI = #auditInfo.lastUpdated#
+			<isNotNull prepend="," property="codigoZona">
+			   COD_ZONA = #codigoZona#    
+		   </isNotNull>
+			<isNotEmpty prepend="," property="descripcion">
+				NOM_DESC = #descripcion#
+			</isNotEmpty>
+		WHERE
+		   COD_ANIO = #codigoAnio# AND
+		   COD_ZONA = #codigoZona# AND
+	       FEC_CALE = #fechaCalendario#
+    </update>   
+
+   <insert id="insertFeriadoZona" parameterClass="bferiadoZona">
+	    INSERT INTO VEN_FERIA_ZONA
+	    (
+		COD_ANIO,
+		COD_ZONA,
+		FEC_CALE,
+		NOM_DESC,
+		USU_DIGI,
+		FEC_DIGI
+		) 
+	    VALUES 
+	    (
+		#codigoAnio#,
+		#codigoZona#,
+		#fechaCalendario#,
+		#descripcion#,
+		#auditInfo.createdBy#,
+		#auditInfo.created#
+	    )
+	</insert>
+
+    <delete id="deleteFeriadoZona" parameterClass="bferiadoZona">
+		DELETE FROM VEN_FERIA_ZONA
+		WHERE
+		   COD_ANIO = #codigoAnio# AND
+		   COD_ZONA = #codigoZona# AND
+	       FEC_CALE = #fechaCalendario#
+    </delete>   
+
+	<parameterMap id="paramProcesoVENGenerarHistoricoVentaCatalogo" class="map" >
+		<parameter property="codigoPais"     jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="codigoSociedad" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoAlmacen"  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="codigoCanal"    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCampanha" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+
+	<procedure id="procesoVENGenerarHistoricoVentaCatalogo" parameterMap="paramProcesoVENGenerarHistoricoVentaCatalogo" >
+		{call VEN_PKG_REPOR.VEN_PR_CARGA_HISTO_VENTA_CATAL(?, ?, ?, ?, ?, ? )}
+	</procedure>
+
+	<parameterMap id="paramProcesoVENCalculoFuenteVentasReal" class="map" >
+		<parameter property="codigoPais"     jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="codigoMarca"    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="codigoCanal"    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+
+	<procedure id="procesoVENCalculoFuenteVentasReal" parameterMap="paramProcesoVENCalculoFuenteVentasReal" >
+		{call VEN_PKG_PROCE.VEN_PR_CALCU_FUENT_VENTA_REAL(?, ?, ?, ? )}
+	</procedure>	
+	
+   <select id="getZonasRegion" parameterClass="string" resultClass="string">
+        SELECT Z.COD_ZONA
+		FROM ZON_ZONA Z, ZON_REGIO R
+		WHERE Z.ZORG_OID_REGI = R.OID_REGI
+		AND R.COD_REGI=#feriadoRegion#		
+	</select>	
+
+
+   <select id="getIndicadorHabilitacionRuv" parameterClass="java.util.Map" resultClass="string">
+        SELECT IND_HABI_RUV
+  		FROM FAC_PARAM_FACTU
+        WHERE PAIS_OID_PAIS=#oidPais#
+	</select>
+	
+     <parameterMap id="paramExecuteGeneracionReporteRUV" class="map" >
+		<parameter property="codigoPais"     		   jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="codigoPeriodoInformar"    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="codigoPeriodoEnviar"      jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="accion"  		   		   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="usuario"  		   		   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>		
+	</parameterMap>
+
+	<procedure id="executeGeneracionReporteRUV" parameterMap="paramExecuteGeneracionReporteRUV" >
+		{call RUV_PKG_PROCE.RUV_PR_GENER_REPOR_SUNAT(?, ?, ?, ?, ? )}
+	</procedure>	
+	
+	
+	<parameterMap id="executeGenerarArchivosLibroVentasDetalleSIIParams" class="map">
+		<parameter property="codigoPais"          jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="fechaDesde"          jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="fechaHasta"          jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="accion"       		  jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="directorioArchivo"   jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>
+		<parameter property="psNota1"   		  jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>
+		<parameter property="psNota2"   		  jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>
+		<parameter property="psBoleta1"   		  jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>
+		<parameter property="psBoleta2"   		  jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>
+	</parameterMap>
+	
+	<procedure id="executeGenerarArchivosLibroVentasDetalleSII" parameterMap="executeGenerarArchivosLibroVentasDetalleSIIParams">
+		{call CCC_PKG_REPOR_PROCE.CCC_PR_VENTAS_DETALLE_SII(?, ?, ?, ?, ?, ?, ?, ?, ?)}
+	</procedure>
+	
+	
+</sqlMap>

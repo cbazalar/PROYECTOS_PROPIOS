@@ -1,0 +1,109 @@
+DROP MATERIALIZED VIEW SOA_MV_DATOS_ESTAT_CONSU;
+CREATE MATERIALIZED VIEW SOA_MV_DATOS_ESTAT_CONSU
+REFRESH FORCE ON DEMAND
+AS
+SELECT mc.cod_clie,
+       mc.val_nom1,
+       mc.val_nom2,
+       mc.val_ape1,
+       mc.val_ape2,
+       mcda.fec_naci,
+       mc.cod_sexo,
+       pq_apl_aux.valor_gen_i18n_sicc(1,
+                                      mcda.escv_oid_esta_civi,
+                                      'MAE_ESTAD_CIVIL') val_esta_civi,
+       CASE
+         WHEN zs.clie_oid_clie = mc.oid_clie AND zs.ind_acti = '1' THEN
+          'Activa'
+         WHEN zs.clie_oid_clie = mc.oid_clie AND zs.ind_acti = '0' THEN
+          'Inactiva'
+         ELSE
+          NULL
+       END val_esta_let,
+       CASE
+         WHEN zs.clie_oid_clie = mc.oid_clie THEN
+          mc.fec_ingr
+         ELSE
+          NULL
+       END fec_alta_let,
+       zt.cod_terr,
+       gen_pkg_gener.gen_fn_indic_prime_pedid(mc.cod_clie,
+                                              spc.cod_peri) ind_prim_pedi,
+       gen_pkg_gener.gen_fn_indic_kit_nueva(mc.cod_clie) ind_kit_nuev,
+       decode(int_pkg_reuti.int_fn_reu_indic_pedid(mc.oid_clie,
+                                                   mec.cod_esta_clie),
+              'S',
+              '1',
+              '0') ind_auto_pedi,
+       spc.cod_peri cod_peri_ingr,
+       mc.fec_ingr,
+       CASE
+         WHEN mcv.oid_clie_vinc IS NULL THEN
+          '0'
+         ELSE
+          '1'
+       END ind_dupl,
+       sp.cod_pais,
+       gen_pkg_gener.gen_fn_clien_datos_oid(mc.oid_clie,
+                                            'COD_REGI') cod_regi,
+       gen_pkg_gener.gen_fn_clien_datos_oid(mc.oid_clie,
+                                            'COD_ZONA') cod_zona,
+       zs.cod_secc,
+       mc.cod_digi_ctrl,
+       CAST(SYS_EXTRACT_UTC(SYSTIMESTAMP) AS DATE) fec_utc_carga
+  FROM mae_clien             mc,
+       mae_clien_prime_conta mpc,
+       mae_clien_datos_adici mcda,
+       mae_clien_unida_admin mcua,
+       zon_terri_admin       zta,
+       zon_terri             zt,
+       zon_secci             zs,
+       cra_perio             cp,
+       seg_perio_corpo       spc,
+       seg_pais              sp,
+       mae_clien_vincu       mcv,
+       mae_estat_clien       mec
+ WHERE mpc.clie_oid_clie = mc.oid_clie
+   AND mcda.clie_oid_clie = mc.oid_clie
+   AND mcda.ind_acti = 1
+   AND mcua.clie_oid_clie = mc.oid_clie
+   AND zta.oid_terr_admi = mcua.ztad_oid_terr_admi
+   AND mcua.ind_acti = '1'
+   AND zta.terr_oid_terr = zt.oid_terr
+   AND zs.oid_secc = zta.zscc_oid_secc
+   AND mpc.perd_oid_peri = cp.oid_peri
+   AND spc.oid_peri = cp.peri_oid_peri
+   AND sp.oid_pais = mc.pais_oid_pais
+   AND mcv.clie_oid_clie_vnte(+) = mc.oid_clie
+   AND mcv.tivc_oid_tipo_vinc(+) = 1
+   AND mcv.fec_hast IS NULL
+   AND mec.oid_esta_clie = mcda.esta_oid_esta_clie
+   AND (mcda.esta_oid_esta_clie IN (1,
+                                    2,
+                                    3,
+                                    4,
+                                    5,
+                                    6,
+                                    8) OR
+       (mcda.esta_oid_esta_clie IN (7) AND EXISTS
+        (SELECT soca.clie_oid_clie
+                      FROM ped_solic_cabec soca,
+                           ped_solic_cabec cons,
+                           ped_tipo_solic_pais tspa,
+                           ped_tipo_solic tsol,
+                           cra_perio cp1,
+                           seg_perio_corpo spc1,
+                           bas_ctrl_fact bcf
+                     WHERE soca.soca_oid_soli_cabe = cons.oid_soli_cabe(+)
+                       AND soca.tspa_oid_tipo_soli_pais = tspa.oid_tipo_soli_pais
+                       AND tspa.tsol_oid_tipo_soli = tsol.oid_tipo_soli
+             AND cons.clie_oid_clie = mc.oid_clie
+                       AND tsol.cod_tipo_soli = 'SOC' -- Tipo de solicitud OC
+                       AND soca.ind_oc = 1 -- Indicador de OC = 1
+                       AND cons.esso_oid_esta_soli <> 4 -- No anulados
+                       AND soca.grpr_oid_grup_proc = 5 -- Facturados/Procesados
+                       AND cp1.oid_peri=soca.perd_oid_peri
+             AND spc.oid_peri = cp1.peri_oid_peri
+             AND spc1.cod_peri = bcf.cod_peri
+             AND bcf.ind_camp_act = '1')));
+             

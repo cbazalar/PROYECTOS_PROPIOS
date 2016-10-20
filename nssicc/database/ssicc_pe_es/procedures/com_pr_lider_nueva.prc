@@ -1,0 +1,197 @@
+CREATE OR REPLACE PROCEDURE "COM_PR_LIDER_NUEVA" (p_codigoPais IN VARCHAR2,
+                      p_codigoPeriodo IN VARCHAR2,
+               p_codigoIdioma IN VARCHAR2) IS
+
+/**************************************************************************
+Descripcion        : Selecciona las Lideres Nuevas - Interfaces.- COM
+Fecha Creacion     : 05/04/2006
+Fecha Modificacion : 05/04/2006
+Parametros Entrada : p_codigoPais : Codigo de Pais
+      p_codigoPeriodo : Codigo de Periodo de Ingreso
+      p_codigoIdioma : Codigo de Idioma
+Autor              : Jose Martinez Vargas
+Version      : Final
+***************************************************************************/
+
+/* Declaramos variables */
+l_codigoPais      VARCHAR2(3);
+l_codigoPeriodo       VARCHAR2(6);
+l_codigoIdioma    VARCHAR2(3);
+l_codigoLider     VARCHAR2(15);
+l_codigoLiderAnt   VARCHAR2(15);
+l_codigoLiderPos   VARCHAR2(15);
+
+/* Creamos cursor y lo llenamos */
+CURSOR c_Lider IS
+
+       SELECT SEG_PAIS.COD_PAIS AS CODPAIS,
+        MAE_CLIEN.VAL_NOM1 || ' ' ||MAE_CLIEN.VAL_NOM2 AS NOM,
+              MAE_CLIEN.VAL_APE1 AS APEPA,
+              MAE_CLIEN.VAL_APE2 AS APEMA,
+     SYSDATE AS FECING,
+              TRIM(MAE_CLIEN_LIDER.NUM_DNI) AS DNI,
+
+              SUBSTR((SEG_TIPO_VIA.DES_ABRV_TIPO_VIA || ' ' || MAE_CLIEN_DIREC.VAL_NOMB_VIA ||
+         ' ' || MAE_CLIEN_DIREC.NUM_PPAL ||
+
+     (CASE
+        WHEN MAE_CLIEN_DIREC.VAL_INTE IS NULL THEN ' '
+      ELSE ' Int.' || MAE_CLIEN_DIREC.VAL_INTE
+      END) ||
+
+      (CASE
+        WHEN MAE_CLIEN_DIREC.VAL_MANZ IS NULL THEN ' '
+      ELSE ' Mnz.' || MAE_CLIEN_DIREC.VAL_MANZ
+       END) ||
+
+      (CASE
+        WHEN MAE_CLIEN_DIREC.VAL_MANZ IS NULL THEN ' '
+      ELSE ' Lt.' || MAE_CLIEN_DIREC.VAL_LOTE
+       END) ||
+
+      (CASE
+        WHEN MAE_CLIEN_DIREC.VAL_MANZ IS NULL THEN ' '
+      ELSE ' Km.' || MAE_CLIEN_DIREC.VAL_KM || ' '
+       END) ||
+
+     SUBSTR((SELECT GEN_I18N_SICC_PAIS.VAL_I18N
+                    FROM  ZON_VALOR_ESTRU_GEOPO ZONA,
+              ZON_SUBES_GEOPO,
+        GEN_I18N_SICC_PAIS,
+                       SEG_IDIOM
+                WHERE ZONA.ORDE_1 = TRIM(SUBSTR(MAE_CLIEN_DIREC.COD_UNID_GEOG,1,6))
+                AND   ZONA.ORDE_2 = LTRIM(RTRIM(SUBSTR(MAE_CLIEN_DIREC.COD_UNID_GEOG,7,6)))
+                AND   ZONA.ORDE_3 = LTRIM(RTRIM(SUBSTR(MAE_CLIEN_DIREC.COD_UNID_GEOG,13,6)))
+                AND   ZONA.ORDE_4 = LTRIM(RTRIM(SUBSTR(MAE_CLIEN_DIREC.COD_UNID_GEOG,19,6)))
+              AND   ZONA.ORDE_5  IS NULL
+                AND   ZONA.PAIS_OID_PAIS = SEG_PAIS.OID_PAIS
+              AND   ZONA.SGEO_OID_SUBE_GEOP = ZON_SUBES_GEOPO.OID_SUBE_GEOP
+           AND  GEN_I18N_SICC_PAIS.VAL_OID = ZON_SUBES_GEOPO.OID_SUBE_GEOP
+           AND   GEN_I18N_SICC_PAIS.IDIO_OID_IDIO = SEG_IDIOM.OID_IDIO
+               AND   GEN_I18N_SICC_PAIS.ATTR_ENTI ='ZON_SUBES_GEOPO'
+               AND   SEG_IDIOM.COD_IDIO = UPPER(p_codigoIdioma)),0,3)) || ' ' ||
+
+     (SELECT ZONA.DES_GEOG FROM ZON_VALOR_ESTRU_GEOPO ZONA
+         WHERE ZONA.ORDE_1 = LTRIM(RTRIM(SUBSTR(MAE_CLIEN_DIREC.COD_UNID_GEOG,1,6)))
+         AND ZONA.ORDE_2 = LTRIM(RTRIM(SUBSTR(MAE_CLIEN_DIREC.COD_UNID_GEOG,7,6)))
+         AND ZONA.ORDE_3 = LTRIM(RTRIM(SUBSTR(MAE_CLIEN_DIREC.COD_UNID_GEOG,13,6)))
+         AND ZONA.ORDE_4 = LTRIM(RTRIM(SUBSTR(MAE_CLIEN_DIREC.COD_UNID_GEOG,19,6)))
+      AND ZONA.ORDE_5 IS NULL
+         AND ZONA.PAIS_OID_PAIS = SEG_PAIS.OID_PAIS),0, 40) AS DIR,
+
+              (CASE MAE_TIPO_COMUN.COD_TIPO_COMU
+         WHEN 'TF' THEN MAE_CLIEN_COMUN.VAL_TEXT_COMU
+      WHEN 'TM' THEN MAE_CLIEN_COMUN.VAL_TEXT_COMU
+      WHEN 'TT' THEN MAE_CLIEN_COMUN.VAL_TEXT_COMU
+      ELSE ''
+      END) AS TEL,
+
+     MAE_CLIEN_DATOS_ADICI.FEC_NACI AS FECNAC,
+              'D' || SUBSTR(ZON_ZONA.COD_ZONA,0,3) AS CIUD,
+              'E' || SUBSTR(MAE_ESTAD_CIVIL.COD_ESTA_CIVI,2,1) AS ESCIV,
+              (CASE SUBSTR(ZON_REGIO.COD_REGI,0,1)  WHEN '0' THEN 'L2' ELSE 'L1' END) AS LIMPRO,
+     SYSDATE AS FECINGPLA,
+              MAE_CLIEN_LIDER.CEN_COST AS CENCOS,
+              ZON_ZONA.COD_ZONA AS CODZON,
+
+     (SELECT ZONA.DES_GEOG FROM ZON_VALOR_ESTRU_GEOPO ZONA
+         WHERE ZONA.ORDE_1 = LTRIM(RTRIM(SUBSTR(MAE_CLIEN_DIREC.COD_UNID_GEOG,1,6)))
+         AND ZONA.ORDE_2 = LTRIM(RTRIM(SUBSTR(MAE_CLIEN_DIREC.COD_UNID_GEOG,7,6)))
+         AND ZONA.ORDE_3 = LTRIM(RTRIM(SUBSTR(MAE_CLIEN_DIREC.COD_UNID_GEOG,13,6)))
+         AND ZONA.ORDE_4  IS NULL
+         AND ZONA.PAIS_OID_PAIS = SEG_PAIS.OID_PAIS) AS DESDISTR,
+
+              MAE_CLIEN_LIDER.COD_CLID AS CODLID,
+
+     (SELECT ZONA.DES_GEOG FROM ZON_VALOR_ESTRU_GEOPO ZONA
+         WHERE ZONA.ORDE_1 = LTRIM(RTRIM(SUBSTR(MAE_CLIEN_DIREC.COD_UNID_GEOG,1,6)))
+         AND ZONA.ORDE_2  IS NULL
+         AND ZONA.ORDE_3  IS NULL
+         AND ZONA.ORDE_4  IS NULL
+         AND ZONA.PAIS_OID_PAIS = SEG_PAIS.OID_PAIS) AS DESDEPA,
+
+     (SELECT RPAD(NVL(ZONA.DES_GEOG, ' '), 40, ' ') FROM ZON_VALOR_ESTRU_GEOPO ZONA
+         WHERE ZONA.ORDE_1 = LTRIM(RTRIM(SUBSTR(MAE_CLIEN_DIREC.COD_UNID_GEOG,1,6)))
+         AND ZONA.ORDE_2 = LTRIM(RTRIM(SUBSTR(MAE_CLIEN_DIREC.COD_UNID_GEOG,7,6)))
+         AND ZONA.ORDE_3  IS NULL
+         AND ZONA.ORDE_4  IS NULL
+         AND ZONA.PAIS_OID_PAIS = SEG_PAIS.OID_PAIS) AS DESPRO
+
+         FROM MAE_CLIEN_LIDER,
+      SEG_PAIS,
+              MAE_CLIEN,
+     MAE_CLIEN_DATOS_ADICI,
+     MAE_ESTAD_CIVIL,
+     MAE_CLIEN_DIREC,
+     SEG_TIPO_VIA,
+     MAE_CLIEN_UNIDA_ADMIN,
+     ZON_TERRI_ADMIN,
+     ZON_SECCI,
+     ZON_ZONA,
+     ZON_REGIO,
+     MAE_CLIEN_COMUN,
+              MAE_TIPO_COMUN
+        WHERE ((MAE_CLIEN_LIDER.PAIS_COD_PAIS = p_codigoPais)
+  AND   (MAE_CLIEN_LIDER.PER_INGR = p_codigoPeriodo)
+  AND   (MAE_CLIEN_UNIDA_ADMIN.IND_ACTI = 1)
+  AND   (MAE_CLIEN_LIDER.PAIS_COD_PAIS = SEG_PAIS.COD_PAIS)
+  AND   (MAE_CLIEN_LIDER.COD_CLID = MAE_CLIEN.COD_CLIE)
+  AND   (MAE_CLIEN.PAIS_OID_PAIS = SEG_PAIS.OID_PAIS)
+        AND   (MAE_CLIEN_DATOS_ADICI.CLIE_OID_CLIE = MAE_CLIEN.OID_CLIE)
+  AND   (MAE_CLIEN_DATOS_ADICI.ESCV_OID_ESTA_CIVI = MAE_ESTAD_CIVIL.OID_ESTA_CIVI (+))
+  AND   (MAE_CLIEN_DIREC.CLIE_OID_CLIE = MAE_CLIEN.OID_CLIE)
+  AND   (MAE_CLIEN_DIREC.TIVI_OID_TIPO_VIA = SEG_TIPO_VIA.OID_TIPO_VIA)
+  AND   (MAE_CLIEN_UNIDA_ADMIN.CLIE_OID_CLIE = MAE_CLIEN.OID_CLIE)
+  AND   (MAE_CLIEN_UNIDA_ADMIN.ZTAD_OID_TERR_ADMI = ZON_TERRI_ADMIN.OID_TERR_ADMI)
+  AND   (ZON_TERRI_ADMIN.ZSCC_OID_SECC = ZON_SECCI.OID_SECC)
+  AND   (ZON_SECCI.ZZON_OID_ZONA = ZON_ZONA.OID_ZONA)
+  AND   (ZON_ZONA.ZORG_OID_REGI = ZON_REGIO.OID_REGI)
+  AND   (MAE_CLIEN_COMUN.CLIE_OID_CLIE (+)= MAE_CLIEN.OID_CLIE)
+  AND   (MAE_CLIEN_COMUN.TICM_OID_TIPO_COMU = MAE_TIPO_COMUN.OID_TIPO_COMU (+))
+        )
+  ORDER BY MAE_CLIEN_LIDER.COD_CLID;
+
+r_Lider c_Lider%ROWTYPE;
+
+BEGIN
+
+   /* Borrar tabla temporal de Lideres Nuevas */
+   DELETE FROM MAE_LIDER_NUEVA_TEMPO
+   WHERE COD_PAIS = p_codigoPais;
+
+   /* Inicializamos varibales */
+   l_codigoLiderAnt := '00000000000';
+
+   /* Abrimos cursor que contine informacion de Lideres Nuevas */
+   DBMS_OUTPUT.PUT_LINE('INICIO');
+   OPEN c_Lider;
+   LOOP
+      FETCH c_Lider INTO r_Lider;
+      EXIT WHEN c_Lider%NOTFOUND;
+   BEGIN
+     /* Asignamos codigo lider de registro actual en un inicio sera igual al primer registro*/
+   l_codigoLiderPos := r_Lider.CODLID;
+
+   IF l_codigoLiderPos <> l_codigoLiderAnt THEN
+
+      /* Insertamos en tabla temporal */
+      INSERT INTO MAE_LIDER_NUEVA_TEMPO (COD_PAIS, NOM_CLIE, APE_PATE, APE_MATE,FEC_INGR,
+                                      NUM_DNI, VAL_DIRE, VAL_TELE, FEC_NACI, VAL_CIUD,
+              EST_CIVI, VAL_LIPR, FEC_INPL, CEN_COST, COD_ZONA,
+              DES_DIST, COD_CLID, DES_DEPA, DES_PROV)
+            VALUES (p_codigoPais, r_Lider.NOM, r_Lider.APEPA, r_Lider.APEMA, r_Lider.FECING, r_Lider.DNI,
+        r_Lider.DIR, r_Lider.TEL, r_Lider.FECNAC, r_Lider.CIUD, r_Lider.ESCIV, r_Lider.LIMPRO,
+     r_Lider.FECINGPLA, r_Lider.CENCOS, r_Lider.CODZON, r_Lider.DESDISTR, r_Lider.CODLID,
+     r_Lider.DESDEPA, r_Lider.DESPRO);
+   END IF;
+
+   /* Asignamos codigo de lider de registro anterior */
+   l_codigoLiderAnt := r_Lider.CODLID;
+
+      END;
+   END LOOP;
+   CLOSE c_Lider;
+COMMIT;
+END COM_PR_LIDER_NUEVA;
+/
+

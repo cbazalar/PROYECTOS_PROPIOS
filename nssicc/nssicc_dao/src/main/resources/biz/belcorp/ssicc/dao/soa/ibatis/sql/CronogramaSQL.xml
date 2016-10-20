@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+<sqlMap namespace="soa.CronogramaSQL">
+
+    <resultMap id="getCronogramaResult" class="java.util.HashMap">
+	    <result property="codigoActividad" 	  	column="COD_ACTI"/>
+	    <result property="descripcion"			column="DES_ACTI"/>
+	    <result property="fechaInicio"			column="FEC_INIC"/>
+	    <result property="rol"					column="ROL"/>
+    </resultMap>
+	
+	<select id="getCronogramaGZ" parameterClass="java.util.Map" resultMap="getCronogramaResult">
+		SELECT DISTINCT 
+			   Z.COD_ACTI,
+			   PQ_APL_AUX.VALOR_GEN_I18N_SICC(1, X.CACT_OID_ACTI, 'CRA_ACTIV') DES_ACTI, 
+		       TO_CHAR(X.FEC_INIC,'dd/MM/yyyy') FEC_INIC,              
+		       #rol# ROL
+		FROM CRA_CRONO X,
+		     ZON_ZONA Y,
+		     CRA_ACTIV Z
+		WHERE   X.FEC_INIC BETWEEN TO_DATE(#fechaInicio#,'dd/MM/yyyy') AND TO_DATE(#fechaFin#,'dd/MM/yyyy')
+		    AND Y.OID_ZONA = X.ZZON_OID_ZONA
+		    AND Y.ZORG_OID_REGI = (SELECT OID_REGI FROM ZON_REGIO WHERE COD_REGI =#codigoRegion#)
+		    AND Y.OID_ZONA = (SELECT OID_ZONA FROM ZON_ZONA WHERE COD_ZONA =#codigoZona#)
+		    AND Z.OID_ACTI = X.CACT_OID_ACTI
+		    AND Z.COD_ACTI IN (
+				SELECT val_para
+				  FROM bas_param_pais
+				 WHERE cod_sist = 'SOA'
+				   AND cod_pais =  #codigoPais#
+				   AND nom_para = 'cronogramaGZ'
+		    )
+		    AND Y.IND_ACTI=1
+		ORDER BY 3  
+	</select>
+	
+	<select id="getCronogramaGR" parameterClass="java.util.Map" resultMap="getCronogramaResult">
+		SELECT DISTINCT 
+			   Z.COD_ACTI,
+			   PQ_APL_AUX.VALOR_GEN_I18N_SICC(1, X.CACT_OID_ACTI, 'CRA_ACTIV') DES_ACTI, 
+		       TO_CHAR(X.FEC_INIC,'dd/MM/yyyy') FEC_INIC,              
+		       #rol# ROL
+		FROM CRA_CRONO X,
+		     ZON_ZONA Y,
+		     CRA_ACTIV Z
+		WHERE   X.FEC_INIC BETWEEN TO_DATE(#fechaInicio#,'dd/MM/yyyy') AND TO_DATE(#fechaFin#,'dd/MM/yyyy')
+		    AND Y.OID_ZONA = X.ZZON_OID_ZONA
+		    AND Y.ZORG_OID_REGI = (SELECT OID_REGI FROM ZON_REGIO WHERE COD_REGI =#codigoRegion#)
+		    AND Z.OID_ACTI = X.CACT_OID_ACTI
+		    AND Z.COD_ACTI IN (
+				SELECT val_para
+				  FROM bas_param_pais
+				 WHERE cod_sist = 'SOA'
+				   AND cod_pais = #codigoPais#
+				   AND nom_para = 'cronogramaGR'
+			)
+		    AND Y.IND_ACTI=1
+		ORDER BY 3
+	</select>
+	
+	<select id="getCronogramaDV" parameterClass="java.util.Map" resultMap="getCronogramaResult">
+		SELECT DISTINCT 
+			   Z.COD_ACTI,
+			   PQ_APL_AUX.VALOR_GEN_I18N_SICC(1, X.CACT_OID_ACTI, 'CRA_ACTIV') DES_ACTI, 
+		       TO_CHAR(X.FEC_INIC,'dd/MM/yyyy') FEC_INIC,              
+		       #rol# ROL
+		FROM CRA_CRONO X,
+		     ZON_ZONA Y,
+		     CRA_ACTIV Z
+		WHERE   X.FEC_INIC BETWEEN TO_DATE(#fechaInicio#,'dd/MM/yyyy') AND TO_DATE(#fechaFin#,'dd/MM/yyyy')
+		    AND Y.OID_ZONA = X.ZZON_OID_ZONA
+		    AND Z.OID_ACTI = X.CACT_OID_ACTI
+		    AND Z.COD_ACTI IN (
+				SELECT val_para
+				  FROM bas_param_pais
+				 WHERE cod_sist = 'SOA'
+				   AND cod_pais = #codigoPais#
+				   AND nom_para = 'cronogramaDV'		    
+		    )
+		<isNotEmpty prepend="AND" property="codigoRegion">
+			  Y.ZORG_OID_REGI = (SELECT OID_REGI FROM ZON_REGIO WHERE COD_REGI =#codigoRegion#)
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="codigoZona">
+			  Y.OID_ZONA = (SELECT OID_ZONA FROM ZON_ZONA WHERE COD_ZONA =#codigoZona#)
+		</isNotEmpty>				    
+		    AND Y.IND_ACTI=1
+		ORDER BY 3
+	</select>		
+		
+	<select id="getDiasFaltantesCierreFacturacion" parameterClass="java.util.Map" resultClass="int">
+	    SELECT 
+        CASE                                                                                                         
+            WHEN (TRUNC(FEC_INIC) - TRUNC(SYSDATE))<![CDATA[ <= 0  ]]> THEN 0
+            ELSE TRUNC(FEC_INIC) - TRUNC(SYSDATE)
+        END  NUM_DIAS_FALTA                 
+        FROM CRA_CRONO X,
+             CRA_ACTIV Z
+        WHERE   X.PERD_OID_PERI = GEN_PKG_GENER.gen_fn_devuelve_id_cra_perio2(#codigoPeriodo#)
+            AND X.ZZON_OID_ZONA = (SELECT OID_ZONA FROM ZON_ZONA WHERE COD_ZONA = #codigoZona#)
+            AND Z.OID_ACTI = X.CACT_OID_ACTI
+            AND Z.COD_ACTI = 'RF'   
+    	    
+	</select>
+	
+	
+    <select id="getDiasFaltantesCierreFacturacionGR" parameterClass="java.util.Map" resultClass="int">
+	    SELECT 
+        CASE                                                                                                         
+            WHEN (TRUNC(MAX(FEC_INIC)) - TRUNC(SYSDATE))<![CDATA[ <= 0  ]]> THEN 0
+            ELSE TRUNC(MAX(FEC_INIC)) - TRUNC(SYSDATE)
+        END  NUM_DIAS_FALTA                 
+        FROM CRA_CRONO X,
+             CRA_ACTIV Z,
+              ZON_ZONA Y
+        WHERE   X.PERD_OID_PERI = GEN_PKG_GENER.gen_fn_devuelve_id_cra_perio2(#codigoPeriodo#) AND                          
+ 			Y.OID_ZONA = X.ZZON_OID_ZONA
+		    AND Y.ZORG_OID_REGI = (SELECT OID_REGI FROM ZON_REGIO WHERE COD_REGI =#codigoRegion#)                
+            AND Z.OID_ACTI = X.CACT_OID_ACTI
+            AND Z.COD_ACTI = 'RF'   
+            AND Y.IND_ACTI=1
+    	    
+	</select>
+	
+	 <select id="getDiasFaltantesCierreFacturacionDV" parameterClass="java.util.Map" resultClass="int">
+	    SELECT 
+        CASE                                                                                                         
+            WHEN (TRUNC(MAX(FEC_INIC)) - TRUNC(SYSDATE))<![CDATA[ <= 0  ]]> THEN 0
+            ELSE TRUNC(MAX(FEC_INIC)) - TRUNC(SYSDATE)
+        END  NUM_DIAS_FALTA                 
+        FROM CRA_CRONO X,
+             CRA_ACTIV Z,
+              ZON_ZONA Y
+        WHERE   X.PERD_OID_PERI = GEN_PKG_GENER.gen_fn_devuelve_id_cra_perio2(#codigoPeriodo#) AND                          
+ 			Y.OID_ZONA = X.ZZON_OID_ZONA                
+            AND Z.OID_ACTI = X.CACT_OID_ACTI
+			<isNotEmpty prepend="AND" property="codigoRegion">
+				  Y.ZORG_OID_REGI = (SELECT OID_REGI FROM ZON_REGIO WHERE COD_REGI =#codigoRegion#)
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="codigoZona">
+				  Y.OID_ZONA = (SELECT OID_ZONA FROM ZON_ZONA WHERE COD_ZONA =#codigoZona#)
+			</isNotEmpty>	            
+            AND Z.COD_ACTI = 'RF'   
+            AND Y.IND_ACTI=1
+    	    
+	</select>
+</sqlMap>

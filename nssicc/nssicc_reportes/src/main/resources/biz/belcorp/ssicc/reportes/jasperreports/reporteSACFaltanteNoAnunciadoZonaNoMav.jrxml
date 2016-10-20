@@ -1,0 +1,494 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteSACFaltanteNoAnunciadoZonaNoMav"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Portrait"
+		 pageWidth="535"
+		 pageHeight="842"
+		 columnWidth="535"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="NoPages"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="codigoPeriodo" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPeriodo")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="region" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("region")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fecFactIni" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fecFactIni")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fecFactFin" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fecFactFin")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="unidadNegocio" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("unidadNegocio")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[select d.DES_REGI REGION,
+               c.cod_zona,
+               i.VAL_I18N UNIDAD_DE_NEGOCIO,
+               count(distinct a.clie_oid_clie) CONSEJERAS,
+               SUM(b.NUM_UNID_DEMA_REAL - b.NUM_UNID_ATEN) UNIDADES,
+               SUM((b.NUM_UNID_DEMA_REAL - b.NUM_UNID_ATEN) * (b.VAL_PREC_CATA_UNIT_LOCA - b.VAL_IMPO_DESC_UNIT_LOCA)) MONTO
+          from ped_solic_cabec     a,
+               ped_solic_posic     b,
+               zon_zona            c,
+               zon_regio           d,
+               pre_ofert_detal     f,
+               mae_produ           g,
+               mae_unida_negoc     h,
+               gen_i18n_sicc_pais  i
+         where a.oid_soli_cabe = b.soca_oid_soli_cabe
+           and a.zzon_oid_zona = c.oid_zona
+           and c.zorg_oid_regi = d.oid_regi
+           and a.PERD_OID_PERI = $P{codigoPeriodo}
+           and b.NUM_UNID_DEMA_REAL - b.NUM_UNID_ATEN > 0
+           and b.OFDE_OID_DETA_OFER = f.OID_DETA_OFER
+           and ((f.COD_ORIG = 'MAV' and f.IMP_PREC_CATA > 0) OR (f.COD_ORIG <> 'MAV')) -- Usar solo si el campo Incluye MAV esta en 'NO' 
+           and f.PROD_OID_PROD = g.OID_PROD
+           and g.UNEG_OID_UNID_NEGO = h.OID_UNID_NEGO
+           and h.OID_UNID_NEGO = i.VAL_OID
+           and i.ATTR_ENTI = 'MAE_UNIDA_NEGOC'
+           and a.FEC_FACT between to_date($P{fecFactIni},'dd/mm/yyyy') and to_date($P{fecFactFin},'dd/mm/yyyy')
+           and a.TSPA_OID_TIPO_SOLI_PAIS = (SELECT OID_TIPO_SOLI_PAIS
+                                   FROM PED_TIPO_SOLIC_PAIS TSP, PED_TIPO_SOLIC TS
+                                  WHERE TSP.TSOL_OID_TIPO_SOLI = TS.OID_TIPO_SOLI
+                                    AND TS.COD_TIPO_SOLI = 'SOC')
+           AND nvl(b.ind_limi_vent,0)<>1
+           and a.FEC_FACT is not null
+           $P!{region} 
+           $P!{unidadNegocio}        
+ group by d.DES_REGI, c.cod_zona, i.VAL_I18N]]></queryString>
+
+	<field name="REGION" class="java.lang.String"/>
+	<field name="COD_ZONA" class="java.lang.String"/>
+	<field name="UNIDAD_DE_NEGOCIO" class="java.lang.String"/>
+	<field name="CONSEJERAS" class="java.math.BigDecimal"/>
+	<field name="UNIDADES" class="java.math.BigDecimal"/>
+	<field name="MONTO" class="java.math.BigDecimal"/>
+
+	<variable name="SUM_CONSEJERAS_1" class="java.math.BigDecimal" resetType="Report" calculation="Sum">
+		<variableExpression><![CDATA[$F{CONSEJERAS}]]></variableExpression>
+	</variable>
+	<variable name="SUM_UNIDADES_1" class="java.math.BigDecimal" resetType="Report" calculation="Sum">
+		<variableExpression><![CDATA[$F{UNIDADES}]]></variableExpression>
+	</variable>
+	<variable name="SUM_MONTO_1" class="java.math.BigDecimal" resetType="Group" resetGroup="UNIDAD_DE_NEGOCIO" calculation="Sum">
+		<variableExpression><![CDATA[$F{MONTO}]]></variableExpression>
+	</variable>
+
+		<group  name="REGION" >
+			<groupExpression><![CDATA[$F{REGION}]]></groupExpression>
+			<groupHeader>
+			<band height="25"  isSplitAllowed="true" >
+				<staticText>
+					<reportElement
+						mode="Opaque"
+						x="3"
+						y="1"
+						width="96"
+						height="23"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="staticText"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Times New Roman" size="10"/>
+					</textElement>
+				<text><![CDATA[Region]]></text>
+				</staticText>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="102"
+						y="0"
+						width="189"
+						height="25"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Times New Roman" pdfFontName="Helvetica-Bold" size="10" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{REGION}]]></textFieldExpression>
+				</textField>
+			</band>
+			</groupHeader>
+			<groupFooter>
+			<band height="21"  isSplitAllowed="true" >
+				<line direction="TopDown">
+					<reportElement
+						x="31"
+						y="20"
+						width="503"
+						height="0"
+						forecolor="#808080"
+						key="line"
+						positionType="FixRelativeToBottom"/>
+					<graphicElement stretchType="NoStretch">
+					<pen lineWidth="0.25" lineStyle="Solid"/>
+</graphicElement>
+				</line>
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="146"
+						y="1"
+						width="100"
+						height="16"
+						key="textField-4"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SUM_CONSEJERAS_1}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="246"
+						y="1"
+						width="100"
+						height="16"
+						key="textField-5"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SUM_UNIDADES_1}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="346"
+						y="1"
+						width="100"
+						height="16"
+						key="textField-6"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SUM_MONTO_1}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement
+						x="12"
+						y="3"
+						width="93"
+						height="13"
+						key="staticText-3"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font/>
+					</textElement>
+				<text><![CDATA[Total Region]]></text>
+				</staticText>
+			</band>
+			</groupFooter>
+		</group>
+		<group  name="COD_ZONA" >
+			<groupExpression><![CDATA[$F{COD_ZONA}]]></groupExpression>
+			<groupHeader>
+			<band height="1"  isSplitAllowed="true" >
+			</band>
+			</groupHeader>
+			<groupFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+			</groupFooter>
+		</group>
+		<group  name="UNIDAD_DE_NEGOCIO" >
+			<groupExpression><![CDATA[$F{UNIDAD_DE_NEGOCIO}]]></groupExpression>
+			<groupHeader>
+			<band height="25"  isSplitAllowed="true" >
+				<staticText>
+					<reportElement
+						mode="Opaque"
+						x="50"
+						y="1"
+						width="96"
+						height="23"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="staticText"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Times New Roman" size="10"/>
+					</textElement>
+				<text><![CDATA[Unidad de Negocio]]></text>
+				</staticText>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="149"
+						y="1"
+						width="292"
+						height="23"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Times New Roman" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{UNIDAD_DE_NEGOCIO}]]></textFieldExpression>
+				</textField>
+			</band>
+			</groupHeader>
+			<groupFooter>
+			<band height="19"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="146"
+						y="2"
+						width="100"
+						height="16"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SUM_CONSEJERAS_1}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="246"
+						y="2"
+						width="100"
+						height="16"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SUM_UNIDADES_1}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="346"
+						y="2"
+						width="100"
+						height="16"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SUM_MONTO_1}]]></textFieldExpression>
+				</textField>
+				<staticText>
+					<reportElement
+						x="11"
+						y="3"
+						width="116"
+						height="13"
+						key="staticText-1"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font/>
+					</textElement>
+				<text><![CDATA[Total Unidad Negocio]]></text>
+				</staticText>
+			</band>
+			</groupFooter>
+		</group>
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="1"  isSplitAllowed="true" >
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="33"  isSplitAllowed="true" >
+				<staticText>
+					<reportElement
+						mode="Opaque"
+						x="146"
+						y="2"
+						width="100"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font  size="10"/>
+					</textElement>
+				<text><![CDATA[Consejeras]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						mode="Opaque"
+						x="246"
+						y="2"
+						width="100"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font  size="10"/>
+					</textElement>
+				<text><![CDATA[Unidades]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						mode="Opaque"
+						x="346"
+						y="2"
+						width="100"
+						height="16"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font  size="10"/>
+					</textElement>
+				<text><![CDATA[Monto]]></text>
+				</staticText>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="146"
+						y="17"
+						width="100"
+						height="16"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Times New Roman" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{CONSEJERAS}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="246"
+						y="17"
+						width="100"
+						height="16"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Times New Roman" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{UNIDADES}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="346"
+						y="17"
+						width="100"
+						height="16"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Times New Roman" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{MONTO}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="1"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

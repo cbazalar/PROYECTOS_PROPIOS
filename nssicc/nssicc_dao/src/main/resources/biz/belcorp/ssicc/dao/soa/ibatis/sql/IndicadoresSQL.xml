@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+<sqlMap namespace="soa.IndicadoresSQL">
+
+	<resultMap id="descripcionIndicador" class="java.util.HashMap">
+	    <result property="codigoPeriodo"					column="COD_PERI"/>
+	    <result property="codigoRegion"						column="COD_REGI"/>
+	    <result property="codigoZona"	 	  				column="COD_ZONA"/>
+	    <result property="indicador21_periodo"				column="COB_21_PERIO"/>	    
+	    <result property="indicador21_region"				column="COB_21_REGION"/>
+	    <result property="indicador21_zona"					column="COB_21_ZONA"/>
+	    <result property="indicador31_periodo"				column="COB_31_PERIO"/>
+	    <result property="indicador31_region"				column="COB_31_REGION"/>
+	    <result property="indicador31_zona"					column="COB_31_ZONA"/>
+	    <result property="indicador60_periodo"				column="COB_63_PERIO"/>
+	    <result property="indicador60_region"				column="COB_63_REGION"/>
+	    <result property="indicador60_zona"					column="COB_63_ZONA"/>	  
+    </resultMap>
+    
+    <resultMap id="descripcionIndicadorPEG" class="java.util.HashMap">    	    	
+        <result property="indicador_peg_sin_deuda"			column="IND_DEUD_VENC"/>	    	
+    </resultMap>
+    
+    <resultMap id="descripcionIndicadorMetas" class="java.util.HashMap">    	    	
+        <result property="indicador_val_meta"				column="METAS_LOGRADAS"/>	    	
+    </resultMap>
+    
+    <resultMap id="descripcionIndicadorLets" class="java.util.HashMap">    	    	
+        <result property="indicador_val_lets"				column="VAL_NUM"/>
+    </resultMap>
+    
+    
+    <resultMap id="descripcionIndicadorPedWebComercial" class="java.util.HashMap">    	    	
+        <result property="indicador_val_ped_web_comercial"		column="VAL_TOTA_NUME_PEDI_WEB_COME"/>	    	
+    </resultMap>
+    
+    <resultMap id="descripcionIndicadorPedComercial" class="java.util.HashMap">    	    	
+        <result property="indicador_val_ped_comercial"		column="VAL_TOTA_NUME_PEDI_COME"/>	    	
+    </resultMap>
+    
+    <resultMap id="descripcionIndicadorMontoPedWebComercial" class="java.util.HashMap">    	    	
+        <result property="indicador_val_monto_ped_web_comercial"	column="VAL_MONTO_PEDI_WEB_COME"/>
+    </resultMap>
+   
+    <select id="getIndicadores" parameterClass="java.util.Map" resultMap="descripcionIndicador">
+    
+			SELECT soa.cod_peri,
+			       soa.cod_regi, 
+			       soa.cod_zona,
+			       soa.cob_21_perio,
+			       soa.cob_21_region,
+			       soa.cob_21_zona,
+			       soa.cob_31_perio,
+			       soa.cob_31_region,
+			       soa.cob_31_zona,
+			       soa.cob_63_perio,
+			       soa.cob_63_region,
+			       soa.cob_63_zona
+			FROM soa_indic_sicc soa
+			where soa.cod_peri = #codigoCampania#				
+				 <isNotEmpty prepend = "AND" property = "codigoRegion" > 
+				 		soa.cod_regi = #codigoRegion#
+				 </isNotEmpty> 
+				 <isNotEmpty prepend = "AND" property = "codigoZona" > 
+					 		 soa.cod_zona = #codigoZona# 
+				 </isNotEmpty>			 		
+			 		and <![CDATA[ROWNUM <= 1]]>		 		 
+			 
+    </select>
+    
+    
+   	<select id="getIndicadoresPEG" parameterClass="java.util.Map" resultMap="descripcionIndicadorPEG">
+    
+			SELECT case when SUM( base.sin_deud_venc ) = 0 then 0 else 
+				   ROUND( SUM( base.con_deud_venc ) / SUM( base.sin_deud_venc ), 4) end ind_deud_venc 
+			FROM SOA_INDIC_SICC_PEG base
+			where base.cod_peri=#codigoCampania#
+				<isNotEmpty prepend = "AND" property = "codigoRegion" > 
+					 		base.cod_regi = #codigoRegion#
+				</isNotEmpty> 
+				<isNotEmpty prepend = "AND" property = "codigoZona" > 
+					 		base.cod_zona = #codigoZona# 
+				</isNotEmpty>		
+			GROUP BY base.cod_peri
+
+    </select>
+        
+    <select id="getIndicadoresMetas" parameterClass="java.util.Map" resultMap="descripcionIndicadorMetas">
+    		
+    		 SELECT  CASE WHEN (COUNT(1) = 0) THEN 0 ELSE
+		             ROUND(SUM( CASE WHEN base.val_mont_acum >= base.imp_logr THEN 1 ELSE 0 END ) / COUNT(1),4) END metas_logradas		     
+		     FROM  SOA_INDIC_SICC_META base
+		     where  base.cod_peri=#codigoCampania#
+		     	<isNotEmpty prepend = "AND" property = "codigoRegion" > 
+					 		base.cod_regi = #codigoRegion#
+				</isNotEmpty> 
+				<isNotEmpty prepend = "AND" property = "codigoZona" > 
+					 		base.cod_zona = #codigoZona# 
+				</isNotEmpty>		        
+		      GROUP BY base.cod_PERI
+		       
+    </select>
+    
+    <select id="getIndicadoresLetsCriticas" parameterClass="java.util.Map" resultMap="descripcionIndicadorLets">
+    		
+   		  	SELECT COUNT(1) VAL_NUM
+			FROM SOA_INDIC_SICC_LETS
+			WHERE COD_PERI = #codigoCampania#    
+			   AND val_esta IN ('C')			   
+			   <isNotEmpty prepend = "AND" property = "codigoRegion" > 
+					 		cod_regi = #codigoRegion#
+				</isNotEmpty> 
+				<isNotEmpty prepend = "AND" property = "codigoZona" > 
+					 		cod_zona = #codigoZona# 
+				</isNotEmpty>	 
+			GROUP BY COD_PERI  
+		       
+    </select>
+    
+    <select id="getIndicadoresLetsProductivas" parameterClass="java.util.Map" resultMap="descripcionIndicadorLets">
+    		
+    		SELECT COUNT(1) VAL_NUM
+			FROM SOA_INDIC_SICC_LETS
+			WHERE COD_PERI = #codigoCampania#			   
+			    AND val_esta IN ('P','X','S')
+			     <isNotEmpty prepend = "AND" property = "codigoRegion" > 
+					 		cod_regi = #codigoRegion#
+				</isNotEmpty> 
+				<isNotEmpty prepend = "AND" property = "codigoZona" > 
+					 		cod_zona = #codigoZona# 
+				</isNotEmpty> 
+			GROUP BY COD_PERI
+		       
+    </select>
+    
+    <select id="getIndicadoresPedWebComercial" parameterClass="java.util.Map" resultMap="descripcionIndicadorPedWebComercial">
+    		
+    		SELECT NVL(sum(VAL_TOTA_NUME_PEDI_WEB_COME),0) VAL_TOTA_NUME_PEDI_WEB_COME
+            FROM SOA_INDIC_PEDID_WEB_COMER
+            WHERE COD_PERI = #codigoCampania#
+		     	<isNotEmpty prepend = "AND" property = "codigoRegion" > 
+					 		COD_REGI = #codigoRegion#
+				</isNotEmpty> 
+				<isNotEmpty prepend = "AND" property = "codigoZona" > 
+					 		COD_ZONA = #codigoZona# 
+				</isNotEmpty>		     
+		       
+    </select>
+    
+    <select id="getIndicadoresPedComercial" parameterClass="java.util.Map" resultMap="descripcionIndicadorPedComercial">
+    		
+    		SELECT NVL(sum(VAL_TOTA_NUME_PEDI_COME),0) VAL_TOTA_NUME_PEDI_COME
+            FROM SOA_INDIC_PEDID_COMER
+            WHERE COD_PERI = #codigoCampania#
+		     	<isNotEmpty prepend = "AND" property = "codigoRegion" > 
+					 		COD_REGI = #codigoRegion#
+				</isNotEmpty> 
+				<isNotEmpty prepend = "AND" property = "codigoZona" > 
+					 		COD_ZONA = #codigoZona# 
+				</isNotEmpty>
+		       
+    </select>
+    
+    <select id="getIndicadoresMontoPedWebComercial" parameterClass="java.util.Map" resultMap="descripcionIndicadorMontoPedWebComercial">
+    		
+    		SELECT NVL(sum(VAL_MONTO_PEDI_WEB_COME),0) VAL_MONTO_PEDI_WEB_COME
+            FROM SOA_INDIC_PEDID_WEB_COMER
+            WHERE COD_PERI = #codigoCampania#
+		     	<isNotEmpty prepend = "AND" property = "codigoRegion" > 
+					 		COD_REGI = #codigoRegion#
+				</isNotEmpty> 
+				<isNotEmpty prepend = "AND" property = "codigoZona" > 
+					 		COD_ZONA = #codigoZona# 
+				</isNotEmpty>
+		       
+    </select>
+     
+</sqlMap>

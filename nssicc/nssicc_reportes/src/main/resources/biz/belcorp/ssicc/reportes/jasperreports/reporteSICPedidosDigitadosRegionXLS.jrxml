@@ -1,0 +1,1650 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteSICPedidosDigitadosRegionXLS"
+		 columnCount="1"
+		 printOrder="Horizontal"
+		 orientation="Landscape"
+		 pageWidth="781"
+		 pageHeight="594"
+		 columnWidth="781"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="oidPerio" isForPrompting="true" class="java.lang.Long">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("oidPerio")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codPeriodo" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codPeriodo")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicionRegion" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicionRegion")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[WITH temporal AS
+(SELECT COUNT(1) AS suma1, x6.cod_zona AS cod_zona1
+          FROM MAE_CLIEN             X1,
+               MAE_CLIEN_DATOS_ADICI X2,
+               MAE_CLIEN_UNIDA_ADMIN X3,
+               ZON_TERRI_ADMIN       X4,
+               ZON_SECCI             X5,
+               ZON_ZONA              X6
+         WHERE X1.OID_CLIE = X2.CLIE_OID_CLIE
+           AND X1.OID_CLIE = X3.CLIE_OID_CLIE
+           AND X3.IND_ACTI = 1
+           AND X3.ZTAD_OID_TERR_ADMI = X4.OID_TERR_ADMI
+           AND X4.ZSCC_OID_SECC = X5.OID_SECC
+           AND X5.ZZON_OID_ZONA = X6.OID_ZONA
+           AND X2.ESTA_OID_ESTA_CLIE = 4
+GROUP BY x6.cod_zona)
+
+SELECT COD_REGI          ,   
+       GERENTER          ,   
+       DES_REGI          ,   
+       COD_ZONA          ,   
+       GERENTE           ,   
+       DES_ZONA          ,   
+       PEDIDOS_ESTIMADOS ,   
+       FACTURADO_ANTERIOR,   
+       DIGITADOS         ,   
+       FACTURADO         ,   
+       PORC_DIGI_ESTIM   ,   
+       PORC_FACT_ESTIM   ,   
+       OCR               ,   
+       WEB               ,   
+       DD                ,   
+       MIXTO             ,   
+       INGRESOS          ,   
+       REINGRESO         ,   
+       temporal.suma1 - AA.PEG EGRESOS,  
+       PENDIENTES        ,   
+       DEUDA             ,   
+       PORC_OCR          ,   
+       PORC_WEB          ,   
+       PORC_DIGI         ,   
+       PORC_MIXTO        ,   
+       COD_PERIODO1
+  FROM (SELECT COD_REGI,
+               GERENTER,
+               DES_REGI, 
+               COD_ZONA,
+               GERENTE, 
+               DES_ZONA,
+               PEDIDOS_ESTIMADOS,
+               FACTURADO_ANTERIOR,
+               COUNT(1) DIGITADOS,
+               SUM(FACTURADO) FACTURADO, 
+               CASE WHEN pedidos_estimados = 0 
+               THEN 0 ELSE round(count(*)/ pedidos_estimados * 100,2) 
+               END PORC_DIGI_ESTIM,
+               CASE WHEN pedidos_estimados = 0
+               THEN 0 ELSE round(sum(FACTURADO)/ pedidos_estimados * 100,2)
+               END PORC_FACT_ESTIM,
+               SUM(CASE
+                     WHEN IND_RECE_OCR = 1 AND IND_RECE_WEB = 0 AND
+                          IND_RECE_DD = 0 AND IND_RECE_DIGI = 0 THEN
+                      1
+                     ELSE
+                      0
+                   END) OCR,
+               SUM(CASE
+                     WHEN IND_RECE_OCR = 0 AND IND_RECE_WEB = 1 AND
+                          IND_RECE_DD = 0 AND IND_RECE_DIGI = 0 THEN
+                      1
+                     ELSE
+                      0
+                   END) WEB,
+               SUM(CASE
+                     WHEN IND_RECE_OCR = 0 AND IND_RECE_WEB = 0 AND
+                          (IND_RECE_DD = 1 OR IND_RECE_DIGI = 1) THEN
+                      1
+                     ELSE
+                      0
+                   END) DD,
+               SUM(CASE
+                     WHEN IND_RECE_OCR + IND_RECE_WEB + IND_RECE_DD +
+                          IND_RECE_DIGI > 1 THEN
+                      1
+                     ELSE
+                      0
+                   END) MIXTO,
+               SUM(DECODE(ESTATUS, 1, 1, 0))   INGRESOS,
+               SUM(DECODE(ESTATUS, 5, 1, 0))   REINGRESO,
+               SUM(DECODE(ESTATUS, 4, 1, 0))   PEG,
+               SUM(DECODE(FACTURADO, 0, 1, 0)) PENDIENTES,
+               SUM(DECODE(DEUDA, 2, 1, 0))     DEUDA,
+               ROUND(SUM(CASE
+                           WHEN IND_RECE_OCR = 1 AND IND_RECE_WEB = 0 AND
+                                IND_RECE_DD = 0 AND IND_RECE_DIGI = 0 THEN
+                            1
+                           ELSE
+                            0
+                         END) / COUNT(1) * 100,
+                     2) PORC_OCR,
+               ROUND(SUM(CASE
+                           WHEN IND_RECE_OCR = 0 AND IND_RECE_WEB = 1 AND
+                                IND_RECE_DD = 0 AND IND_RECE_DIGI = 0 THEN
+                            1
+                           ELSE 
+                            0
+                         END) / COUNT(1) * 100,
+                     2) PORC_WEB,
+               ROUND(SUM(CASE
+                           WHEN IND_RECE_OCR = 0 AND IND_RECE_WEB = 0 AND
+                                (IND_RECE_DD = 1 OR IND_RECE_DIGI = 1) THEN
+                            1
+                           ELSE
+                            0
+                         END) / COUNT(1) * 100,
+                     2) PORC_DIGI,
+               ROUND(SUM(CASE
+                           WHEN IND_RECE_OCR + IND_RECE_WEB + IND_RECE_DD +
+                                IND_RECE_DIGI > 1 THEN
+                            1
+                           ELSE
+                            0
+                         END) / COUNT(1) * 100,
+                     2) PORC_MIXTO,
+                     TABLA1.COD_PERIODO COD_PERIODO1
+          FROM (SELECT  A.COD_REGI COD_REGI,
+                        TRIM(MCL.VAL_NOM1) || ' ' || TRIM(MCL.VAL_NOM2) || ' ' ||
+                        TRIM(MCL.VAL_APE1) || ' ' || TRIM(MCL.VAL_APE2) GERENTER,
+                        RR.DES_REGI, 
+                        A.COD_ZONA,
+                        TRIM(MC.VAL_NOM1) || ' ' || TRIM(MC.VAL_NOM2) || ' ' ||
+                        TRIM(MC.VAL_APE1) || ' ' || TRIM(MC.VAL_APE2) GERENTE,
+                        ZZ.DES_ZONA,
+                        (SELECT NUM_PEDI
+                           FROM INT_FUENT_VENTA_PREVI_SAP
+                          WHERE PERD_OID_PERI =
+                                GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO2(A.COD_PERI)
+                            AND ZZON_OID_ZONA = ZZ.OID_ZONA) PEDIDOS_ESTIMADOS,
+                        (SELECT COUNT(1)
+                           FROM PED_SOLIC_CABEC
+                          WHERE PERD_OID_PERI =
+                                GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO2(A.COD_PERI)
+                            AND IND_OC = 1
+                            AND ZZON_OID_ZONA = ZZ.OID_ZONA) FACTURADO_ANTERIOR,
+                        A.IND_RECE_OCR,
+                        A.IND_RECE_WEB,
+                        A.IND_RECE_DD,
+                        A.IND_RECE_DIGI,
+                        A.IND_OCS_PROC AS FACTURADO,
+                        DECODE(A.IND_ERRO_DEUD, 2, 1, 0) AS DEUDA,
+                        (SELECT ESTA_OID_ESTA_CLIE
+                           FROM MAE_CLIEN_DATOS_ADICI
+                          WHERE CLIE_OID_CLIE =
+                                (SELECT OID_CLIE
+                                  FROM MAE_CLIEN
+                                  WHERE COD_CLIE = A.COD_CLIE)) ESTATUS,
+                         A.COD_PERI COD_PERIODO
+                   FROM INT_SOLIC_CONSO_CABEC A, 
+                        ZON_ZONA              ZZ, 
+                        MAE_CLIEN             MC,
+                        ZON_REGIO             RR,
+                        MAE_CLIEN             MCL
+                  WHERE A.COD_ZONA = ZZ.COD_ZONA
+                    AND ZZ.CLIE_OID_CLIE = MC.OID_CLIE
+                    AND A.COD_REGI       = RR.COD_REGI (+)
+                    AND RR.CLIE_OID_CLIE = MCL.OID_CLIE (+)
+                    AND IND_ORIG_CABE    = 1
+                    AND A.perd_oid_peri  = $P{oidPerio}
+                    $P!{condicionRegion}) TABLA1
+         GROUP BY COD_REGI,
+                  GERENTER,
+                  DES_REGI,
+                  COD_ZONA,
+                  GERENTE,
+                  DES_ZONA,
+                  PEDIDOS_ESTIMADOS,
+                  FACTURADO_ANTERIOR,
+                  TABLA1.COD_PERIODO) AA, temporal
+WHERE temporal.cod_zona1 = aa.cod_zona]]></queryString>
+
+	<field name="COD_REGI" class="java.lang.String"/>
+	<field name="GERENTER" class="java.lang.String"/>
+	<field name="DES_REGI" class="java.lang.String"/>
+	<field name="COD_ZONA" class="java.lang.String"/>
+	<field name="GERENTE" class="java.lang.String"/>
+	<field name="DES_ZONA" class="java.lang.String"/>
+	<field name="PEDIDOS_ESTIMADOS" class="java.lang.Integer"/>
+	<field name="FACTURADO_ANTERIOR" class="java.math.BigDecimal"/>
+	<field name="DIGITADOS" class="java.lang.Integer"/>
+	<field name="FACTURADO" class="java.lang.Integer"/>
+	<field name="PORC_DIGI_ESTIM" class="java.math.BigDecimal"/>
+	<field name="PORC_FACT_ESTIM" class="java.math.BigDecimal"/>
+	<field name="OCR" class="java.math.BigDecimal"/>
+	<field name="WEB" class="java.math.BigDecimal"/>
+	<field name="DD" class="java.math.BigDecimal"/>
+	<field name="MIXTO" class="java.math.BigDecimal"/>
+	<field name="INGRESOS" class="java.math.BigDecimal"/>
+	<field name="REINGRESO" class="java.math.BigDecimal"/>
+	<field name="EGRESOS" class="java.math.BigDecimal"/>
+	<field name="PENDIENTES" class="java.math.BigDecimal"/>
+	<field name="DEUDA" class="java.math.BigDecimal"/>
+	<field name="PORC_OCR" class="java.math.BigDecimal"/>
+	<field name="PORC_WEB" class="java.math.BigDecimal"/>
+	<field name="PORC_DIGI" class="java.math.BigDecimal"/>
+	<field name="PORC_MIXTO" class="java.math.BigDecimal"/>
+	<field name="COD_PERIODO1" class="java.lang.String"/>
+
+	<variable name="SumarPedido" class="java.lang.Integer" resetType="Group" resetGroup="Region" calculation="Sum">
+		<variableExpression><![CDATA[$F{PEDIDOS_ESTIMADOS}]]></variableExpression>
+	</variable>
+	<variable name="SumarFactAnterior" class="java.math.BigDecimal" resetType="Group" resetGroup="Region" calculation="Sum">
+		<variableExpression><![CDATA[$F{FACTURADO_ANTERIOR}]]></variableExpression>
+	</variable>
+	<variable name="SumarPedDigitados" class="java.lang.Integer" resetType="Group" resetGroup="Region" calculation="Sum">
+		<variableExpression><![CDATA[$F{DIGITADOS}]]></variableExpression>
+	</variable>
+	<variable name="SumarPedFacturados" class="java.lang.Integer" resetType="Group" resetGroup="Region" calculation="Sum">
+		<variableExpression><![CDATA[$F{FACTURADO}]]></variableExpression>
+	</variable>
+	<variable name="SumarDigiDist" class="java.math.BigDecimal" resetType="Group" resetGroup="Region" calculation="Sum">
+		<variableExpression><![CDATA[$F{DD}]]></variableExpression>
+	</variable>
+	<variable name="SumarWeb" class="java.math.BigDecimal" resetType="Group" resetGroup="Region" calculation="Sum">
+		<variableExpression><![CDATA[$F{WEB}]]></variableExpression>
+	</variable>
+	<variable name="SumarOCR" class="java.math.BigDecimal" resetType="Report" incrementType="Group" incrementGroup="Region" calculation="Sum">
+		<variableExpression><![CDATA[$F{OCR}]]></variableExpression>
+	</variable>
+	<variable name="SumarIngr" class="java.math.BigDecimal" resetType="Group" resetGroup="Region" calculation="Sum">
+		<variableExpression><![CDATA[$F{INGRESOS}]]></variableExpression>
+	</variable>
+	<variable name="SumarReingr" class="java.math.BigDecimal" resetType="Group" resetGroup="Region" calculation="Sum">
+		<variableExpression><![CDATA[$F{REINGRESO}]]></variableExpression>
+	</variable>
+	<variable name="SumarEgreso" class="java.math.BigDecimal" resetType="Group" resetGroup="Region" calculation="Sum">
+		<variableExpression><![CDATA[$F{EGRESOS}]]></variableExpression>
+	</variable>
+	<variable name="SumarPendiente" class="java.math.BigDecimal" resetType="Group" resetGroup="Region" calculation="Sum">
+		<variableExpression><![CDATA[$F{PENDIENTES}]]></variableExpression>
+	</variable>
+	<variable name="SumarXDeuda" class="java.math.BigDecimal" resetType="Group" resetGroup="Region" calculation="Sum">
+		<variableExpression><![CDATA[$F{DEUDA}]]></variableExpression>
+	</variable>
+	<variable name="SumarMixto" class="java.math.BigDecimal" resetType="Report" incrementType="Group" incrementGroup="Region" calculation="Sum">
+		<variableExpression><![CDATA[$F{MIXTO}]]></variableExpression>
+	</variable>
+
+		<group  name="Region" >
+			<groupExpression><![CDATA[$F{COD_REGI}]]></groupExpression>
+			<groupHeader>
+			<band height="43"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="4"
+						y="15"
+						width="32"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-3"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.zona}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="36"
+						y="15"
+						width="72"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-5"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.nombre}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="166"
+						y="15"
+						width="36"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-7"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.totestimados}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="310"
+						y="15"
+						width="40"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-12"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true" isPdfEmbedded ="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.prdigcontraestim}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="202"
+						y="15"
+						width="36"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-32"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.factanterior}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="238"
+						y="15"
+						width="36"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-56"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.peddigitados}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="274"
+						y="15"
+						width="36"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-59"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.pedfacturados}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="350"
+						y="15"
+						width="40"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-60"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.prfactcontraestim}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="390"
+						y="1"
+						width="90"
+						height="14"
+						backcolor="#CCCCCC"
+						key="textField-62"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.viaspedidos}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="390"
+						y="15"
+						width="30"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-63"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.digidist}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="420"
+						y="15"
+						width="30"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-64"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.web}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="450"
+						y="15"
+						width="30"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-65"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.ocr}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="480"
+						y="1"
+						width="90"
+						height="14"
+						backcolor="#CCCCCC"
+						key="textField-66"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.capital}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="480"
+						y="15"
+						width="30"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-67"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.ingr}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="510"
+						y="15"
+						width="30"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-68"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.reing}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="540"
+						y="15"
+						width="30"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-69"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.egres}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="570"
+						y="1"
+						width="42"
+						height="42"
+						backcolor="#CCCCCC"
+						key="textField-70"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.pendiente}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="612"
+						y="1"
+						width="42"
+						height="42"
+						backcolor="#CCCCCC"
+						key="textField-71"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.xdeuda}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="654"
+						y="1"
+						width="120"
+						height="14"
+						backcolor="#CCCCCC"
+						key="textField-72"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.prviasped}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="654"
+						y="15"
+						width="30"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-73"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.prdigidist}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="684"
+						y="15"
+						width="30"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-74"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.prweb}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="714"
+						y="15"
+						width="30"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-75"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.fax}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="744"
+						y="15"
+						width="30"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-76"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.mixto}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="108"
+						y="15"
+						width="58"
+						height="28"
+						backcolor="#CCCCCC"
+						key="textField-91"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegionForm.localidad}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="4"
+						y="1"
+						width="386"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-119"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[]]></textFieldExpression>
+				</textField>
+			</band>
+			</groupHeader>
+			<groupFooter>
+			<band height="15"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="4"
+						y="1"
+						width="32"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-93"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_REGI}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="36"
+						y="1"
+						width="72"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-94"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{GERENTER}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="108"
+						y="1"
+						width="58"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-95"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{DES_REGI}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="166"
+						y="1"
+						width="36"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-96"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Integer"><![CDATA[$V{SumarPedido}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="202"
+						y="1"
+						width="36"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-97"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SumarFactAnterior}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="238"
+						y="1"
+						width="36"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-98"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Integer"><![CDATA[$V{SumarPedFacturados}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="274"
+						y="1"
+						width="36"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-100"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Integer"><![CDATA[$V{SumarPedFacturados}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="310"
+						y="1"
+						width="40"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-101"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[( $V{SumarPedido}.intValue()==0 ? new BigDecimal(0) : new BigDecimal(  ($V{SumarPedDigitados}.intValue()) /($V{SumarPedido}.intValue()) ) )]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="350"
+						y="1"
+						width="40"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-102"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[( $V{SumarPedido}.intValue()==0 ? new BigDecimal(0) : new BigDecimal(  ($V{SumarPedFacturados}.intValue()) /($V{SumarPedido}.intValue()) ) )]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="390"
+						y="1"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-103"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true" isPdfEmbedded ="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SumarDigiDist}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="420"
+						y="1"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-104"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SumarWeb}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="450"
+						y="1"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-105"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SumarOCR}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="480"
+						y="1"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-106"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SumarIngr}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="510"
+						y="1"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-107"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SumarReingr}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="540"
+						y="1"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-108"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SumarEgreso}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="570"
+						y="1"
+						width="42"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-109"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SumarPendiente}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="612"
+						y="1"
+						width="42"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-110"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SumarXDeuda}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="654"
+						y="1"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-111"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[( $V{SumarPedDigitados}.intValue()==0 ? new BigDecimal(0) : new BigDecimal(  ($V{SumarDigiDist}.intValue()) /($V{SumarPedDigitados}.intValue()) ) )]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="684"
+						y="1"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-112"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[( $V{SumarPedDigitados}.intValue()==0 ? new BigDecimal(0) : new BigDecimal(  ($V{SumarWeb}.intValue()) /($V{SumarPedDigitados}.intValue()) ) )]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="714"
+						y="1"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-113"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[( $V{SumarPedDigitados}.intValue()==0 ? new BigDecimal(0) : new BigDecimal(  ($V{SumarOCR}.intValue()) /($V{SumarPedDigitados}.intValue()) ) )]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="744"
+						y="1"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-114"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[( $V{SumarPedDigitados}.intValue()==0 ? new BigDecimal(0) : new BigDecimal(  ($V{SumarMixto}.intValue()) /($V{SumarPedDigitados}.intValue()) ) )]]></textFieldExpression>
+				</textField>
+			</band>
+			</groupFooter>
+		</group>
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="27"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="4"
+						y="2"
+						width="770"
+						height="25"
+						forecolor="#FFFFFF"
+						backcolor="#003399"
+						key="textField-120"
+						stretchType="RelativeToBandHeight"/>
+					<box>					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.5" lineColor="#000000"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="12" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSICPedidosDigitadosRegion.titulo}]]></textFieldExpression>
+				</textField>
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="14"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="108"
+						y="0"
+						width="58"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-36"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{DES_ZONA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="166"
+						y="0"
+						width="36"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-37"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Integer"><![CDATA[$F{PEDIDOS_ESTIMADOS}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="390"
+						y="0"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-39"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true" isPdfEmbedded ="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{DD}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="202"
+						y="0"
+						width="36"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-42"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{FACTURADO_ANTERIOR}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="238"
+						y="0"
+						width="36"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-57"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Integer"><![CDATA[$F{DIGITADOS}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="350"
+						y="0"
+						width="40"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-58"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{PORC_FACT_ESTIM}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="420"
+						y="0"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-61"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{WEB}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="274"
+						y="0"
+						width="36"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-77"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.Integer"><![CDATA[$F{FACTURADO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="310"
+						y="0"
+						width="40"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-78"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{PORC_DIGI_ESTIM}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="450"
+						y="0"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-79"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{OCR}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="480"
+						y="0"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-80"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{INGRESOS}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="510"
+						y="0"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-81"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{REINGRESO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="540"
+						y="0"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-82"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{EGRESOS}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="570"
+						y="0"
+						width="42"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-83"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{PENDIENTES}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="612"
+						y="0"
+						width="42"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-84"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{DEUDA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="654"
+						y="0"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-85"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{PORC_DIGI}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="684"
+						y="0"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-86"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{PORC_WEB}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="714"
+						y="0"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-87"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{PORC_OCR}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="36"
+						y="0"
+						width="72"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-92"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{GERENTE}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Transparent"
+						x="774"
+						y="0"
+						width="6"
+						height="14"
+						forecolor="#FFFFFF"
+						backcolor="#FFFFFF"
+						key="textField-115"
+						positionType="Float"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{OCR}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="4"
+						y="0"
+						width="32"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-117"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_ZONA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="744"
+						y="0"
+						width="30"
+						height="14"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-118"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="7" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{PORC_MIXTO}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

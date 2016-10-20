@@ -1,0 +1,314 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.sessionexperte.SessionExperteSQL">
+	<typeAlias alias="progSSE" 		type="biz.belcorp.ssicc.dao.spusicc.sessionexperte.model.ProgramaSessionExperte"/>
+	<typeAlias alias="cicloProg" 		type="biz.belcorp.ssicc.dao.spusicc.sessionexperte.model.CicloDePrograma"/>	
+	<typeAlias alias="ssiccPais" 	type="biz.belcorp.ssicc.dao.model.Pais"/>
+
+	<resultMap id="baseResult"          class="baseGenerico">
+		<result property="codigo" 		column="CODIGO" 	/>
+		<result property="descripcion" 	column="DESCRIPCION"/>
+	</resultMap>
+
+	<resultMap id="programasSSEResult" class="progSSE">                     
+<!--		<result property="id"					column="ID"			/> -->
+		<result property="codigoPais"			column="COD_PAIS"	/>                 		    
+		<result property="codigoPrograma"		column="COD_PROG"	/>              
+		<result property="campanhaInicial"		column="CAM_INIC"	/>            
+		<result property="campanhaFinal"		column="CAM_FIN"	/>              
+		<result property="estadoRegistro"		column="EST_REGI"	/>                      
+		<result property="codigoMarca"			column="COD_MARCA"	/>  		
+		<result property="codigoCanal"			column="COD_CANAL"	/> 
+		<result property="codigoAnho"           column="COD_ANHO"   />
+	</resultMap>
+	
+	<resultMap id="ciclosProgResult" class="cicloProg">                     
+<!--		<result property="id"					column="ID"			/> -->
+		<result property="codigoPais"			column="COD_PAIS"	/>                 		    
+		<result property="codigoPrograma"		column="COD_PROG"	/>
+        <result property="codigoAnho"		    column="COD_ANHO"	/>
+        <result property="tipoCiclo"		    column="TIP_CICLO"	/>		
+        <result property="codigoCiclo"		    column="COD_CICLO"	/>		
+		<result property="campanhaInicial"		column="CAM_INIC"	/>            
+		<result property="campanhaFinal"		column="CAM_FIN"	/>              
+		<result property="estadoRegistro"		column="EST_REGI"	/>    
+		<result property="descTipoCiclo"		column="DES_CICLO"	/>                   
+	</resultMap>
+
+    <!-- OBTIENE PROGRAMAS SESSION EXPERTE SEGUN CODIGO DE PAIS -->
+ 	<select id="getProgramasSessionExperteByPais" parameterClass="ssiccPais" 
+		resultMap="baseResult">
+		SELECT prog.cod_prog AS CODIGO,  
+              prog.cod_prog AS DESCRIPCION  
+       FROM   SSE_PROGR_PARAM_SESIO prog 
+       WHERE  prog.cod_pais = #codigo#
+ 	</select>
+	
+	<!-- OBTIENE AÑOS SESSION EXPERTE SEGUN CODIGO DE PAIS -->
+	<select id="getAnhoSessionExperteByPais" parameterClass="ssiccPais" 
+		resultMap="baseResult">
+        SELECT progAnho.cod_anho AS CODIGO,  
+              progAnho.cod_anho AS DESCRIPCION  
+       FROM   SSE_PROGR_ANHO progAnho
+       WHERE  progAnho.cod_pais = #codigo# 
+ 	</select>
+
+    <!-- OBTIENE PROGRAMAS SESSION EXPERTE SEGUN CRITERIOS  -->
+	<select id="getProgramasSessionExperteByCriteria" parameterClass="progSSE" 
+		resultMap="programasSSEResult">
+		SELECT                                 
+				progAnho.COD_PAIS || '|' || progAnho.COD_PROG || '|' || progAnho.COD_ANHO "ID"	,      
+				progAnho.COD_PAIS	,
+				progAnho.COD_PROG	,
+				progAnho.CAM_INIC	,
+				progAnho.CAM_FIN	,
+				progAnho.EST_REGI	,
+				prog.COD_MARCA	,
+				prog.COD_CANAL  ,
+				progAnho.COD_ANHO   
+		FROM SSE_PROGR_PARAM_SESIO prog, SSE_PROGR_ANHO progAnho
+		WHERE
+				progAnho.COD_PAIS = prog.COD_PAIS AND
+				progAnho.COD_PROG = prog.COD_PROG 
+			<isGreaterThan prepend="AND" property="codigoAnho" compareValue="0">
+				progAnho.COD_ANHO = #codigoAnho#
+			</isGreaterThan>  
+			<isNotEmpty prepend="AND" property="codigoPais">
+				progAnho.COD_PAIS = #codigoPais#
+	    	</isNotEmpty>
+			<isNotEmpty prepend="AND" property="codigoPrograma">
+				progAnho.COD_PROG = #codigoPrograma#
+	    	</isNotEmpty>
+		ORDER BY
+			progAnho.COD_ANHO
+	</select>
+
+    <!-- OBTIENE TODOS LOS PROGRAMAS SESSION EXPERTE CON ESTADO ACTIVO (SIN IMPORTAR PAIS) -->
+	<select id="getProgramaActivoByPais" parameterClass="ssiccPais"
+		resultClass="string">
+		SELECT	to_char(to_number(max(cod_prog)), 'FM99099')
+		FROM
+			SSE_PROGR_PARAM_SESIO
+		WHERE																				
+			COD_PAIS = #codigo#
+	</select>
+
+	<!-- OBTIENE EL CODIGO DE PROGRAMA DE UN PAIS -->
+	<select id="getCodigoProgramaByPais" parameterClass="ssiccPais"
+		resultClass="string">
+		SELECT DECODE(count(*),0,'001',TO_CHAR(MAX(TO_NUMBER(COD_PROG)),'FM99099'))
+		FROM 																				
+			SSE_PROGR_PARAM_SESIO												
+		WHERE																				
+			COD_PAIS = #codigo#    
+	</select>
+	
+		<!-- OBTIENE EL SIGUIENTE CODIGO QUE SE LE ASIGNARA A UN NUEVO ANHO DE UN PAIS -->
+	<select id="getNextCodigoAnhoByPais" parameterClass="ssiccPais"
+		resultClass="string">
+		SELECT	nvl(to_char(max(cod_anho) + 1 , 'FM99099'),to_char(sysdate,'YYYY'))
+		FROM 																				
+			SSE_PROGR_ANHO													
+		WHERE																				
+			COD_PAIS = #codigo#    
+	</select>
+	
+	<!-- OBTIENE EL CODIGO ANHO ULTIMO DE UN PAIS y PROGRAMA -->
+	<select id="getCodigoAnhoActivo" parameterClass="ssiccPais"
+		resultClass="string">
+		SELECT	trim(to_char(max(COD_ANHO),'9999'))
+		FROM 																				
+			SSE_PROGR_ANHO													
+		WHERE																				
+			COD_PAIS = #codigo# 
+			AND EST_REGI = '1'
+	</select>
+	
+	<!-- INSERTA UN NUEVO PROGRAMA SESSION EXPERTE -->
+    <insert id="insertProgramaSessionExperte" parameterClass="progSSE">
+	INSERT INTO SSE_PROGR_PARAM_SESIO
+    	(	cod_pais, cod_prog, cod_marca, cod_canal, 
+			usu_digi, fec_digi)
+	VALUES
+		(	#codigoPais#		,
+			#codigoPrograma#	,
+			#codigoMarca#		,
+			#codigoCanal#		,
+			#auditInfo.createdBy#,
+			#auditInfo.created#
+		)
+	</insert>
+	<!-- ACTUALIZA UN PROGRAMA SESSION EXPERTE -->
+	<update id="updateProgramaSessionExperte" parameterClass="progSSE">
+		UPDATE SSE_PROGR_PARAM_SESIO
+		SET 
+			cod_canal 	= #codigoCanal#		,
+			cod_marca 	= #codigoMarca#		,
+			usu_modi	= #auditInfo.updatedBy#		,
+			fec_modi	= #auditInfo.lastUpdated#
+		WHERE cod_pais = #codigoPais#
+			AND cod_prog = #codigoPrograma#
+	</update>
+	
+	<!-- INSERTA UN NUEVO PROGRAMA SESSION EXPERTE ANHO-->
+    <insert id="insertProgramaSessionExperteAnho" parameterClass="progSSE">
+	INSERT INTO SSE_PROGR_ANHO
+    	(	cod_pais, cod_prog, cod_anho, cam_inic, cam_fin, est_regi, 
+			usu_digi, fec_digi)
+	VALUES
+		(	#codigoPais#		,
+			#codigoPrograma#	,
+			#codigoAnho#        , 
+			#campanhaInicial#	,    
+			#campanhaFinal#		,      
+			#estadoRegistro#	,
+			#auditInfo.createdBy#,
+			#auditInfo.created#
+		)
+	</insert>
+	<!-- ACTUALIZA UN PROGRAMA SESSION EXPERTE ANHO -->
+	<update id="updateProgramaSessionExperteAnho" parameterClass="progSSE">
+		UPDATE SSE_PROGR_ANHO
+		SET cam_inic 	= #campanhaInicial#	,
+			cam_fin 	= #campanhaFinal#	,
+			est_regi	= #estadoRegistro#	,
+			usu_modi	= #auditInfo.updatedBy#		,
+			fec_modi	= #auditInfo.lastUpdated#
+		WHERE cod_pais = #codigoPais#
+			AND cod_prog = #codigoPrograma#
+			AND cod_anho = #codigoAnho#
+	</update>
+
+	<!-- BORRA/ACTUALIZA UN PROGRAMA SESSION EXPERTE A ESTADO INACTIVO-->
+	<update id="deleteProgramaSessionExperte" parameterClass="progSSE">
+		UPDATE SSE_PROGR_ANHO
+		SET est_regi	= #estadoRegistro#	,
+			usu_modi	= #auditInfo.updatedBy#		,
+			fec_modi	= #auditInfo.lastUpdated#
+		WHERE cod_pais = #codigoPais#
+			AND cod_prog = #codigoPrograma#
+			AND cod_anho = #codigoAnho#
+	</update>
+<!-- 
+    <delete id="deleteProgramaSessionExperte" parameterClass="progSSE">
+			DELETE from SSE_PROGR_PARAM_SESIO
+			WHERE cod_pais = #codigoPais#
+				AND cod_prog = #codigoPrograma#
+    </delete>
+-->
+	<!-- OBTIENE CICLOS SESSION EXPERTE SEGUN CRITERIOS  -->
+	<select id="getCiclosDeProgramaSessionExperteByCriteria" parameterClass="cicloProg" 
+		resultMap="ciclosProgResult">
+		SELECT                                 
+				cic.COD_PAIS || '|' || cic.COD_PROG || '|' || cic.COD_ANHO || '|' || cic.COD_CICLO "ID"	,      
+				cic.COD_PAIS	,
+				cic.COD_PROG	,
+				cic.COD_ANHO    ,
+				cic.COD_CICLO   ,
+				cic.TIP_CICLO   ,
+				tip.DES_CICLO   ,
+				cic.CAM_INIC	,
+				cic.CAM_FIN	    , 
+				cic.EST_REGI	  
+		FROM  SSE_PROGR_ANHO_CICLO cic, SSE_TIPO_CICLO tip
+		WHERE 
+		    tip.TIP_CICLO = cic.TIP_CICLO 
+			<isGreaterThan prepend="AND" property="codigoAnho" compareValue="0">
+				cic.COD_ANHO = #codigoAnho#
+			</isGreaterThan>  
+			<isNotEmpty prepend="AND" property="codigoPais">
+				cic.COD_PAIS = #codigoPais#
+	    	</isNotEmpty>
+			<isNotEmpty prepend="AND" property="codigoPrograma">
+				cic.COD_PROG = #codigoPrograma#
+	    	</isNotEmpty>
+		    <isNotEmpty prepend="AND" property="codigoCiclo">
+				cic.COD_CICLO = #codigoCiclo#
+	    	</isNotEmpty>
+		
+		ORDER BY
+			cic.COD_CICLO
+	</select>
+	
+	<!-- OBTIENE CICLOS DE PROGRAMAS SESSION EXPERTE  -->
+	<select id="getTipoCiclosSessionExperte" parameterClass="ssiccPais"
+		resultMap="baseResult">
+		SELECT tipcic.TIP_CICLO AS CODIGO,  
+              tipcic.DES_CICLO AS DESCRIPCION  
+       FROM   SSE_TIPO_CICLO tipcic
+ 	</select>
+	
+	<!-- INSERTA UN NUEVO CICLO SESSION EXPERTE -->
+    <insert id="insertCicloDeProgramaSessionExperte" parameterClass="cicloProg">
+	INSERT INTO SSE_PROGR_ANHO_CICLO
+    	(	cod_pais, cod_prog, cod_anho, cod_ciclo, tip_ciclo, cam_inic, cam_fin, est_regi, usu_digi, fec_digi)
+	VALUES
+		(	#codigoPais#		,
+			#codigoPrograma#	,
+			#codigoAnho#	    ,
+			#codigoCiclo#		,      
+			#tipoCiclo#	        ,
+			#campanhaInicial#	,
+			#campanhaFinal#     ,  
+			#estadoRegistro#    ,
+			#auditInfo.createdBy#,
+			#auditInfo.created#
+		)
+	</insert>
+	
+	<!-- ACTUALIZA UN CICLO SESSION EXPERTE -->
+	<update id="updateCicloDeProgramaSessionExperte" parameterClass="cicloProg">
+		UPDATE SSE_PROGR_ANHO_CICLO
+		SET cam_inic 	= #campanhaInicial#	,
+			cam_fin 	= #campanhaFinal#	,
+			est_regi	= #estadoRegistro#	,
+			usu_modi	= #auditInfo.updatedBy#		,
+			fec_modi	= #auditInfo.lastUpdated#
+		WHERE cod_pais   = #codigoPais#
+			AND cod_prog = #codigoPrograma#
+			AND cod_anho = #codigoAnho#
+			AND cod_ciclo= #codigoCiclo#
+	</update>
+	
+	<!-- BORRA/ACTUALIZA UN CICLO SESSION EXPERTE A ESTADO INACTIVO-->
+	<update id="deleteCicloDeProgramaSessionExperte" parameterClass="cicloProg">
+		UPDATE SSE_PROGR_ANHO_CICLO
+		SET 
+			est_regi	= #estadoRegistro#	,
+			usu_modi	= #auditInfo.updatedBy#		,
+			fec_modi	= #auditInfo.lastUpdated#
+		WHERE cod_pais   = #codigoPais#
+			AND cod_prog = #codigoPrograma#
+			AND cod_anho = #codigoAnho#
+			AND cod_ciclo= #codigoCiclo#
+	</update>
+	
+	<select id="getCodigoCicloByAnhoTipoCiclo" parameterClass="cicloProg" resultClass="string">
+		SELECT TO_CHAR(MAX(TO_NUMBER(SUBSTR(COD_CICLO, 6, 1))),'9')
+		FROM
+		    SSE_PROGR_ANHO_CICLO
+		WHERE
+		  COD_ANHO = #codigoAnho# AND
+		  TIP_CICLO = #tipoCiclo#
+   </select> 
+   
+   <select id="getCodigoCiclosByPaisProgAnho" parameterClass="cicloProg" 
+		resultMap="baseResult">
+		SELECT cic.COD_CICLO AS CODIGO,
+		       cic.COD_CICLO AS DESCRIPCION
+		FROM
+		    SSE_PROGR_ANHO_CICLO cic
+		WHERE
+		  cic.COD_PAIS = #codigoPais# AND
+		  cic.COD_PROG = #codigoPrograma# AND
+		  cic.COD_ANHO = #codigoAnho# AND
+		  cic.TIP_CICLO = #tipoCiclo#
+	   ORDER BY 	cic.COD_CICLO
+   </select> 
+
+	
+	
+</sqlMap>

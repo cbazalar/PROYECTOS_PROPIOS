@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.car.mantenimientoCARSQL">
+
+	<resultMap id="nivelRiesgoSeccionListResult" class="java.util.HashMap">
+		<result property="codigoRegion" column="COD_REGI"/>
+		<result property="region" column="DES_REGI"/>
+		<result property="codigoZona" column="COD_ZONA"/>
+		<result property="zona" column="DES_ZONA"/>
+		<result property="codigoSeccion" column="COD_SECC"/>
+		<result property="seccion" column="DES_SECCI"/>
+		<result property="codigoNivelRiesgo" column="COD_NIVE_RIES"/>
+		<result property="nivelRiesgo" column="DES_NIVE_RIES"/>
+		<result property="oidSeccion" column="OID_SECC" javaType="java.lang.String"/>
+		<result property="fechaUltimaActualizacion" column="FEC_ACTU"/>
+	</resultMap>
+
+	<resultMap id="baseResultOids"  class="baseGenerico">
+    	<result property="codigo" 		column="OID" 	/>
+    	<result property="descripcion" 	column="DESCRIPCION"/>
+    </resultMap>
+	
+	<select id="getNivelRiesgoSeccionList" resultMap="nivelRiesgoSeccionListResult">
+		SELECT reg.COD_REGI, 
+		       reg.DES_REGI, 
+		       zon.COD_ZONA, 
+		       zon.DES_ZONA,
+		       sec.COD_SECC, 
+		       sec.DES_SECCI, 
+		       nrg.COD_NIVE_RIES,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(1, nrs.oid_nive_ries, 'CAR_NIVEL_RIESG')  AS DES_NIVE_RIES,
+		       sec.OID_SECC,
+		       TO_CHAR(nrs.FEC_ACTU, 'dd/MM/yyyy HH24:mm:ss') FEC_ACTU
+		  FROM ZON_REGIO reg,
+		       ZON_ZONA zon,    
+		       ZON_SECCI sec,
+		       CAR_NIVRI_SECCI nrs,
+		       CAR_NIVEL_RIESG nrg
+		 WHERE reg.OID_REGI = zon.ZORG_OID_REGI
+		   AND zon.OID_ZONA = sec.ZZON_OID_ZONA
+		   AND sec.OID_SECC = nrs.OID_SECC(+)
+		   AND nrs.OID_NIVE_RIES = nrg.OID_NIVE_RIES(+)
+		
+		<isNotEmpty property="codigoRegion">
+			and reg.COD_REGI = #codigoRegion#
+		</isNotEmpty>
+		
+		<isNotEmpty property="codigoZona">
+			and zon.COD_ZONA = #codigoZona#
+		</isNotEmpty>
+		
+		<isNotEmpty property="codigoSeccion">
+			and sec.COD_SECC = #codigoSeccion#
+		</isNotEmpty>
+		
+   			and reg.IND_ACTI = 1
+	   		and zon.IND_ACTI = 1
+   			and sec.IND_ACTI = 1
+   				
+		ORDER BY 1, 3, 5
+	</select>
+    
+    <!-- OBTIENE NIVELES DE RIESGO -->
+    <select id="getNivelesRiesgos" parameterClass="java.util.Map" resultMap="baseResultOids">
+		SELECT OID_NIVE_RIES as OID, pq_apl_aux.Valor_Gen_I18n_Sicc(1, OID_NIVE_RIES, 'CAR_NIVEL_RIESG') as DESCRIPCION 
+		  FROM CAR_NIVEL_RIESG
+         ORDER BY 2
+	</select>    
+    
+    <select id="getNivelRiesgoSeccion" parameterClass="java.util.Map" resultClass="string">
+		SELECT COUNT(1)
+  		  FROM CAR_NIVRI_SECCI
+ 	  	 WHERE OID_SECC = #oidSeccion#   
+    </select>
+    
+    <insert id="insertNivelRiesgoSeccion" parameterClass="java.util.Map">
+		INSERT INTO CAR_NIVRI_SECCI
+		  (OID_SECC, OID_NIVE_RIES, COD_REGI, COD_ZONA,
+		   COD_SECC, USU_ACTU, FEC_ACTU)
+		VALUES
+		  (#oidSeccion#, #oidNivelRiesgo#, #codigoRegion#, #codigoZona#,
+		   #codigoSeccion#, #usuario#, SYSDATE)
+    </insert>
+
+    <update id="updateNivelRiesgoSeccion" parameterClass="java.util.Map">
+		UPDATE CAR_NIVRI_SECCI
+		   SET OID_NIVE_RIES = #oidNivelRiesgo#, 
+		       COD_REGI = #codigoRegion#, 
+		       COD_ZONA = #codigoZona#,
+		       COD_SECC = #codigoSeccion#, 
+		       USU_ACTU = #usuario#, 
+		       FEC_ACTU = SYSDATE
+		 WHERE OID_SECC = #oidSeccion#
+    </update>
+    
+</sqlMap>

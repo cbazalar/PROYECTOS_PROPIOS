@@ -1,0 +1,688 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+<sqlMap namespace="soa.ConsultoraSQL">
+
+	<select id="getPeriodoPrevios" parameterClass="java.util.Map" resultClass="string">
+	    select  gen_fn_calcu_perio( #codigoPeriodo#, #cantidadPrevias#*(-1) )  from dual
+	</select>	
+
+ 	<resultMap id="getObtenerCursosCapacitacionResult" class="java.util.HashMap">
+		<result property="numeroRegistros"		        		column="NUM_REGI"/> 	
+	    <result property="cantidadTotalRegistros"				column="TOT_REGI"/> 	
+	    <result property="codigoCurso"							column="COD_CURS_CAPA"/>
+	    <result property="nombreCurso"							column="NOM_CURS_CAPA"/>
+	    <result property="estadoCapacitacion"					column="EST_CAPA"/>
+	    <result property="ultCampanhaProgramacion" 				column="ULT_CAMP_PROG_DICT"/>
+	    <result property="campanhiaCapacitacion"				column="CAM_CAPA"/>
+	    <result property="campanhaUltimaCalificada"				column="CAM_ULTI_CALI_APTA"/>
+	    <result property="campanhia"							column="COD_CAMP"/>
+	    <result property="nombreEstadoCapacitacion"				column="DES_ESTA_CAPA"/>
+    </resultMap>
+    
+    <select id="getObtenerCursosCapacitacion" parameterClass="java.util.Map" resultMap="getObtenerCursosCapacitacionResult">
+		WITH TMP AS(	
+			select y.COD_CURS_CAPA,
+			       y.NOM_CURS_CAPA,
+			       X.EST_CAPA,
+			       X.ULT_CAMP_PROG_DICT,
+			       X.CAM_CAPA,
+			       X.CAM_ULTI_CALI_APTA,
+			       DECODE('CP',X.EST_CAPA,X.CAM_CAPA,'') COD_CAMP, 
+			       (select w.DES_ESTA_CAPA from EDU_ESTAD_CAPAC w where w.COD_ESTA_CAPA = X.EST_CAPA) DES_ESTA_CAPA  
+			from edu_histo_aptas x, EDU_PARAM_CURSO_CAPAC y
+			where x.pais_cod_pais=#codigoPais#
+			 and x.clie_cod_clie = #codigoCliente#
+			 and X.CCAP_COD_CURS_CAPA = Y.COD_CURS_CAPA
+			 and x.PAIS_COD_PAIS = y.PAIS_COD_PAIS
+			 and x.EMCO_COD_EMPR_COME = y.EMCO_COD_EMPR_COME
+			  			
+			 <isEmpty prepend="ORDER BY" property="campoOrdenamiento">
+			    		Y.NOM_CURS_CAPA
+			 </isEmpty>
+			 
+		)SELECT * 
+		FROM ( SELECT  ROWNUM  AS NUM_REGI,
+				      (SELECT COUNT(1) FROM TMP) AS  TOT_REGI,
+				       X.*
+			    FROM TMP X  )		
+				<isNotEmpty prepend="where" property="tamanhoPagina">
+			    		NUM_REGI BETWEEN (#paginaActual# - 1) * #tamanhoPagina# + 1   AND  #paginaActual# * #tamanhoPagina#	
+			    </isNotEmpty>				
+		  
+	</select>
+	
+	<resultMap id="getObtenerListaConsultorasResult" class="java.util.HashMap">
+		<result property="numeroRegistros"		        column="NUM_REGI"/> 	
+	    <result property="cantidadTotalRegistros"		column="TOT_REGI"/>		
+	    <result property="codigoCampania"				column="COD_PERI"/>	
+	    <result property="codigoTerritorio" 		  	column="COD_TERR"/> 
+	    <result property="codigoCliente" 		  		column="COD_CLIE"/>   	     	
+	    <result property="codSeccion" 		  			column="COD_SECC"/> 
+		<result property="nombre1"		        		column="VAL_NOM1"/>
+	    <result property="nombre2"						column="VAL_NOM2"/>
+	    <result property="apellido1" 		  			column="VAL_APE1"/>
+	    <result property="apellido2" 		  			column="VAL_APE2"/> 	     	
+	    <result property="direccion" 		  			column="VAL_DIRE"/>
+	    <result property="numeroTelefonoCel" 			column="VAL_TELE_CELU"/>
+	   <result property="tipoTelefonoCel" 				column="VAL_TIPO_TELE_MOVI"/>
+	    <result property="numeroTelefonoFijo" 			column="VAL_TELE_FIJO"/>
+	    <result property="tipoTelefonoFijo" 			column="VAL_TIPO_TELE_FIJO"/>  
+	    <result property="montoSaldo" 					column="VAL_SALD_PEND"/>
+	      <result property="indicadorAutorizada" 		column="VAL_AUTO_PASE"/>
+	      <result property="nombreEstadoConsultora" 	column="VAL_ESTA_CONSU"/>   
+	    <result property="montoPedido" 					column="VAL_MONT_PEDI"/>	       
+	    <result property="simboloMoneda"		 		column="VAL_SIMB_MONE"/>
+	    <result property="descripcionMoneda" 			column="DES_MONED"/>	
+	    <result property="digitoVerificacion" 			column="COD_DIGI_CTRL"/>    
+    </resultMap>    
+    
+    <select id="getObtenerListaConsultoras" parameterClass="java.util.Map" resultMap="getObtenerListaConsultorasResult">
+
+	WITH TMP AS(			
+			select distinct 
+						X.COD_PERI,
+						X.COD_TERR, 
+						X.COD_CLIE, 
+						X.COD_SECC, 
+						X.VAL_NOM1, 
+						X.VAL_NOM2, 
+						X.VAL_APE1, 
+						X.VAL_APE2, 
+						X.VAL_DIRE, 
+						X.VAL_TELE_CELU, 
+						X.VAL_TIPO_TELE_MOVI, 
+						X.VAL_TELE_FIJO, 
+						X.VAL_TIPO_TELE_FIJO, 
+						X.VAL_SALD_PEND, 
+						X.VAL_AUTO_PASE, 
+						X.VAL_ESTA_CONSU, 
+						X.VAL_MONT_PEDI, 
+						X.VAL_SIMB_MONE, 
+						X.DES_MONED,
+						(SELECT cod_digi_ctrl  FROM mae_clien WHERE cod_clie = x.cod_clie) COD_DIGI_CTRL     		
+				<isNotEmpty  property="nombreCompletoConsultora">      
+						,                                      			                   			        
+                      <iterate property="nombreCompletoConsultora" open="(" close=")" conjunction="+">
+                   		DECODE(INSTR(upper(x.NOM_CONS),upper(trim(#nombreCompletoConsultora[]#))),0,0,1)  
+                       </iterate> 
+                       CTA                         			
+           		</isNotEmpty>   
+			from SOA_CONSU x      
+			where   x.cod_pais =#codigoPais#
+			    and x.cod_regi =#codigoRegion#
+			    and x.cod_zona =#codigoZona#			   
+			     <isNotEmpty prepend="AND" property="codigoSeccion">
+			     	     X.COD_SECC = #codigoSeccion#
+			    </isNotEmpty>
+
+			    <isNotEmpty prepend="AND" property="conDeuda" >
+			      <isEqual property="conDeuda" compareValue="1">
+			      	x.VAL_SALD_PEND > 0
+			      </isEqual>
+			    <isEqual property="conDeuda" compareValue="0">
+			      	(x.VAL_SALD_PEND = 0 OR X.VAL_SALD_PEND IS NULL)
+			      </isEqual>
+			    </isNotEmpty>			    
+
+			     <isNotEmpty prepend="AND" property="conCapacitacion">
+			    		X.IND_CAPA = #conCapacitacion# 
+			    </isNotEmpty>				    
+			     <isNotEmpty prepend="AND" property="indicadorAutorizada">
+			     	     X.VAL_AUTO_PASE = #indicadorAutorizada#
+			    </isNotEmpty>
+			     <isNotEmpty prepend="AND" property="conPedido">
+			     	     X.IND_CONS_PEDI = #conPedido#
+			    </isNotEmpty>			    
+			     <isNotEmpty prepend="AND" property="codigoConsultora">
+			    		X.COD_CLIE = #codigoConsultora# 
+			    </isNotEmpty>
+			     <isNotEmpty prepend="AND" property="nom1">
+			    		upper(#nom1#) like '%' || upper(x.VAL_NOM1) || '%'
+			    </isNotEmpty>
+				<isNotEmpty prepend="AND" property="nom2">
+			    		upper(#nom2#) like '%' || upper(x.VAL_NOM2) || '%'
+			    </isNotEmpty>
+				<isNotEmpty prepend="AND" property="ape1">
+			    		upper(#ape1#) like '%' || upper(x.VAL_APE1) || '%'
+			    </isNotEmpty>
+				<isNotEmpty prepend="AND" property="ape2">
+			    		upper(#ape2#) like '%' || upper(x.VAL_APE2) || '%'
+			    </isNotEmpty>			    			    
+			    	    
+			     <isNotEmpty prepend="AND" property="nombreConsultora">
+			    		upper(x.NOM_CONS) like '%' || upper(#nom1#) || '%' or
+			    		upper(x.NOM_CONS) like '%' || upper(#nom2#) || '%' or
+			    		upper(x.NOM_CONS) like '%' || upper(#ape1#) || '%' or
+			    		upper(x.NOM_CONS) like '%' || upper(#ape2#) || '%' 
+			    </isNotEmpty>			    
+			    
+			    <isNotEmpty  property="nombreCompletoConsultora">                                            			                   			        
+                      <iterate prepend="AND" property="nombreCompletoConsultora" open="(" close=")" conjunction="OR">
+                   		upper(x.NOM_CONS) like '%' || upper(trim(#nombreCompletoConsultora[]#)) || '%'
+                       </iterate>                     			
+           		</isNotEmpty>
+			    
+			    <isNotEmpty prepend="AND" property="codigoEstadoConsultora">
+			     	     X.COD_ESTA_CLIE = #codigoEstadoConsultora#
+			    </isNotEmpty>
+			    
+			     <isNotEmpty  prepend="ORDER BY" property="nombreCompletoConsultora"> 
+			    		CTA  DESC, X.COD_SECC, X.VAL_NOM1||' '||X.VAL_NOM2||' '||X.VAL_APE1||' '||X.VAL_APE2                			
+           		</isNotEmpty>
+           		<isEmpty  property="nombreCompletoConsultora">                                            			                   			        
+                     <isEmpty prepend="ORDER BY" property="campoOrdenamiento">
+			    		X.COD_SECC, X.VAL_NOM1||' '||X.VAL_NOM2||' '||X.VAL_APE1||' '||X.VAL_APE2
+			    	 </isEmpty>                   			
+           		</isEmpty>
+	    			    		    			    
+	   )
+				SELECT * 
+				FROM (
+				    SELECT  ROWNUM  AS NUM_REGI,
+				            (SELECT COUNT(1) FROM TMP) AS  TOT_REGI,
+				            X.*
+				    FROM TMP X )
+				<isNotEmpty prepend="where" property="tamanhoPagina">
+			    		NUM_REGI BETWEEN (#paginaActual# - 1) * #tamanhoPagina# + 1   AND  #paginaActual# * #tamanhoPagina#	
+			    </isNotEmpty>			    
+			    			    			    			
+	</select>
+	
+		
+	<resultMap id="getObtenerConsultoraResult" class="java.util.HashMap">
+		<result property="codigoPeriodo"				column="COD_PERI" />
+		<result property="codigoConsultora"				column="COD_CLIE" />		
+		<result property="primerNombre"	    			column="VAL_NOM1"	/>
+		<result property="segundoNombre"	    		column="VAL_NOM2"	/>
+		<result property="primerApellido"	    		column="VAL_APE1"	/>
+		<result property="segundoApellido"	    		column="VAL_APE2"	/>
+		<result property="codigoRegion"		    		column="COD_REGI"	/>
+		<result property="codigoZona"		    		column="COD_ZONA"	/>
+		<result property="codigoSeccion"	    		column="COD_SECC"	/>
+ 		<result property="codigoTerritorio"    			column="COD_TERR"	/>
+ 		<result property="valDocumentoIdentidad"		column="VAL_DOCU_IDEN"	/>
+ 		<result property="valDireccion"	    			column="VAL_DIRE" />
+ 		<result property="valTipoTelfFijo"    			column="VAL_TIPO_TELE_FIJO"	/>
+ 		<result property="valTipoTelfMovil"    			column="VAL_TIPO_TELE_MOVI"	/>
+ 		<result property="valTeleFijo"    				column="VAL_TELE_FIJO"	/>
+ 		<result property="valTeleCelu"    				column="VAL_TELE_CELU"	/>
+ 		<result property="valCorreoElec"    			column="VAL_CORR_ELEC"	/>
+ 		<result property="fechaCumple"    				column="FEC_CUMP"	/>
+ 		<result property="valEstadoConsu"    			column="VAL_ESTA_CONSU"	/>		
+ 		<result property="codigoCampaniaIngreso"    	column="CAM_INGR"	/>
+ 		<result property="nombreDuplaCyzon"	   			column="NOM_DUPL_CYZO"	/>
+ 	    <result property="montoMetaUltimaCampania"  	column="VAL_META_ULTI_CAMP"	/>  
+		<result property="tipoVisita"		    		column="COD_TIPO_VISI_CAMP"	/>
+		<result property="desTipoVisita"		    	column="VAL_TIPO_VISI_CAMP"	/>		
+		<result property="indicadorFamiliaProt"    		column="IND_FAMI_PROT"	/>
+        <result property="frecuenciaPedidos"			column="FRE_PEDI"	/>      	
+ 	    <result property="frecuenciaPedidosWeb"			column="FRE_PEDI_WEB"		/>  
+ 		<result property="valorPorcentajeVentaMult"  	column="VAL_PORC_VENT_MULT"	/> 
+ 		<result property="indAsistConfeVenta"  			column="IND_ASIST_CONFE_VENTA" />  	
+ 		<result property="kitNuevas"		  			column="KIT_NUEV" />  	 		   
+ 		<result property="indLider"  					column="IND_LIDER" /> 
+ 		<result property="cantidadRecomendadas"			column="NUM_RECO" />
+ 		<result property="valSaldoPendiente"	  		column="VAL_SALD_PEND"	/>
+        <result property="estadoCapacitacion"			column="IND_CAPA" />
+ 		<result property="descripcionMoneda"  			column="DES_MONED" />      
+ 		<result property="simboloMoneda"		  		column="VAL_SIMB_MONE"	/>	
+	    <result property="digitoVerificacion" 			column="COD_DIGI_CTRL"/>  	    
+    </resultMap>
+    
+    <select id="getObtenerConsultora" parameterClass="java.util.Map" resultMap="getObtenerConsultoraResult">
+  SELECT   (select max(cod_peri) from soa_consu where cod_clie =  #codigoConsultora#  ) cod_peri,
+           clie.cod_clie,
+           clie.val_nom1,
+           clie.val_nom2,
+           clie.val_ape1,
+           clie.val_ape2,
+           clie.cod_regi,
+           clie.cod_zona,
+           clie.cod_secc,
+           clie.cod_terr,
+           clie.val_docu_iden,
+           clie.val_dire,          
+           clie.val_tipo_tele_fijo,
+           clie.val_tipo_tele_movi,
+           clie.val_tele_fijo,
+           clie.val_tele_celu,
+           (SELECT clco.val_text_comu
+              FROM mae_clien_comun clco
+             WHERE clco.clie_oid_clie = clie.oid_clie
+               AND clco.ticm_oid_tipo_comu = 3) val_corr_elec,
+           CASE
+             WHEN clda.fec_naci IS NOT NULL THEN
+              TO_CHAR(TO_DATE(SUBSTR(TO_CHAR(clda.fec_naci, 'DDMMYYYY'),
+                                     1,
+                                     4) || to_char(SYSDATE, 'YYYY'),
+                              'DD/MM/YYYY'),
+                      'dd/MM/yyyy')
+             ELSE
+              NULL
+           END fec_cump,
+           (SELECT UPPER(gens.val_i18n) estado_actividad
+              FROM gen_i18n_sicc_comun gens
+             WHERE gens.attr_enti = 'MAE_ESTAT_CLIEN'
+               AND gens.val_oid = clda.esta_oid_esta_clie) val_esta_consu,
+           (SELECT peri.cod_peri
+              FROM seg_perio_corpo peri
+             WHERE peri.oid_peri =
+                   (SELECT perd.peri_oid_peri
+                      FROM cra_perio perd
+                     WHERE perd.oid_peri = cprc.perd_oid_peri)) cam_ingr,
+           (SELECT DISTINCT clie_clvi.val_nom1 || ' ' || clie_clvi.val_ape1 || ' ' ||
+                            clie_clvi.val_ape2 nombre_dupla
+              FROM mae_clien_vincu clvi,
+                   mae_tipo_vincu  tivc,
+                   mae_clien       clie_clvi
+             WHERE clvi.tivc_oid_tipo_vinc = tivc.oid_tipo_vinc
+               AND clvi.clie_oid_clie_vndo = clie_clvi.oid_clie
+               AND tivc.cod_tipo_vinc = '01'
+               AND clvi.fec_hast IS NULL
+               AND clvi.clie_oid_clie_vnte = clie.oid_clie) nom_dupl_cyzo,
+           NVL((SELECT nvcg.imp_logr
+                 FROM nvs_consu_logro nvcg
+                WHERE nvcg.cod_clie = clie.cod_clie
+                  AND nvcg.cmp_inic =
+                      (SELECT MAX(nvcg.cmp_inic)
+                         FROM nvs_consu_logro nvcg
+                        WHERE nvcg.cod_clie = clie.cod_clie)),
+               0) val_meta_ulti_camp,
+             CASE
+              WHEN ( clda.esta_oid_esta_clie = 1 AND camp.clie_oid_clie IS NULL ) THEN
+	               '1'
+              WHEN cprc.perd_oid_peri = cier.perd_oid_peri OR
+                   ( clda.esta_oid_esta_clie IN (1,2,7,8) AND camp.clie_oid_clie IS NOT NULL )THEN
+                   '2' 
+	          WHEN cprc.perd_oid_peri = fin_pkg_gener.fin_fn_obtie_oid_perio( gen_fn_calcu_perio( cier.cod_peri, -1 ) ) THEN
+	               '3'
+              WHEN cprc.perd_oid_peri = fin_pkg_gener.fin_fn_obtie_oid_perio( gen_fn_calcu_perio( cier.cod_peri, -2 ) ) AND
+                   clda.num_camp_sin_pedi = 0 THEN
+	               '4'
+              WHEN cprc.perd_oid_peri = fin_pkg_gener.fin_fn_obtie_oid_perio( gen_fn_calcu_perio( cier.cod_peri, -3 ) ) AND
+                   clda.num_camp_sin_pedi = 0 THEN
+	               '5'
+              WHEN (cprc.perd_oid_peri = fin_pkg_gener.fin_fn_obtie_oid_perio( gen_fn_calcu_perio( cier.cod_peri, -3 ) ) AND
+                    clda.num_camp_sin_pedi >= 2 OR cier.cod_peri <![CDATA[ <  ]]> (SELECT nvcp.cmp_inic_prog FROM nvs_param_logro nvcp )) THEN
+                   '0' 
+	          ELSE '6'
+           END cod_tipo_visi_camp,
+           CASE
+              WHEN ( clda.esta_oid_esta_clie = 1 AND camp.clie_oid_clie IS NULL ) THEN
+	               'visita de incorporación'
+             WHEN cprc.perd_oid_peri = cier.perd_oid_peri OR
+	               ( clda.esta_oid_esta_clie IN (1,2,7,8) AND camp.clie_oid_clie IS NOT NULL )THEN
+	               'visita de Refuerzo'
+	          WHEN cprc.perd_oid_peri = fin_pkg_gener.fin_fn_obtie_oid_perio( gen_fn_calcu_perio( cier.cod_peri, -1 ) ) THEN
+              'visita de acompañamiento 1'
+	          WHEN cprc.perd_oid_peri = fin_pkg_gener.fin_fn_obtie_oid_perio( gen_fn_calcu_perio( cier.cod_peri, -2 ) ) AND
+                  clda.num_camp_sin_pedi = 0 THEN
+              'visita de acompañamiento 2'
+	          WHEN cprc.perd_oid_peri = fin_pkg_gener.fin_fn_obtie_oid_perio( gen_fn_calcu_perio( cier.cod_peri, -3 ) ) AND
+                  clda.num_camp_sin_pedi = 0 THEN
+              'visita felicitaciones'
+	          WHEN (cprc.perd_oid_peri = fin_pkg_gener.fin_fn_obtie_oid_perio( gen_fn_calcu_perio( cier.cod_peri, -3 ) ) AND
+	                clda.num_camp_sin_pedi >= 2 OR cier.cod_peri <![CDATA[ <  ]]> (SELECT nvcp.cmp_inic_prog FROM nvs_param_logro nvcp )) THEN
+              'no le corresponde visita'
+	          ELSE 'visita establecida'
+              END val_tipo_visi_camp,
+           CASE
+             WHEN fapr.est_poli IS NULL OR fapr.est_poli = '4' THEN
+              '0'
+             ELSE
+              '1'
+           END AS ind_fami_prot,
+           (SELECT COUNT(*) numero_pedidos
+              FROM ped_solic_cabec_acum2 sca2
+             WHERE sca2.perd_oid_peri BETWEEN #oidPeriodoInicial# AND
+                   #oidPeriodo#
+               AND sca2.clie_oid_clie = clie.oid_clie) fre_pedi,
+           (NVL((SELECT SUM(CASE
+                             WHEN a.ind_rece_web IS NOT NULL THEN
+                              1
+                             ELSE
+                              0
+                           END) dato
+                  FROM ped_histo_solic_conso_cabec a
+                 WHERE a.cod_clie = clie.cod_clie
+                   AND a.perd_oid_peri BETWEEN #oidPeriodoInicial# AND
+                       #oidPeriodo#
+                   AND a.soca_oid_soli_cabe_refe IS NOT NULL
+                   AND a.ind_erro_rech = 0),
+                0) + NVL((SELECT SUM(CASE
+                                       WHEN a.ind_rece_web IS NOT NULL THEN
+                                        1
+                                       ELSE
+                                        0
+                                     END) dato
+                            FROM int_solic_conso_cabec a
+                           WHERE a.cod_clie = clie.cod_clie
+                             AND a.perd_oid_peri = #oidPeriodo#
+                             AND a.soca_oid_soli_cabe_refe IS NOT NULL
+                             AND a.ind_erro_rech = 0),
+                          0)) fre_pedi_web,
+           nvl(NULL, 0) val_porc_vent_mult, 
+           NVL(triu.flagasiste, 0) ind_asist_confe_venta,
+           (SELECT COUNT(1) ind_kit_nueva
+              FROM cup_consu_nueva cupc
+             WHERE cupc.cod_cons = clie.cod_clie
+               AND cupc.camp_ini_ccc = #codigoPeriodo#) kit_nuev,
+           CASE
+             WHEN clie.oid_clie = zscc.clie_oid_clie THEN
+              1
+             ELSE
+              0
+           END ind_lider,
+           (SELECT COUNT(*) total_recomen
+              FROM mae_clien_vincu clvi, mae_tipo_vincu tivc
+             WHERE clvi.tivc_oid_tipo_vinc = tivc.oid_tipo_vinc
+               AND tivc.cod_tipo_vinc = '03'
+               AND clvi.clie_oid_clie_vnte = clie.oid_clie) num_reco,
+           (SELECT COUNT(1)
+              FROM edu_histo_capac_cabec hicc
+             WHERE hicc.clie_cod_clie = clie.cod_clie
+               AND hicc.ult_camp_capa = #codigoPeriodo#) ind_capa,
+           clie.VAL_SALD_PEND val_sald_pend,
+           D.VAL_SIMB_MONE,
+           PQ_APL_AUX.VALOR_GEN_I18N_SICC(1, D.OID_MONE, 'SEG_MONED') DES_MONED,
+		   (SELECT cod_digi_ctrl  FROM mae_clien WHERE cod_clie = clie.cod_clie) COD_DIGI_CTRL   
+      FROM mae_clien_datos_adici clda,
+           soa_consu clie,
+           mae_clien_prime_conta cprc,
+           mae_clien_unida_admin cuad,
+           zon_terri_admin ztad,
+           zon_terri terr,
+           zon_secci zscc,
+           zon_zona zzon,
+           zon_regio zorg,
+           (SELECT soca.clie_oid_clie
+              FROM ped_solic_cabec          soca,
+                   ped_solic_cabec          cons,
+                   ped_tipo_solic_pais      tspa,
+                   ped_tipo_solic tsol
+             WHERE soca.soca_oid_soli_cabe = cons.oid_soli_cabe(+)
+               AND soca.tspa_oid_tipo_soli_pais = tspa.oid_tipo_soli_pais
+               AND tspa.tsol_oid_tipo_soli = tsol.oid_tipo_soli
+               AND soca.perd_oid_peri = #oidPeriodo# 
+               AND tsol.cod_tipo_soli = 'SOC' 
+               AND soca.ind_oc = 1 
+               AND cons.esso_oid_esta_soli <![CDATA[ <>  ]]> 4 
+               AND soca.grpr_oid_grup_proc = 5 
+            ) camp,      
+           (SELECT cod_clie,
+                   MAX(CASE
+                         WHEN UPPER(cod_acce) IN ('S', 'A') THEN
+                          1
+                         ELSE
+                          0
+                       END) flagAsiste
+              FROM int_solic_pedid_detal
+             WHERE cod_peri = #codigoPeriodo#
+             GROUP BY cod_clie) triu,
+           (SELECT zorg_oid_regi,
+                   MAX(perd_oid_peri) perd_oid_peri,
+                   fin_pkg_gener.fin_fn_obtie_codig_perio(MAX(perd_oid_peri)) cod_peri
+              FROM fac_contr_cierr
+             WHERE tcie_oid_tipo_cier = 1
+               AND perd_oid_peri  <![CDATA[  <= ]]> #oidPeriodo#
+             GROUP BY zorg_oid_regi) cier,
+           (SELECT p.clie_oid_clie, p.est_poli
+              FROM sgr_famse_poliz_regis p
+             WHERE p.fec_soli =
+                   (SELECT MAX(p1.fec_soli)
+                      FROM sgr_famse_poliz_regis p1
+                     WHERE p1.clie_oid_clie = p.clie_oid_clie
+                       AND p1.est_regi != '9'
+                       AND p1.cam_regi <![CDATA[  <= ]]>#codigoPeriodo#)
+               AND p.est_regi != '9') fapr,
+           SEG_PAIS C,
+           SEG_MONED D
+     WHERE clda.clie_oid_clie = clie.oid_clie
+       and clie.cod_clie = #codigoConsultora#
+       		   
+     <isNotEmpty prepend="AND" property="codigoRegion">
+     	     clie.cod_regi = #codigoRegion#
+    </isNotEmpty>			    		   
+     <isNotEmpty prepend="AND" property="codigoZona">
+     	     clie.cod_zona = #codigoZona#
+    </isNotEmpty>
+      
+       and clie.COD_PAIS = #codigoPais#                                            
+  	   and clie.cod_regi = zorg.cod_regi
+       and clie.cod_zona = zzon.cod_zona
+       and clie.cod_pais = C.COD_PAIS                 
+       AND clie.oid_clie = camp.clie_oid_clie(+)
+       AND clie.cod_clie = triu.cod_clie(+)
+       AND clie.oid_clie = cprc.clie_oid_clie(+)
+       AND clie.oid_clie = fapr.clie_oid_clie(+)
+       AND zorg.oid_regi = cier.zorg_oid_regi(+)
+       AND clie.oid_clie = cuad.clie_oid_clie
+       AND cuad.ztad_oid_terr_admi = ztad.oid_terr_admi
+       AND ztad.terr_oid_terr = terr.oid_terr
+       AND ztad.zscc_oid_secc = zscc.oid_secc
+       AND zscc.zzon_oid_zona = zzon.oid_zona
+       AND zzon.zorg_oid_regi = zorg.oid_regi
+       and C.COD_PAIS =clie.COD_PAIS
+       AND D.OID_MONE = C.MONE_OID_MONE  
+       AND #oidPeriodo# BETWEEN cuad.perd_oid_peri_ini AND  NVL(cuad.perd_oid_peri_fin, #oidPeriodo#)
+       AND clda.ind_acti = 1
+		 
+	</select>		
+	
+    <select id="getOidCliente" parameterClass="java.util.Map" resultClass="long">
+	    select oid_clie
+	    from mae_clien
+	    where cod_clie = #codigoCliente#
+	</select>
+
+	
+	<resultMap id="getObtenerOperacionesResult" class="java.util.HashMap">
+		<result property="numeroRegistros"		    column="NUM_REGI"/> 	
+	    <result property="cantidadTotalRegistros"	column="TOT_REGI"/>	
+	    <result property="fechaRegistro"			column="FEC_EMIS_DOCU"/>
+	    <result property="campanhaRefe"				column="CAM_REFE"/>
+	    <result property="nombreTipoTransaccion"	column="TIP_MOVI"/>
+	    <result property="numeroDocumento"			column="NUM_DOCU"/>
+	    <result property="fechaVencimiento"			column="FEC_VENC"/>	    
+	    <result property="fechaPago"				column="FEC_PAGO"/>
+	    <result property="montoCargo"				column="IMP_CARG"/>
+	    <result property="montoAbono"				column="IMP_ABON"/> 
+ 		<result property="descripcionMoneda"  		column="DES_MONED" />      
+ 		<result property="simboloMoneda"		  	column="VAL_SIMB_MONE"	/>	    
+    </resultMap>
+    
+    <select id="getObtenerOperaciones" parameterClass="java.util.Map" resultMap="getObtenerOperacionesResult">
+
+	WITH TMP AS(					
+		SELECT TO_CHAR(x.FEC_EMIS, 'dd/MM/yyyy') FEC_EMIS_DOCU,
+			       NVL(TO_CHAR(x.CAM_REFE), '') CAM_REFE,
+			       x.TIP_MOVI,
+			       x.NUM_DOCU,
+			       NVL(TO_CHAR(x.FEC_VENC, 'dd/MM/yyyy'), '') FEC_VENC,
+			       NVL(TO_CHAR(x.FEC_PAGO, 'dd/MM/yyyy'), '') FEC_PAGO,
+			       x.IMP_CARG,
+			       x.IMP_ABON,
+			       PQ_APL_AUX.VALOR_GEN_I18N_SICC(1, D.OID_MONE, 'SEG_MONED') DES_MONED,
+			       D.VAL_SIMB_MONE          
+			  FROM (SELECT FEC_EMIS,
+			               CAM_REFE,
+			               TIP_MOVI,
+			               SOCA_OID_SOLI_CABE,
+			               NUM_DOCU,
+			               FEC_VENC,
+			               FEC_PAGO,
+			               SUM(IMP_CARG) IMP_CARG,
+			               SUM(IMP_ABON) IMP_ABON
+			          FROM ((SELECT MCC.FEC_DOCU FEC_EMIS,
+			                        SPC.COD_PERI CAM_REFE,
+			                        CASE
+			                          WHEN MCC.TCAB_OID_TCAB_CREA = 2001 THEN
+			                           CASE
+			                             WHEN EXISTS
+			                              (SELECT OID_SOLI_CABE
+			                                     FROM PED_SOLIC_CABEC     P,
+			                                          PED_TIPO_SOLIC_PAIS TP,
+			                                          PED_TIPO_SOLIC      T
+			                                    WHERE P.SOCA_OID_SOLI_CABE =
+			                                          MCC.SOCA_OID_SOLI_CABE
+			                                      AND P.TSPA_OID_TIPO_SOLI_PAIS =
+			                                          TP.OID_TIPO_SOLI_PAIS
+			                                      AND TP.TSOL_OID_TIPO_SOLI = T.OID_TIPO_SOLI
+			                                      AND P.IND_OC = 1
+			                                      AND T.IND_SOLI_NEGA = 0) THEN
+			                              'Pedido'
+			                             ELSE
+			                              CASE
+			                                WHEN MCC.IMP_MOVI > 0 THEN
+			                                 'Atención de Servicio'
+			                                ELSE
+			                                 NVL((SELECT 'C' || PERIOCORPO.COD_PERI || ' ' ||
+			                                            OPERA.VAL_DESC_LARG || ' NRO.' ||
+			                                            CABECRECLA.NUM_RECL AS DESCRIP
+			                                       FROM PED_SOLIC_CABEC CONS,
+			                                            PED_SOLIC_CABEC SOLICRECLA,
+			                                            PED_SOLIC_CABEC SOLICORIGEN,
+			                                            REC_SOLIC_OPERA SOLICOPERA,
+			                                            REC_OPERA_RECLA OPERARECLA,
+			                                            REC_CABEC_RECLA CABECRECLA,
+			                                            REC_TIPOS_OPERA TIPOSOPERA,
+			                                            REC_OPERA       OPERA,
+			                                            CRA_PERIO       PERIO,
+			                                            SEG_PERIO_CORPO PERIOCORPO
+			                                      WHERE CONS.OID_SOLI_CABE =
+			                                            MCC.SOCA_OID_SOLI_CABE
+			                                        AND CONS.OID_SOLI_CABE =
+			                                            SOLICRECLA.SOCA_OID_SOLI_CABE
+			                                        AND SOLICRECLA.SOCA_OID_DOCU_REFE IS NOT NULL
+			                                        AND SOLICRECLA.OID_SOLI_CABE =
+			                                            SOLICOPERA.SOCA_OID_SOLI_CABE
+			                                        AND SOLICOPERA.OPRE_OID_OPER_RECL =
+			                                            OPERARECLA.OID_OPER_RECL
+			                                        AND OPERARECLA.CARE_OID_CABE_RECL =
+			                                            CABECRECLA.OID_CABE_RECL
+			                                        AND OPERARECLA.TIOP_OID_TIPO_OPER =
+			                                            TIPOSOPERA.OID_TIPO_OPER
+			                                        AND TIPOSOPERA.ROPE_OID_OPER =
+			                                            OPERA.OID_OPER
+			                                        AND SOLICRECLA.SOCA_OID_DOCU_REFE =
+			                                            SOLICORIGEN.OID_SOLI_CABE
+			                                        AND SOLICORIGEN.PERD_OID_PERI =
+			                                            PERIO.OID_PERI
+			                                        AND PERIO.PERI_OID_PERI =
+			                                            PERIOCORPO.OID_PERI
+			                                        AND ROWNUM = 1),
+			                                     'CDR')
+			                              END
+			                           END
+			                          ELSE
+			                           GEN.VAL_I18N
+			                        END TIP_MOVI,
+			                        MCC.SOCA_OID_SOLI_CABE SOCA_OID_SOLI_CABE,
+			                        MCC.NUM_IDEN_CUOT NUM_DOCU,
+			                        MCC.FEC_VENC FEC_VENC,
+			                        NULL FEC_PAGO,
+			                        CASE
+			                          WHEN (MCC.IMP_MOVI > 0) THEN
+			                           MCC.IMP_MOVI
+			                          ELSE
+			                           NULL
+			                        END IMP_CARG,
+			                        CASE
+			                          WHEN (MCC.IMP_MOVI > 0) THEN
+			                           NULL
+			                          ELSE
+			                           ABS(MCC.IMP_MOVI)
+			                        END IMP_ABON
+			                   FROM CCC_MOVIM_CUENT_CORRI MCC,
+			                        CCC_SUBPR             CS,
+			                        CCC_TIPO_ABONO_SUBPR  TAS,
+			                        CCC_TIPO_CARGO_ABONO  TCA,
+			                        GEN_I18N_SICC_PAIS    GEN,
+			                        CRA_PERIO             CP,
+			                        SEG_PERIO_CORPO       SPC
+			                  WHERE MCC.SUBP_OID_SUBP_CREA = CS.OID_SUBP
+			                    AND CS.OID_SUBP = TAS.SUBP_OID_SUBP
+			                    AND TAS.TCAB_OID_TCAB = TCA.OID_TIPO_CARG_ABON
+			                    AND GEN.ATTR_ENTI LIKE 'CCC_TIPO_CARGO_ABONO'
+			                    AND GEN.VAL_OID = TCA.OID_TIPO_CARG_ABON
+			                    AND MCC.PERD_OID_PERI = CP.OID_PERI
+			                    AND CP.PERI_OID_PERI = SPC.OID_PERI
+			                    AND MCC.CLIE_OID_CLIE = #oidCliente#)  
+			               UNION ALL
+			                (SELECT MB.FEC_PROC      FEC_EMIS,
+			                        NULL             OID_PERI,
+			                        CCB.DES_CC       TIP_MOVI,
+			                        MB.OID_MOVI_BANC SOCA_OID_SOLI_CABE,
+			                        MB.NUM_LOTE      NUM_DOCU,
+			                        NULL             FEC_VENC,
+			                        MB.FEC_PAGO      FEC_PAGO,
+			                        NULL             IMP_CARG,
+			                        MB.IMP_PAGO      IMP_ABON
+			                   FROM CCC_MOVIM_BANCA MB, CCC_CUENT_CORRI_BANCA CCB
+			                  WHERE MB.CCBA_OID_CC_BANC = CCB.OID_CUEN_CORR_BANC
+			                    AND MB.COD_IDEN_PROC = 'P'
+			                    AND CCB.IND_BANC_CHEQ = 0
+			                   AND MB.CLIE_OID_CLIE = #oidCliente#) 
+			               UNION ALL
+			                (SELECT MB.FEC_PROC FEC_EMIS,
+			                        NULL OID_PERI,
+			                        CCB.DES_CC || ' ' || bc.des_banc TIP_MOVI,
+			                        MB.OID_MOVI_BANC SOCA_OID_SOLI_CABE,
+			                        MB.NUM_LOTE NUM_DOCU,
+			                        MB.FEC_COBR_CHEQ FEC_VENC,
+			                        MB.FEC_PAGO FEC_PAGO,
+			                        NULL IMP_CARG,
+			                        MB.IMP_PAGO IMP_ABON
+			                   FROM CCC_MOVIM_BANCA       MB,
+			                        CCC_CUENT_CORRI_BANCA CCB,
+			                        CCC_BANCO_CHEQU       BC
+			                  WHERE MB.CCBA_OID_CC_BANC = CCB.OID_CUEN_CORR_BANC
+			                    AND MB.COD_IDEN_PROC = 'P'
+			                    AND CCB.IND_BANC_CHEQ = 1
+			                    AND MB.COD_BANC_CHEQ = BC.COD_BANC
+			                    AND MB.CLIE_OID_CLIE = #oidCliente#))
+			         GROUP BY FEC_EMIS,
+			                  CAM_REFE,
+			                  TIP_MOVI,
+			                  SOCA_OID_SOLI_CABE,
+			                  NUM_DOCU,
+			                  FEC_VENC,
+			                  FEC_PAGO) x,
+			                  (SELECT A.FEC_INIC
+			                    FROM CRA_PERIO A,
+			                      SEG_PERIO_CORPO B
+			                    WHERE   A.PERI_OID_PERI = B.OID_PERI
+			                     AND B.COD_PERI = #campanhaInicial#) fi,                  
+			                  (SELECT A.FEC_FINA
+			                    FROM CRA_PERIO A,
+			                      SEG_PERIO_CORPO B
+			                    WHERE   A.PERI_OID_PERI = B.OID_PERI
+			                     AND B.COD_PERI= #codigoPeriodo# ) ff,                     
+			          seg_pais c,
+			          SEG_MONED D             
+			where    
+			   C.COD_PAIS = #codigoPais#
+			   AND D.OID_MONE = C.MONE_OID_MONE
+			   AND x.FEC_EMIS  BETWEEN fi.fec_inic and ff.fec_fina 
+			
+			 <isEmpty prepend="ORDER BY" property="campoOrdenamiento">
+			    		X.FEC_EMIS DESC
+			 </isEmpty>
+			 
+   		)
+				SELECT * 
+				FROM (
+				    SELECT  ROWNUM  AS NUM_REGI,
+				            (SELECT COUNT(1) FROM TMP) AS  TOT_REGI,
+				            X.*
+				    FROM TMP X  )
+				<isNotEmpty prepend="where" property="tamanhoPagina">
+			    		NUM_REGI BETWEEN (#paginaActual# - 1) * #tamanhoPagina# + 1   AND  #paginaActual# * #tamanhoPagina#	
+			    </isNotEmpty>
+				
+	</select>		
+	
+</sqlMap>
+

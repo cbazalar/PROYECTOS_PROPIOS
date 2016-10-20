@@ -1,0 +1,455 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteAPEEstadisticasEtiquetasPDF"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Portrait"
+		 pageWidth="595"
+		 pageHeight="842"
+		 columnWidth="595"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="NoPages"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="marca" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoMarca")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="canal" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoCanal")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="campana" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPeriodo")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaDes" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaDesde")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaHas" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaHasta")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="centro" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoCentro")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="linea" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoLinea")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoPais" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPais")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[select distinct TRUNC(cab.fec_factu) FECHA, 
+(SELECT
+COUNT(ETIQ.IND_IMPR) 
+FROM
+APE_LISTA_PICAD_CABEC PICA,
+APE_ETIQU ETIQ
+WHERE
+PICA.FEC_FACTU = $P{fechaDes}
+AND PICA.OID_LIST_PICA_CABE = ETIQ.LPCA_OID_LIST_PICA_CABE
+AND etiQ.ind_impr='S') IMPRESAS,
+(select count(*) from ape_etiqu eti where eti.estp_oid_esta_pedi= (select estado.oid_esta_soli from ped_estad_solic estado where estado.cod_esta_soli = 'AN' and estado.oid_esta_soli = eti.estp_oid_esta_pedi)) ANULADAS,
+(select count(*) from ape_etiqu eti where eti.estp_oid_esta_pedi= (select estado.oid_esta_soli from ped_estad_solic estado where estado.cod_esta_soli = 'RE' and estado.oid_esta_soli = eti.estp_oid_esta_pedi)) REIMPRESAS,
+(select gen.VAL_I18N from GEN_I18N_SICC_PAIS gen where gen.VAL_OID = (select li.OID_LINE_ARMA from ape_linea_armad li where li.NUM_CODI_LINE=$P{linea}) and gen.ATTR_ENTI = 'APE_LINEA_ARMAD') linea,
+	   (select gen.VAL_I18N from GEN_I18N_SICC_PAIS gen where gen.VAL_OID = (select ce.OID_CONF_CENT_DIST  from APP_CONFI_CENTR_DISTR ce where ce.COD_CENT_DIST =$P{centro}) and gen.ATTR_ENTI = 'APP_CONFI_CENTR_DISTR') centro,
+(select gen.VAL_I18N from GEN_I18N_SICC_COMUN gen where gen.VAL_OID = (select sub.OID_CANA  from SEG_CANAL sub where sub.COD_CANA =$P{canal}) and gen.ATTR_ENTI = 'SEG_CANAL')  CANAL,
+(select MARCA.DES_MARC   from SEG_MARCA MARCA where MARCA.COD_MARC =$P{marca})  MARCA,
+(select periodo.VAL_NOMB_PERI from cra_perio periodo where periodo.VAL_NOMB_PERI LIKE $P{campana}) periodo
+ from ape_etiqu eti 
+inner join ped_solic_cabec soli on  eti.soca_oid_soli_cabe = soli.oid_soli_cabe and eti.pais_oid_pais = (select p.oid_pais from seg_pais p where p.oid_pais = soli.pais_oid_pais and p.cod_pais=$P{codigoPais}) and
+soli.perd_oid_peri = (select camp.oid_peri from cra_perio camp where camp.oid_peri = soli.perd_oid_peri and camp.val_nomb_peri LIKE $P{campana}
+and camp.marc_oid_marc = (select marca.oid_marc from seg_marca marca where marca.oid_marc = camp.marc_oid_marc and marca.cod_marc=$P{marca}) and 
+camp.cana_oid_cana = (select canal.oid_cana from seg_canal canal where canal.oid_cana = camp.cana_oid_cana and canal.cod_cana = $P{canal})
+) inner join ape_lista_picad_cabec cab on cab.fec_factu between to_date($P{fechaDes},'dd/mm/yyyy') AND to_date($P{fechaHas},'dd/mm/yyyy')
+and cab.liar_oid_line_arma = (select linea.oid_line_arma from ape_linea_armad linea where linea.oid_line_arma = cab.liar_oid_line_arma and linea.num_codi_line=1)
+GROUP BY cab.fec_factu, CAB.OID_LIST_PICA_CABE]]></queryString>
+
+	<field name="FECHA" class="java.lang.String"/>
+	<field name="IMPRESAS" class="java.lang.String"/>
+	<field name="ANULADAS" class="java.lang.String"/>
+	<field name="REIMPRESAS" class="java.lang.String"/>
+	<field name="MARCA" class="java.lang.String"/>
+	<field name="CANAL" class="java.lang.String"/>
+	<field name="CENTRO" class="java.lang.String"/>
+	<field name="LINEA" class="java.lang.String"/>
+	<field name="PERIODO" class="java.lang.String"/>
+
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="50"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="5"
+						y="7"
+						width="48"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-28"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEEstadisticasEtiquetaForm.marca}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="5"
+						y="22"
+						width="48"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-29"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEEstadisticasEtiquetaForm.canal}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="5"
+						y="36"
+						width="48"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-30"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEEstadisticasEtiquetaForm.periodo}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="127"
+						y="8"
+						width="55"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-31"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEEstadisticasEtiquetaForm.fechaDes}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="127"
+						y="23"
+						width="56"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-32"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEEstadisticasEtiquetaForm.fechaHas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="127"
+						y="37"
+						width="138"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-33"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEEstadisticasEtiquetaForm.centro}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="296"
+						y="7"
+						width="48"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-34"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEEstadisticasEtiquetaForm.linea}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="60"
+						y="6"
+						width="61"
+						height="14"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{MARCA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="186"
+						y="21"
+						width="93"
+						height="14"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$P{fechaHas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="296"
+						y="37"
+						width="203"
+						height="12"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{CENTRO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="357"
+						y="6"
+						width="110"
+						height="14"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{LINEA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="60"
+						y="22"
+						width="60"
+						height="14"
+						key="textField-35"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{CANAL}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="62"
+						y="35"
+						width="54"
+						height="14"
+						key="textField-36"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{PERIODO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="187"
+						y="6"
+						width="93"
+						height="14"
+						key="textField-37"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$P{fechaDes}]]></textFieldExpression>
+				</textField>
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="17"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1"
+						y="4"
+						width="63"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-8"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEEstadisticasEtiquetasForm.fecha}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="64"
+						y="4"
+						width="129"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-9"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEEstadisticasEtiquetasForm.impresas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="193"
+						y="4"
+						width="126"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-10"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEEstadisticasEtiquetasForm.anuladas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="319"
+						y="4"
+						width="115"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-11"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPEEstadisticasEtiquetasForm.reimpresas}]]></textFieldExpression>
+				</textField>
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="15"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1"
+						y="1"
+						width="63"
+						height="13"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-18"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{FECHA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="64"
+						y="1"
+						width="129"
+						height="13"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-19"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{IMPRESAS}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="193"
+						y="1"
+						width="126"
+						height="13"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-20"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{ANULADAS}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="319"
+						y="1"
+						width="115"
+						height="13"
+						forecolor="#333333"
+						backcolor="#FFFFFF"
+						key="textField-21"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{REIMPRESAS}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

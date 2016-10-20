@@ -1,0 +1,354 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteSTOEstadisticoDetalleZonaOutXLS"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Portrait"
+		 pageWidth="338"
+		 pageHeight="566"
+		 columnWidth="338"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="NoPages"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 whenResourceMissingType="Empty"
+		 isIgnorePagination="true">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="tipoDocumento" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("tipoDocumento")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="periodo" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("periodo")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicionRegion" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicionRegion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoPais" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPais")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicionFecha" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicionFecha")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[-- query Reporte STO Estadistico
+select zr.des_regi,
+  corr.cab_tot,corr.det_tot,
+  erro.cab_err,erro.det_err,
+  erro.cab_ate, erro.det_ate,
+  erro.cab_rec, erro.det_Rec
+from 
+    (
+        select erro.COD_REGI,
+        sum(decode(erro.COD_TIPO_DOCU,$P{tipoDocumento},1,0)) as cab_err,
+        sum(decode(erro.COD_TIPO_DOCU, sto_pkg_gener.sto_fn_devue_codig_docum_detal($P{codigoPais},
+                                                                             $P{tipoDocumento}),1,0)) as det_err,
+        sum(decode(erro.COD_TIPO_DOCU,$P{tipoDocumento},erro.ind_envi,0)) as cab_ate,
+        sum(decode(erro.COD_TIPO_DOCU,sto_pkg_gener.sto_fn_devue_codig_docum_detal($P{codigoPais},
+                                                                             $P{tipoDocumento}),erro.ind_envi,0)) as det_ate,
+        sum(decode(erro.COD_TIPO_DOCU,$P{tipoDocumento},erro.ind_rech,0)) as cab_rec,
+        sum(decode(erro.COD_TIPO_DOCU,sto_pkg_gener.sto_fn_devue_codig_docum_detal($P{codigoPais},
+                                                                             $P{tipoDocumento}),erro.ind_rech,0)) as det_rec
+        from 
+            (
+              select a.COD_REGI,a.cod_tipo_docu, a.Sec_Nume_Docu, a.ind_envi, a.ind_rech
+               from sto_docum_digit a, STO_AUDIT_EXCEP b
+              where
+                  a.Cod_Pais = b.Cod_Pais 
+                  and a.Cod_Tipo_Docu = b.Cod_Tipo_Docu
+                  and a.Num_Lote = b.Num_Lote
+                  and a.Sec_Nume_Docu = b.Sec_Nume_Docu 
+                  and a.cod_tipo_docu in ($P{tipoDocumento}, sto_pkg_gener.sto_fn_devue_codig_docum_detal($P{codigoPais},
+                                                                             $P{tipoDocumento})) 
+    
+                    -- Tipo de documento
+                     and a.cod_tipo_docu = $P{tipoDocumento}
+                    -- Campaña
+                     and ( ( $P{periodo} = 'TODOS') or ( a.cod_peri = $P{periodo} ) )
+                    -- Fecha Inicio & Fecha Fin
+                     $P!{condicionFecha}
+                    -- Region
+                     $P!{condicionRegion}
+
+                group by a.COD_REGI, a.cod_tipo_docu, a.Sec_Nume_Docu,a.ind_envi, a.ind_rech
+             ) erro
+             
+        group by erro.COD_REGI
+        
+    ) erro,
+  (
+        select a.COD_REGI, 
+          sum(decode(a.COD_TIPO_DOCU,$P{tipoDocumento},1,0)) as cab_tot,
+          sum(decode(a.COD_TIPO_DOCU,sto_pkg_gener.sto_fn_devue_codig_docum_detal($P{codigoPais},
+                                                                             $P{tipoDocumento}),1,0)) as det_tot
+        from sto_docum_digit a
+        where a.COD_TIPO_DOCU in ($P{tipoDocumento},sto_pkg_gener.sto_fn_devue_codig_docum_detal($P{codigoPais},
+                                                                             $P{tipoDocumento})) 
+      -- Tipo de documento
+             and a.cod_tipo_docu = $P{tipoDocumento}
+            -- Campaña
+             and ( ( $P{periodo} = 'TODOS') or ( a.cod_peri = $P{periodo} ) )
+            -- Fecha Inicio & Fecha Fin
+            $P!{condicionFecha}
+            -- Region
+            $P!{condicionRegion}
+            
+        group by a.COD_REGI
+  ) corr,
+zon_regio zr
+where
+
+zr.cod_regi = erro.cod_regi 
+and erro.cod_regi = corr.cod_regi
+
+ORDER BY erro.cod_regi]]></queryString>
+
+	<field name="des_regi" class="java.lang.String"/>
+	<field name="CAB_TOT" class="java.math.BigDecimal"/>
+	<field name="DET_TOT" class="java.math.BigDecimal"/>
+	<field name="CAB_ERR" class="java.math.BigDecimal"/>
+	<field name="DET_ERR" class="java.math.BigDecimal"/>
+	<field name="CAB_ATE" class="java.math.BigDecimal"/>
+	<field name="DET_ATE" class="java.math.BigDecimal"/>
+	<field name="CAB_REC" class="java.math.BigDecimal"/>
+	<field name="DET_REC" class="java.math.BigDecimal"/>
+
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="29"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="1"
+						width="119"
+						height="28"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<pen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOEstadisticoForm.region}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="119"
+						y="1"
+						width="53"
+						height="28"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<pen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOEstadisticoForm.totalDetalles}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="172"
+						y="1"
+						width="53"
+						height="28"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<pen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOEstadisticoForm.detallesError}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="225"
+						y="1"
+						width="53"
+						height="28"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<pen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOEstadisticoForm.detallesAtendidas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="278"
+						y="1"
+						width="60"
+						height="28"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<pen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOEstadisticoForm.detallesRechazados}]]></textFieldExpression>
+				</textField>
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="12"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="119"
+						height="12"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<pen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{des_regi}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="119"
+						y="0"
+						width="53"
+						height="12"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<pen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{DET_TOT}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="172"
+						y="0"
+						width="53"
+						height="12"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<pen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{DET_ERR}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="225"
+						y="0"
+						width="53"
+						height="12"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<pen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{DET_ATE}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="278"
+						y="0"
+						width="60"
+						height="12"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<pen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font fontName="SansSerif" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{DET_REC}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

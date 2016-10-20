@@ -1,0 +1,57 @@
+DROP MATERIALIZED VIEW SOA_MV_CAMPA;
+CREATE MATERIALIZED VIEW SOA_MV_CAMPA
+REFRESH FORCE ON DEMAND
+AS
+SELECT substr(spc.cod_peri,
+              1,
+              4) val_anio,
+       spc.cod_peri,
+       'C-' || substr(spc.cod_peri,
+                      5,
+                      2) val_nomb_cort_peri,
+       cr2.fec_inic+1 fec_inic,
+       cr.fec_inic fec_fina,
+       sp.cod_pais,
+       zr.cod_regi,
+       zz.cod_zona,
+       CAST(SYS_EXTRACT_UTC(SYSTIMESTAMP) AS DATE) fec_utc_carga
+  FROM cra_crono       cr,
+       cra_perio       cp,
+       seg_perio_corpo spc,
+       zon_zona        zz,
+       zon_regio       zr,
+       seg_pais        sp,
+       cra_activ       ca,
+       cra_crono       cr2,
+       cra_perio       cp2,
+       seg_perio_corpo spc2,
+       zon_zona        zz2,
+       zon_regio       zr2,
+       seg_pais        sp2,
+       cra_activ       ca2
+ WHERE zz.oid_zona = cr.zzon_oid_zona
+   AND cp.oid_peri = cr.perd_oid_peri
+   AND cp.peri_oid_peri = spc.oid_peri
+   AND sp.oid_pais = cp.pais_oid_pais
+   AND zr.oid_regi = zz.zorg_oid_regi
+   AND ca.oid_acti = cr.cact_oid_acti
+   AND ca.cod_acti = 'RF'
+   AND zz2.oid_zona = cr2.zzon_oid_zona
+   AND cp2.oid_peri = cr2.perd_oid_peri
+   AND cp2.peri_oid_peri = spc2.oid_peri
+   AND sp2.oid_pais = cp2.pais_oid_pais
+   AND zr2.oid_regi = zz2.zorg_oid_regi
+   AND ca2.oid_acti = cr2.cact_oid_acti
+   AND ca2.cod_acti = 'RF'
+   AND ca2.oid_acti = ca.oid_acti
+   AND zz2.oid_zona = zz.oid_zona
+   AND spc2.cod_peri = (CASE
+         WHEN substr(spc.cod_peri,
+                     5,
+                     2) = 1 THEN
+          substr(spc.cod_peri,
+                 1,
+                 4) - 1 || 18
+         ELSE
+          to_char(spc.cod_peri - 1)
+       END);

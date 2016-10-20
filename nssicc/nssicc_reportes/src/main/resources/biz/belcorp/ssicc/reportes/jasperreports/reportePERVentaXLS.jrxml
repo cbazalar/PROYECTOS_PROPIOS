@@ -1,0 +1,1760 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reportePERVentaXLS"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Landscape"
+		 pageWidth="3529"
+		 pageHeight="595"
+		 columnWidth="3529"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 whenResourceMissingType="Empty"
+		 isIgnorePagination="true">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="fechaDesde" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaDesde")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaHasta" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaHasta")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[select 
+	* 
+from
+	(
+		select
+			to_char(fec_fact,'dd/mm/yyyy') as fec_fact_1,
+			DES_TIPO_DOCU as tipo_doc_1,
+			VAL_SERI_DOCU_LEGA as val_seri_1,
+			min(NUM_DOCU_LEGA) as doc_legal_inic_1,
+			max(NUM_DOCU_LEGA) as doc_legal_fin_1,		
+			sum(unid_atnd) as unid_atnd,
+			sum(importe_bi) as importe_bi,
+			sum(importe_dto1) as importe_dto1,
+			sum(importe_dto2) as importe_dto2,
+			sum(dto) as dto,
+			sum(importe_bi_neta) as importe_bi_neta,
+			sum(flete) as flete_1,
+			sum(iva) as iva_1,
+			sum(total) as total_1
+		from
+			(
+				select
+					cons.fec_fact,
+					oid_cabe,
+					FAC_TIPO_DOCUM.DES_TIPO_DOCU,
+					FAC_DOCUM_CONTA_CABEC.VAL_SERI_DOCU_LEGA,
+					FAC_DOCUM_CONTA_CABEC.NUM_DOCU_LEGA,
+					sum(FAC_DOCUM_CONTA_LINEA.NUM_UNID_ATEN) unid_atnd,
+					sum(FAC_DOCUM_CONTA_LINEA.val_prec_sin_impu_tota_loca) as importe_bi,
+					sum(FAC_DOCUM_CONTA_LINEA.imp_desc_sin_impu_tota_loca) as importe_dto1,
+					sum(decode(FAC_DOCUM_CONTA_LINEA.val_prec_cont_tota_loca,0,0,PED_SOLIC_POSIC.val_prec_sin_impu_tota_loca)) as importe_dto2,
+					sum(decode(FAC_DOCUM_CONTA_LINEA.val_prec_cont_tota_loca,0,0,PED_SOLIC_POSIC.val_prec_sin_impu_tota_loca)) + sum(FAC_DOCUM_CONTA_LINEA.imp_desc_sin_impu_tota_loca) as dto,
+					sum(FAC_DOCUM_CONTA_LINEA.val_prec_sin_impu_tota_loca) - (sum(decode(FAC_DOCUM_CONTA_LINEA.val_prec_cont_tota_loca,0,0,PED_SOLIC_POSIC.val_prec_sin_impu_tota_loca)) + sum(FAC_DOCUM_CONTA_LINEA.imp_desc_sin_impu_tota_loca)) as importe_bi_neta,
+					FAC_DOCUM_CONTA_CABEC.imp_impu_tota_loca as iva,
+					FAC_DOCUM_CONTA_CABEC.IMP_FLET_IMPU_TOTA_LOCA as flete,
+					FAC_DOCUM_CONTA_CABEC.val_tota_paga_loca as total
+				from
+					ped_solic_cabec ped,
+					ped_solic_cabec cons,
+					PED_SOLIC_ACUMU_IMPUE,
+					PED_SOLIC_POSIC,
+					mae_produ,
+					(select VAL_I18N, VAL_OID from GEN_I18N_SICC_PAIS where ATTR_ENTI = 'MAE_PRODU') dp,
+					(select VAL_I18N, VAL_OID from GEN_I18N_SICC_PAIS where ATTR_ENTI = 'MAE_UNIDA_NEGOC') pun,
+					(select VAL_I18N, VAL_OID from GEN_I18N_SICC_PAIS where ATTR_ENTI = 'MAE_NEGOC') pn,		
+					(select VAL_I18N, VAL_OID from GEN_I18N_SICC_COMUN where ATTR_ENTI = 'PED_TIPO_SOLIC') ts,
+					ped_tipo_solic_pais ptsp,
+					ped_tipo_solic pts,
+					FAC_DOCUM_CONTA_CABEC,
+					FAC_TIPO_DOCUM,
+					INC_CONCU_TIPO_PROG,
+					FAC_DOCUM_CONTA_LINEA,
+					FAC_DOCUM_CONTA_ACUMU_IMPUE,
+					FAC_REGIS_UNICO_VENTA,
+					(
+						select
+							ZON_REGIO.DES_REGI,
+							ZON_ZONA.DES_ZONA,
+							oid_clie,
+							cod_clie,
+							VAL_NOM1 ||' '||VAL_NOM2 ||' '||VAL_APE1 ||' '||VAL_APE2 as nombre
+						from
+							MAE_CLIEN,
+							MAE_CLIEN_UNIDA_ADMIN,
+							ZON_TERRI_ADMIN,
+							ZON_SECCI,
+							ZON_ZONA,	
+							ZON_REGIO,
+							ZON_SUB_GEREN_VENTA
+						where
+							1=1	
+							and MAE_CLIEN_UNIDA_ADMIN.CLIE_OID_CLIE = MAE_CLIEN.OID_CLIE
+							and MAE_CLIEN_UNIDA_ADMIN.ZTAD_OID_TERR_ADMI = ZON_TERRI_ADMIN.OID_TERR_ADMI
+							and ZON_TERRI_ADMIN.ZSCC_OID_SECC = ZON_SECCI.OID_SECC
+							and ZON_SECCI.ZZON_OID_ZONA = ZON_ZONA.OID_ZONA
+							and ZON_ZONA.ZORG_OID_REGI = ZON_REGIO.OID_REGI
+							and ZON_REGIO.ZSGV_OID_SUBG_VENT = ZON_SUB_GEREN_VENTA.OID_SUBG_VENT
+							and MAE_CLIEN_UNIDA_ADMIN.IND_ACTI = 1
+							--and ZON_ZONA.COD_ZONA in (6032)
+					) ua
+				where
+					1=1
+					and FAC_TIPO_DOCUM.OID_TIPO_DOCU = FAC_DOCUM_CONTA_CABEC.TIDO_OID_TIPO_DOCU 
+					and FAC_DOCUM_CONTA_LINEA.DCCA_OID_CABE = FAC_DOCUM_CONTA_CABEC.OID_CABE
+					and FAC_REGIS_UNICO_VENTA.DCCA_OID_CABE = FAC_DOCUM_CONTA_CABEC.OID_CABE
+					and FAC_DOCUM_CONTA_ACUMU_IMPUE.DCCA_OID_CABE = FAC_DOCUM_CONTA_CABEC.OID_CABE
+					and FAC_DOCUM_CONTA_CABEC.ICTP_OID_TIPO_PROG = INC_CONCU_TIPO_PROG.OID_TIPO_PROG(+)
+					and FAC_DOCUM_CONTA_LINEA.SOPO_OID_SOLI_POSI = PED_SOLIC_POSIC.OID_SOLI_POSI
+					and oid_prod = PED_SOLIC_POSIC.PROD_OID_PROD
+					and oid_prod = dp.VAL_OID
+					and mae_produ.NEGO_OID_NEGO = pn.VAL_OID(+)
+					and mae_produ.UNEG_OID_UNID_NEGO = pun.VAL_OID(+)
+					and PED_SOLIC_POSIC.SOCA_OID_SOLI_CABE = ped.OID_SOLI_CABE
+					and ped.TSPA_OID_TIPO_SOLI_PAIS = ptsp.OID_TIPO_SOLI_PAIS
+					and ptsp.TSOL_OID_TIPO_SOLI = pts.OID_TIPO_SOLI
+					and pts.OID_TIPO_SOLI = ts.VAL_OID
+					and ped.SOCA_OID_SOLI_CABE = cons.OID_SOLI_CABE
+					and PED_SOLIC_ACUMU_IMPUE.SOCA_OID_SOLI_CABE = cons.OID_SOLI_CABE
+					and (cons.fec_fact>=to_date($P{fechaDesde},'dd/mm/yyyy') and cons.fec_fact<(to_date($P{fechaHasta},'dd/mm/yyyy')+1))
+					--and cons.perd_oid_peri = 2095
+					and ua.oid_clie = cons.CLIE_OID_CLIE 
+				group by 
+					cons.fec_fact,
+					oid_cabe,
+					FAC_DOCUM_CONTA_CABEC.NUM_DOCU_LEGA,
+					FAC_TIPO_DOCUM.DES_TIPO_DOCU,
+					FAC_DOCUM_CONTA_CABEC.VAL_SERI_DOCU_LEGA,
+					FAC_DOCUM_CONTA_CABEC.VAL_PREC_CATA_SIN_IMPU_TOTA + FAC_DOCUM_CONTA_CABEC.VAL_PREC_CONT_SIN_IMPU_TOTA + FAC_DOCUM_CONTA_CABEC.IMP_FLET_SIN_IMPU_TOTA_DOCU, 	    
+					FAC_DOCUM_CONTA_CABEC.IMP_DES1_SIN_IMPU_TOTA + FAC_DOCUM_CONTA_CABEC.VAL_PREC_CONT_SIN_IMPU_TOTA,
+					FAC_DOCUM_CONTA_CABEC.VAL_PREC_NETO_TOTA_LOCA,
+					FAC_DOCUM_CONTA_CABEC.imp_impu_tota_loca,
+					FAC_DOCUM_CONTA_CABEC.val_tota_paga_loca,
+					FAC_DOCUM_CONTA_CABEC.IMP_FLET_IMPU_TOTA_LOCA
+			)
+		group by
+			fec_fact,
+			DES_TIPO_DOCU,
+			VAL_SERI_DOCU_LEGA
+		order by 
+			fec_fact,
+			DES_TIPO_DOCU	
+	) cab,
+	(
+		select
+			fec_fact,
+			DES_TIPO_DOCU,
+			VAL_SERI_DOCU_LEGA,
+			min(doc_legal_inic) as doc_legal_inic,
+			max(doc_legal_fin) as doc_legal_fin,
+			--negocio,
+			--unidad_negocio,
+			sum(unid_atnd_0101) as unid_atnd_fragancias_0101,
+			sum(bi_neta_0101) as bi_neta_fragancias_0101,
+			sum(unid_atnd_0102) as unid_atnd_maquillaje_0102,
+			sum(bi_neta_0102) as bi_neta_maquillaje_0102,
+			sum(unid_atnd_0103) as unid_atnd_cuidado_0103,
+			sum(bi_neta_0103) as bi_neta_cuidado_0103,
+			sum(unid_atnd_0104) as unid_atnd_trat_facial_0104,
+			sum(bi_neta_0104) as bi_neta_trat_facial_0104,
+			sum(unid_atnd_0105) as unid_atnd_trat_corpo_0105,
+			sum(bi_neta_0105) as bi_neta_trat_corpo_0105,
+			sum(unid_atnd_0106) as unid_atnd_acce_cosme_0106,
+			sum(bi_neta_0106) as bi_neta_acce_cosme_0106,
+			sum(unid_atnd_0107) as unid_atnd_muestr_cosme_0107,
+			sum(bi_neta_0107) as bi_neta_muestr_cosme_0107,
+			sum(unid_atnd_0201) as unid_atnd_bijouterie_0201,
+			sum(bi_neta_0201) as bi_neta_bijouterie_0201,
+			sum(unid_atnd_0202) as unid_atnd_lentes_0202,
+			sum(bi_neta_0202) as bi_neta_lentes_0202,
+			sum(unid_atnd_0203) as unid_atnd_relojes_0203,
+			sum(bi_neta_0203) as bi_neta_relojes_0203,
+			sum(unid_atnd_0301) as unid_atnd_ropa_0301,
+			sum(bi_neta_0301) as bi_neta_ropa_0301,
+			sum(unid_atnd_0302) as unid_atnd_comple_0302,
+			sum(bi_neta_0302) as bi_neta_comple_0302,
+			sum(unid_atnd_0303) as unid_atnd_calzado_0303,
+			sum(bi_neta_0303) as bi_neta_calzado_0303,
+			sum(unid_atnd_0401) as unid_atnd_hogar_0401,
+			sum(bi_neta_0401) as bi_neta_hogar_0401,
+			sum(unid_atnd_0501) as unid_atnd_promo_usu_0501,
+			sum(bi_neta_0501) as bi_neta_promo_usu_0501,
+			sum(unid_atnd_0502) as unid_atnd_incentivos_0502,
+			sum(bi_neta_0502) as bi_neta_incentivos_0502,
+			sum(unid_atnd_0503) as unid_atnd_mat_prom_vta_0503,
+			sum(bi_neta_0503) as bi_neta_mat_prom_vta_0503,
+			sum(unid_atnd_0504) as unid_atnd_mat_prom_mkt_0504,
+			sum(bi_neta_0504) as bi_neta_mat_prom_mkt_0504,
+			--sum(unid_atnd_salud) as unid_atnd_salud,
+			--sum(bi_neta_salud) as bi_neta_salud,
+			sum(flete) as flete,
+			sum(iva) as iva,
+			sum(total) as total
+		from
+			(
+				select
+					to_char(fec_fact,'dd/mm/yyyy') as fec_fact,
+					DES_TIPO_DOCU,
+					VAL_SERI_DOCU_LEGA,
+					min(NUM_DOCU_LEGA) as doc_legal_inic,
+					max(NUM_DOCU_LEGA) as doc_legal_fin,
+					--negocio,
+					--unidad_negocio,
+					bpcs,
+					case
+						when bpcs = '0101' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0101,
+					case
+						when bpcs = '0101' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0101,
+					case
+						when bpcs = '0102' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0102,
+					case
+						when bpcs = '0102' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0102,
+					case
+						when bpcs = '0103' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0103,
+					case
+						when bpcs = '0103' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0103,
+					case
+						when bpcs = '0104' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0104,
+					case
+						when bpcs = '0104' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0104,
+					case
+						when bpcs = '0105' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0105,
+					case
+						when bpcs = '0105' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0105,
+					case
+						when bpcs = '0106' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0106,
+					case
+						when bpcs = '0106' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0106,
+					case
+						when bpcs = '0107' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0107,
+					case
+						when bpcs = '0107' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0107,
+					case
+						when bpcs = '0201' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0201,
+					case
+						when bpcs = '0201' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0201,
+					case
+						when bpcs = '0202' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0202,
+					case
+						when bpcs = '0202' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0202,
+					case
+						when bpcs = '0203' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0203,
+					case
+						when bpcs = '0203' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0203,
+					
+					case
+						when bpcs = '0301' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0301,
+					case
+						when bpcs = '0301' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0301,
+					case
+						when bpcs = '0302' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0302,
+					case
+						when bpcs = '0302' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0302,
+					case
+						when bpcs = '0303' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0303,
+					case
+						when bpcs = '0303' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0303,
+					case
+						when bpcs = '0401' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0401,
+					case
+						when bpcs = '0401' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0401,
+					case
+						when bpcs = '0501' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0501,
+					case
+						when bpcs = '0501' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0501,
+					case
+						when bpcs = '0502' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0502,
+					case
+						when bpcs = '0502' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0502,
+					case
+						when bpcs = '0503' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0503,
+					case
+						when bpcs = '0503' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0503,
+					case
+						when bpcs = '0504' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_0504,
+					case
+						when bpcs = '0504' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_0504,
+					
+					/*case
+						when bpcs = 'Unidad Negocios Salud-Bienestar' then sum(unid_atnd)
+						else 0 
+					end as unid_atnd_salud,
+					case
+						when bpcs = 'Unidad Negocios Salud-Bienestar' then sum(importe_bi_neta)
+						else 0 
+					end as bi_neta_salud,*/
+					
+					--sum(importe_bi) as importe_bi,
+					--sum(importe_dto1) as importe_dto1,
+					--sum(importe_dto2) as importe_dto2,
+					--sum(dto) as dto,
+					--sum(importe_bi_neta) as importe_bi_neta,
+					sum(flete) as flete,
+					--sum(flete) over (partition by 1) as flete1,
+					sum(iva) as iva,
+					sum(total) as total
+				from
+					(
+						select
+							cons.fec_fact,
+							oid_cabe,
+							FAC_TIPO_DOCUM.DES_TIPO_DOCU,
+							FAC_DOCUM_CONTA_CABEC.VAL_SERI_DOCU_LEGA,
+							FAC_DOCUM_CONTA_CABEC.NUM_DOCU_LEGA,
+							--pn.VAL_I18N as negocio,
+							--pun.VAL_I18N as unidad_negocio,
+							prod.val_grup_arti bpcs,
+							sum(FAC_DOCUM_CONTA_LINEA.NUM_UNID_ATEN) unid_atnd,
+							sum(FAC_DOCUM_CONTA_LINEA.val_prec_sin_impu_tota_loca) as importe_bi,
+							sum(FAC_DOCUM_CONTA_LINEA.imp_desc_sin_impu_tota_loca) as importe_dto1,
+							sum(decode(FAC_DOCUM_CONTA_LINEA.val_prec_cont_tota_loca,0,0,PED_SOLIC_POSIC.val_prec_sin_impu_tota_loca)) as importe_dto2,
+							sum(decode(FAC_DOCUM_CONTA_LINEA.val_prec_cont_tota_loca,0,0,PED_SOLIC_POSIC.val_prec_sin_impu_tota_loca)) + sum(FAC_DOCUM_CONTA_LINEA.imp_desc_sin_impu_tota_loca) as dto,
+							sum(FAC_DOCUM_CONTA_LINEA.val_prec_sin_impu_tota_loca) - (sum(decode(FAC_DOCUM_CONTA_LINEA.val_prec_cont_tota_loca,0,0,PED_SOLIC_POSIC.val_prec_sin_impu_tota_loca)) + sum(FAC_DOCUM_CONTA_LINEA.imp_desc_sin_impu_tota_loca)) as importe_bi_neta,
+							FAC_DOCUM_CONTA_CABEC.imp_impu_tota_loca as iva,
+							FAC_DOCUM_CONTA_CABEC.IMP_FLET_IMPU_TOTA_LOCA as flete,
+							FAC_DOCUM_CONTA_CABEC.val_tota_paga_loca as total
+
+						from
+							ped_solic_cabec ped,
+							ped_solic_cabec cons,
+							PED_SOLIC_ACUMU_IMPUE,
+							PED_SOLIC_POSIC,
+							mae_produ prod,
+							pre_ofert_detal pod,
+							pre_tipo_ofert tof,
+							(select VAL_I18N, VAL_OID from GEN_I18N_SICC_PAIS where ATTR_ENTI = 'MAE_PRODU') dp,
+							--(select VAL_I18N, VAL_OID from GEN_I18N_SICC_PAIS where ATTR_ENTI = 'MAE_UNIDA_NEGOC') pun,
+							--(select VAL_I18N, VAL_OID from GEN_I18N_SICC_PAIS where ATTR_ENTI = 'MAE_NEGOC') pn,		
+							(select VAL_I18N, VAL_OID from GEN_I18N_SICC_COMUN where ATTR_ENTI = 'PED_TIPO_SOLIC') ts,
+							(select VAL_I18N, VAL_OID from GEN_I18N_SICC_COMUN where ATTR_ENTI = 'PRE_TIPO_OFERT') dtof,
+							ped_tipo_solic_pais ptsp,
+							ped_tipo_solic pts,
+							FAC_DOCUM_CONTA_CABEC,
+							FAC_TIPO_DOCUM,
+							INC_CONCU_TIPO_PROG,
+							FAC_DOCUM_CONTA_LINEA,
+							FAC_DOCUM_CONTA_ACUMU_IMPUE,
+							FAC_REGIS_UNICO_VENTA,
+							(
+								select
+									ZON_REGIO.DES_REGI,
+									ZON_ZONA.DES_ZONA,
+									oid_clie,
+									cod_clie,
+									VAL_NOM1 ||' '||VAL_NOM2 ||' '||VAL_APE1 ||' '||VAL_APE2 as nombre
+								from
+									MAE_CLIEN,
+									MAE_CLIEN_UNIDA_ADMIN,
+									ZON_TERRI_ADMIN,
+									ZON_SECCI,
+									ZON_ZONA,	
+									ZON_REGIO,
+									ZON_SUB_GEREN_VENTA
+								where
+									1=1	
+									and MAE_CLIEN_UNIDA_ADMIN.CLIE_OID_CLIE = MAE_CLIEN.OID_CLIE
+									and MAE_CLIEN_UNIDA_ADMIN.ZTAD_OID_TERR_ADMI = ZON_TERRI_ADMIN.OID_TERR_ADMI
+									and ZON_TERRI_ADMIN.ZSCC_OID_SECC = ZON_SECCI.OID_SECC
+									and ZON_SECCI.ZZON_OID_ZONA = ZON_ZONA.OID_ZONA
+									and ZON_ZONA.ZORG_OID_REGI = ZON_REGIO.OID_REGI
+									and ZON_REGIO.ZSGV_OID_SUBG_VENT = ZON_SUB_GEREN_VENTA.OID_SUBG_VENT
+									and MAE_CLIEN_UNIDA_ADMIN.IND_ACTI = 1
+									--and ZON_ZONA.COD_ZONA in (6032)
+							) ua
+						where
+							1=1
+							and FAC_TIPO_DOCUM.OID_TIPO_DOCU = FAC_DOCUM_CONTA_CABEC.TIDO_OID_TIPO_DOCU 
+							and FAC_DOCUM_CONTA_LINEA.DCCA_OID_CABE = FAC_DOCUM_CONTA_CABEC.OID_CABE
+							and FAC_REGIS_UNICO_VENTA.DCCA_OID_CABE = FAC_DOCUM_CONTA_CABEC.OID_CABE
+							and FAC_DOCUM_CONTA_ACUMU_IMPUE.DCCA_OID_CABE = FAC_DOCUM_CONTA_CABEC.OID_CABE
+							and FAC_DOCUM_CONTA_CABEC.ICTP_OID_TIPO_PROG = INC_CONCU_TIPO_PROG.OID_TIPO_PROG(+)
+							and FAC_DOCUM_CONTA_LINEA.SOPO_OID_SOLI_POSI = PED_SOLIC_POSIC.OID_SOLI_POSI
+							and PED_SOLIC_POSIC.ofde_oid_deta_ofer=pod.oid_deta_ofer (+)
+							and pod.tofe_oid_tipo_ofer=tof.oid_tipo_ofer (+)
+							and tof.oid_tipo_ofer=dtof.val_oid (+)
+							and oid_prod = PED_SOLIC_POSIC.PROD_OID_PROD
+							and oid_prod = dp.VAL_OID
+							--and mae_produ.NEGO_OID_NEGO = pn.VAL_OID(+)
+							--and prod.UNEG_OID_UNID_NEGO = pun.VAL_OID(+)
+							and PED_SOLIC_POSIC.SOCA_OID_SOLI_CABE = ped.OID_SOLI_CABE
+							and ped.TSPA_OID_TIPO_SOLI_PAIS = ptsp.OID_TIPO_SOLI_PAIS
+							and ptsp.TSOL_OID_TIPO_SOLI = pts.OID_TIPO_SOLI
+							and pts.OID_TIPO_SOLI = ts.VAL_OID
+							and ped.SOCA_OID_SOLI_CABE = cons.OID_SOLI_CABE
+							and PED_SOLIC_ACUMU_IMPUE.SOCA_OID_SOLI_CABE = cons.OID_SOLI_CABE
+							and (cons.fec_fact>=to_date($P{fechaDesde},'dd/mm/yyyy') and cons.fec_fact<(to_date($P{fechaHasta},'dd/mm/yyyy')+1))
+							--and cons.perd_oid_peri = 2095
+							and ua.oid_clie = cons.CLIE_OID_CLIE 
+						group by 
+							cons.fec_fact,
+							oid_cabe,
+							FAC_DOCUM_CONTA_CABEC.NUM_DOCU_LEGA,
+							FAC_TIPO_DOCUM.DES_TIPO_DOCU,
+							FAC_DOCUM_CONTA_CABEC.VAL_SERI_DOCU_LEGA,
+							--pn.VAL_I18N,
+							--pun.VAL_I18N,
+							prod.val_grup_arti,
+							FAC_DOCUM_CONTA_CABEC.VAL_PREC_CATA_SIN_IMPU_TOTA + FAC_DOCUM_CONTA_CABEC.VAL_PREC_CONT_SIN_IMPU_TOTA + FAC_DOCUM_CONTA_CABEC.IMP_FLET_SIN_IMPU_TOTA_DOCU, 	    
+							FAC_DOCUM_CONTA_CABEC.IMP_DES1_SIN_IMPU_TOTA + FAC_DOCUM_CONTA_CABEC.VAL_PREC_CONT_SIN_IMPU_TOTA,
+							FAC_DOCUM_CONTA_CABEC.VAL_PREC_NETO_TOTA_LOCA,
+							FAC_DOCUM_CONTA_CABEC.imp_impu_tota_loca,
+							FAC_DOCUM_CONTA_CABEC.val_tota_paga_loca,
+							FAC_DOCUM_CONTA_CABEC.IMP_FLET_IMPU_TOTA_LOCA
+					)
+				group by
+					fec_fact,
+					DES_TIPO_DOCU,
+					bpcs,
+					--negocio,
+					--unidad_negocio,
+					VAL_SERI_DOCU_LEGA
+				order by 
+					fec_fact,
+					DES_TIPO_DOCU	
+			)
+		group by
+			fec_fact,
+			DES_TIPO_DOCU,
+			VAL_SERI_DOCU_LEGA
+	) det
+where
+	cab.fec_fact_1 = det.fec_fact(+)
+	and cab.tipo_doc_1 = det.des_tipo_docu(+)]]></queryString>
+
+	<field name="FEC_FACT_1" class="java.lang.String"/>
+	<field name="TIPO_DOC_1" class="java.lang.String"/>
+	<field name="VAL_SERI_1" class="java.lang.String"/>
+	<field name="UNID_ATND" class="java.math.BigDecimal"/>
+	<field name="IMPORTE_BI" class="java.math.BigDecimal"/>
+	<field name="IMPORTE_DTO1" class="java.math.BigDecimal"/>
+	<field name="IMPORTE_DTO2" class="java.math.BigDecimal"/>
+	<field name="DTO" class="java.math.BigDecimal"/>
+	<field name="IMPORTE_BI_NETA" class="java.math.BigDecimal"/>
+	<field name="FLETE_1" class="java.math.BigDecimal"/>
+	<field name="IVA_1" class="java.math.BigDecimal"/>
+	<field name="TOTAL_1" class="java.math.BigDecimal"/>
+	<field name="FEC_FACT" class="java.lang.String"/>
+	<field name="DES_TIPO_DOCU" class="java.lang.String"/>
+	<field name="BI_NETA_FRAGANCIAS_0101" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_MAQUILLAJE_0102" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_CUIDADO_0103" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_TRAT_FACIAL_0104" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_TRAT_CORPO_0105" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_ACCE_COSME_0106" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_MUESTR_COSME_0107" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_BIJOUTERIE_0201" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_LENTES_0202" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_RELOJES_0203" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_ROPA_0301" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_COMPLE_0302" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_CALZADO_0303" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_HOGAR_0401" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_PROMO_USU_0501" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_INCENTIVOS_0502" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_MAT_PROM_VTA_0503" class="java.math.BigDecimal"/>
+	<field name="BI_NETA_MAT_PROM_MKT_0504" class="java.math.BigDecimal"/>
+
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="2"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="15"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.fechaFacturacion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="110"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.tipoDocumentoLegal}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="220"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.serieDocumentoLegal}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="330"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.unidadesAtendida}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="440"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.importeBI}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="550"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.importeDTO1}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="660"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.importeDTO2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="770"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.DTO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="880"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.importeBINeta}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="990"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.flete}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1100"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.iva}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1210"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.total}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1320"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.fechaFacturacion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1430"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.tipoDocumentoLegal}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1540"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaFragancias}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1650"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaMaquillaje}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1760"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaCuidado}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1870"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaTratFacial}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1980"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaTratCorporal}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2090"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaAcceCometic}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2200"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaMuestraCometic}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2310"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaBijouteria}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2420"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaLentes}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2530"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaRelojes}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2640"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaRopa}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2750"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaComple}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2860"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaCalzado}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2970"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaHogar}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="3080"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaPromoUsu}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="3190"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaIncentivos}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="3300"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaMatPromVta}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="3410"
+						y="0"
+						width="110"
+						height="15"
+						forecolor="#666666"
+						backcolor="#CCCCCC"
+						key="element-90"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePERVenta.biNetaMatPromMkt}]]></textFieldExpression>
+				</textField>
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="16"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{FEC_FACT_1}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="110"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{TIPO_DOC_1}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="220"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{VAL_SERI_1}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="330"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{UNID_ATND}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="440"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{IMPORTE_BI}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="550"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{IMPORTE_DTO1}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="660"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{IMPORTE_DTO2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="770"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{DTO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="880"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{IMPORTE_BI_NETA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="990"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{FLETE_1}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1100"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{IVA_1}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1210"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{TOTAL_1}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1320"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{FEC_FACT}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1430"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{DES_TIPO_DOCU}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1540"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_FRAGANCIAS_0101}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1650"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_MAQUILLAJE_0102}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1760"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_CUIDADO_0103}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1870"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_TRAT_FACIAL_0104}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1980"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_TRAT_CORPO_0105}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="2090"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_ACCE_COSME_0106}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="2200"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_MUESTR_COSME_0107}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="2310"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_BIJOUTERIE_0201}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="2420"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_LENTES_0202}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="2530"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_RELOJES_0203}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="2640"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_ROPA_0301}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="2750"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_COMPLE_0302}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="2860"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_CALZADO_0303}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="2970"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_HOGAR_0401}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="3080"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_PROMO_USU_0501}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="3190"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_INCENTIVOS_0502}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="3300"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_MAT_PROM_VTA_0503}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="3410"
+						y="0"
+						width="110"
+						height="15"
+						key="textField"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement>
+						<font fontName="Arial" size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{BI_NETA_MAT_PROM_MKT_0504}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

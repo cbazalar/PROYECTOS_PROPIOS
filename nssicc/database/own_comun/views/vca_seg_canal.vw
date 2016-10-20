@@ -1,0 +1,10 @@
+CREATE OR REPLACE VIEW VCA_SEG_CANAL AS
+SELECT T1.COD_USUA COD_USUA
+          ,T2.OID_CANA OID_CANA
+          ,T2.TIPE_OID_TIPO_PERI TIPE_OID_TIPO_PERI
+          ,T2.COD_CANA COD_CANA
+FROM VCA_MGU_PERMI_USUAR T1
+    ,SEG_CANAL T2
+  WHERE t1.val_prop = to_char(t2.oid_cana)
+    and t1.cod_prop = 'Canal';
+

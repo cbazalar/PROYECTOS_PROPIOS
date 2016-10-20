@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.cobranzas.consultaCOBSQL">
+
+	<typeAlias alias="baseGenericoCob"                         type="biz.belcorp.ssicc.dao.sisicc.model.Base"/>
+        <typeAlias alias="ftpCobrador"                       	   type="biz.belcorp.ssicc.dao.spusicc.cobranzas.model.FtpCobrador"/>
+	
+	<resultMap id="baseResultCob"          class="baseGenericoCob">
+    	<result property="codigo" 		   column="CODIGO" 	/>
+    	<result property="descripcion" 	   column="DESCRIPCION"/>
+    </resultMap>    
+    	
+    <resultMap id="baseDatosClienteEscaneoSCResult"    class="java.util.HashMap">
+    	<result property="codigoCliente"          column="COD_CLIE"/>		
+    	<result property="documentoIdentidad"     column="NUM_DOCU_IDEN"/>		
+    	<result property="nombreCliente"          column="NOM_CLIE"/>		
+    	<result property="region"                 column="COD_REGI_CLIE"/>
+    	<result property="zona"                   column="COD_ZONA_CLIE"/>
+    </resultMap>
+	
+	 <resultMap id="ftpCobradorResult"    			    class="ftpCobrador">	 		       	                                   
+    	<result property="servidorFTP"            column="VAL_SERV_FTP"/>		
+    	<result property="puertoFTP"     		  column="VAL_PUER_FTP"/>		
+    	<result property="usuarioFTP"             column="VAL_USUA_FTP"/>		
+    	<result property="claveFTP"               column="VAL_CLAV_FTP"/>
+    	<result property="directorioFTP"          column="VAL_DIRE_FTP"/>
+    </resultMap>
+    
+    	
+	<!-- OBTIENE EL VALOR DE UN PARAMETRO PAIS -->
+    <select id="getParametroPais" parameterClass="java.util.Map" resultClass="string">
+		 SELECT val_para FROM cob_param_gener WHERE cod_para = #codigoParametro#
+ 	</select>   
+ 	    	
+	<!-- OBTIENE LAS ETAPAS DE DEUDA POR POR PAIS -->
+	<select id="getEtapasDeuda" parameterClass="java.util.Map" resultMap="baseResultCob">
+    	SELECT 
+    	   COD_ETAP_DEUD AS CODIGO , 
+		   VAL_DESC      AS DESCRIPCION
+		FROM COB_ETAPA_DEUDA_PAIS	    
+		ORDER BY 2 ASC
+	</select>		
+	
+	<!-- OBTIENE LAS COBRADORES ACTIVOS POR POR PAIS -->
+	<select id="getCobradoresActivos" parameterClass="java.util.Map" resultMap="baseResultCob">
+    	SELECT 
+    	   COD_USUA_COBR AS CODIGO, 
+    	   VAL_NOMB_USUA_COBR AS DESCRIPCION
+  		FROM COB_USUAR_COBRA_PAIS
+ 		ORDER BY 2 ASC
+	</select>		     
+	
+	<!-- OBTIENE LOS SUPERVISORES POR POR PAIS -->
+	<select id="getSupervisores" parameterClass="java.util.Map" resultMap="baseResultCob">
+    	SELECT 
+    	   COD_USUA_COBR AS CODIGO, 
+    	   VAL_NOMB_USUA_COBR AS DESCRIPCION
+  		FROM COB_USUAR_COBRA_PAIS
+  		WHERE IND_SUPE = 1  	
+ 		ORDER BY 2 ASC
+	</select>			                                    	
+	
+	<!-- OBTIENE LAS CONSULTORAS QUE TIENE SC EN LA CARTERA -->
+	<select id="getSCCarteraList" parameterClass="java.util.Map" resultMap="baseDatosClienteEscaneoSCResult">
+    	SELECT D.COD_CLIE,
+		       D.NUM_DOCU_IDEN,
+		       D.NOM_CLIE,
+		       D.COD_REGI_CLIE, 
+		       D.COD_ZONA_CLIE
+		  FROM OCR_SOLIC_CREDI_TRANS T,		       
+		       COB_DETAL_ASIGN_CARTE D		    	
+ 		WHERE D.COD_CLIE = T.COD_CLIE
+ 		  AND D.COD_PAIS = #codigoPais# 
+   		  AND D.COD_SOCI = #codigoSociedad#
+   		  AND D.COD_ETAP_DEUD = #codigoEtapaDeuda#
+   		  AND D.COD_PERI >= #codigoPeriodoDesde#   		  
+   		 <![CDATA[
+   		  AND D.COD_PERI <= #codigoPeriodoHasta#
+   		  ]]>   		      	
+   		  AND D.COD_USUA_COBR = DECODE(#codigoCobrador#,NULL,D.COD_USUA_COBR,'Todos',D.COD_USUA_COBR,#codigoCobrador#)
+	</select>
+	
+	<!-- OBTIENE LAS CONSULTORAS QUE TIENE SC EN LA CARTERA -->
+	<select id="getFTPCobrador" parameterClass="string" resultMap="ftpCobradorResult">
+    	SELECT 
+		   C.VAL_SERV_FTP,
+       	   C.VAL_PUER_FTP,
+           C.VAL_USUA_FTP,
+           C.VAL_DIRE_FTP,
+           C.VAL_CLAV_FTP
+  	    FROM COB_USUAR_COBRA_PAIS C
+ 		WHERE C.COD_USUA_COBR = #codigoCobrador#
+	</select>
+	
+	<!-- OBTIENE EL DIRECTORIO TEMPORAL EN EL SERVIDOR -->
+	<select id="getDirectorioTemporal" parameterClass="java.util.Map" resultClass="string">
+       SELECT VAL_PARA
+       FROM COB_PARAM_GENER
+       WHERE COD_PARA = 'VAL_DIRE_TEMP'
+	</select>
+		 				                                    	
+	<parameterMap id="paramExecuteRepoComisionAbogados" class="java.util.Map" >
+       <parameter property="fechaInicial" 		jdbcType="VARCHAR"    javaType="java.lang.String" mode="IN"/>
+       <parameter property="fechaFinal" 		jdbcType="VARCHAR"    javaType="java.lang.String" mode="IN"/>
+    </parameterMap>
+	<procedure id="executeRepoComisionAbogados" parameterMap="paramExecuteRepoComisionAbogados">
+	  	{call COB_PKG_REPOR.COB_PR_GENER_REPOR_COMIS_ABOGA(?,?)}
+  	</procedure>
+		 				                                    	
+</sqlMap>

@@ -1,0 +1,488 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reportePROLFaltantesXLS"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Portrait"
+		 pageWidth="414"
+		 pageHeight="436118"
+		 columnWidth="414"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 whenResourceMissingType="Empty"
+		 isIgnorePagination="true">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="codigoPais" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPais")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="campanhia" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("campanhia")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[SELECT 
+	PRODU.COD_SAP, 
+	I18PROD.VAL_I18N DESCRIPCION,
+	FALTANTES.FALTANTE_WEB_VALIDADO, 
+	FALTANTES.FALTANTE_WEB_NO_VALIDADO,
+	FALTANTES.FALTANTE_OCR,
+	FALTANTES.FALTANTE_WEB_VALIDADO + FALTANTES.FALTANTE_WEB_NO_VALIDADO + FALTANTES.FALTANTE_OCR TOTAL_FALTANTES
+	FROM MAE_PRODU PRODU,
+   (SELECT   POSIC.PROD_OID_PROD,
+     SUM
+        (CASE
+            WHEN HISTO.IND_VALI_PROL = 1
+            AND HISTO.IND_RECE_DD = 0
+            AND HISTO.IND_RECE_DIGI = 0
+            AND HISTO.IND_RECE_OCR = 0
+            AND HISTO.IND_RECE_WEB = 1
+               THEN NVL (POSIC.NUM_UNID_DEMA_REAL, 0) - NVL (POSIC.NUM_UNID_ATEN, 0)
+            ELSE 0
+         END
+        ) FALTANTE_WEB_VALIDADO,
+     SUM
+        (CASE
+            WHEN HISTO.IND_VALI_PROL = 0
+            AND HISTO.IND_RECE_DD = 0
+            AND HISTO.IND_RECE_DIGI = 0
+            AND HISTO.IND_RECE_OCR = 0
+            AND HISTO.IND_RECE_WEB = 1
+               THEN NVL (POSIC.NUM_UNID_DEMA_REAL, 0) - NVL (POSIC.NUM_UNID_ATEN, 0)
+            ELSE 0
+         END
+        ) FALTANTE_WEB_NO_VALIDADO,
+     SUM
+        (CASE
+            WHEN HISTO.IND_VALI_PROL IS NULL
+            AND HISTO.IND_RECE_DD = 0
+            AND HISTO.IND_RECE_DIGI = 0
+            AND HISTO.IND_RECE_OCR = 1
+            AND HISTO.IND_RECE_WEB = 0
+               THEN NVL (POSIC.NUM_UNID_DEMA_REAL, 0) - NVL (POSIC.NUM_UNID_ATEN, 0)
+            ELSE 0
+         END
+        ) FALTANTE_OCR
+    FROM PED_SOLIC_CABEC CABEC,
+         PED_SOLIC_POSIC POSIC,
+         INT_SOLIC_CONSO_CABEC HISTO
+   WHERE HISTO.COD_PAIS = $P{codigoPais}
+     AND HISTO.COD_PERI = $P{campanhia}
+     AND HISTO.COD_REGI IN (
+            SELECT COD_REGI
+              FROM INT_SOLIC_CONSO_CABEC A
+             WHERE A.IND_VALI_PROL = 1
+               AND COD_PERI = $P{campanhia} )
+     AND HISTO.SOCA_OID_SOLI_CABE_REFE = POSIC.SOCA_OID_SOLI_CABE
+     AND CABEC.TSPA_OID_TIPO_SOLI_PAIS IN
+     (
+        SELECT PTSP.OID_TIPO_SOLI_PAIS
+        FROM
+        PED_TIPO_SOLIC PTS,
+        PED_TIPO_SOLIC_PAIS PTSP
+        WHERE PTS.OID_TIPO_SOLI = PTSP.TSOL_OID_TIPO_SOLI
+        AND PTS.COD_TIPO_SOLI = 'SOC'
+     )            
+     AND CABEC.GRPR_OID_GRUP_PROC = 5
+     AND HISTO.SOCA_OID_SOLI_CABE_REFE = CABEC.OID_SOLI_CABE
+     AND POSIC.TPOS_OID_TIPO_POSI != 3
+     AND POSIC.STPO_OID_SUBT_POSI != 6
+     AND NVL (POSIC.NUM_UNID_DEMA_REAL, 0) - NVL (POSIC.NUM_UNID_ATEN, 0) > 0
+    GROUP BY POSIC.PROD_OID_PROD) FALTANTES,
+   (SELECT V.VAL_OID, V.VAL_I18N
+      FROM V_GEN_I18N_SICC V
+     WHERE V.ATTR_ENTI = 'MAE_PRODU' AND V.IDIO_OID_IDIO = 1) I18PROD
+ WHERE PRODU.OID_PROD = FALTANTES.PROD_OID_PROD
+   AND PRODU.OID_PROD = I18PROD.VAL_OID
+UNION
+SELECT   
+PRODU.COD_SAP, 
+I18PROD.VAL_I18N DESCRIPCION,
+FALTANTES.FALTANTE_WEB_VALIDADO, 
+FALTANTES.FALTANTE_WEB_NO_VALIDADO,
+FALTANTES.FALTANTE_OCR,
+FALTANTES.FALTANTE_WEB_VALIDADO + FALTANTES.FALTANTE_WEB_NO_VALIDADO + FALTANTES.FALTANTE_OCR TOTAL_FALTANTES
+FROM MAE_PRODU PRODU,
+     (SELECT   POSIC.PROD_OID_PROD,
+       SUM
+          (CASE
+              WHEN HISTO.IND_VALI_PROL = 1
+              AND HISTO.IND_RECE_DD = 0
+              AND HISTO.IND_RECE_DIGI = 0
+              AND HISTO.IND_RECE_OCR = 0
+              AND HISTO.IND_RECE_WEB = 1
+                 THEN   NVL (POSIC.NUM_UNID_DEMA_REAL, 0) - NVL (POSIC.NUM_UNID_ATEN, 0)
+              ELSE 0
+           END
+          ) FALTANTE_WEB_VALIDADO,
+       SUM
+          (CASE
+              WHEN HISTO.IND_VALI_PROL = 0
+              AND HISTO.IND_RECE_DD = 0
+              AND HISTO.IND_RECE_DIGI = 0
+              AND HISTO.IND_RECE_OCR = 0
+              AND HISTO.IND_RECE_WEB = 1
+                 THEN NVL (POSIC.NUM_UNID_DEMA_REAL, 0) - NVL (POSIC.NUM_UNID_ATEN, 0)
+              ELSE 0
+           END
+          ) FALTANTE_WEB_NO_VALIDADO,
+       SUM
+          (CASE
+              WHEN HISTO.IND_VALI_PROL IS NULL
+              AND HISTO.IND_RECE_DD = 0
+              AND HISTO.IND_RECE_DIGI = 0
+              AND HISTO.IND_RECE_OCR = 1
+              AND HISTO.IND_RECE_WEB = 0
+                 THEN NVL (POSIC.NUM_UNID_DEMA_REAL, 0) - NVL (POSIC.NUM_UNID_ATEN, 0)
+              ELSE 0
+           END
+          ) FALTANTE_OCR
+      FROM PED_SOLIC_CABEC CABEC,
+           PED_SOLIC_POSIC POSIC,
+           PED_HISTO_SOLIC_CONSO_CABEC HISTO
+     WHERE HISTO.COD_PAIS = $P{codigoPais}
+       AND HISTO.COD_PERI = $P{campanhia}
+       AND HISTO.COD_REGI IN 
+       (
+          SELECT COD_REGI
+          FROM PED_HISTO_SOLIC_CONSO_CABEC A
+          WHERE A.IND_VALI_PROL = 1
+          AND COD_PERI = $P{campanhia} 
+       )
+       AND HISTO.SOCA_OID_SOLI_CABE_REFE = POSIC.SOCA_OID_SOLI_CABE
+       AND CABEC.TSPA_OID_TIPO_SOLI_PAIS IN
+       (
+          SELECT PTSP.OID_TIPO_SOLI_PAIS
+          FROM
+          PED_TIPO_SOLIC PTS,
+          PED_TIPO_SOLIC_PAIS PTSP
+          WHERE PTS.OID_TIPO_SOLI = PTSP.TSOL_OID_TIPO_SOLI
+          AND PTS.COD_TIPO_SOLI = 'SOC'
+       )
+       AND CABEC.GRPR_OID_GRUP_PROC = 5
+       AND HISTO.SOCA_OID_SOLI_CABE_REFE = CABEC.OID_SOLI_CABE
+       AND POSIC.TPOS_OID_TIPO_POSI != 3
+       AND POSIC.STPO_OID_SUBT_POSI != 6
+       AND NVL (POSIC.NUM_UNID_DEMA_REAL, 0) - NVL (POSIC.NUM_UNID_ATEN, 0) > 0
+  GROUP BY POSIC.PROD_OID_PROD) FALTANTES,
+ (SELECT V.VAL_OID, V.VAL_I18N
+  FROM V_GEN_I18N_SICC V
+  WHERE V.ATTR_ENTI = 'MAE_PRODU' AND V.IDIO_OID_IDIO = 1) I18PROD
+WHERE PRODU.OID_PROD = FALTANTES.PROD_OID_PROD
+ AND PRODU.OID_PROD = I18PROD.VAL_OID
+ORDER BY 1]]></queryString>
+
+	<field name="COD_SAP" class="java.lang.String"/>
+	<field name="DESCRIPCION" class="java.lang.String"/>
+	<field name="FALTANTE_WEB_VALIDADO" class="java.math.BigDecimal"/>
+	<field name="FALTANTE_WEB_NO_VALIDADO" class="java.math.BigDecimal"/>
+	<field name="FALTANTE_OCR" class="java.math.BigDecimal"/>
+	<field name="TOTAL_FALTANTES" class="java.math.BigDecimal"/>
+
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="60"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="26"
+						width="69"
+						height="34"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-16"
+						positionType="Float"/>
+					<box>					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePROLFaltantesForm.codigoSAP}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="69"
+						y="26"
+						width="69"
+						height="34"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-58"
+						positionType="Float"/>
+					<box>					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePROLFaltantesForm.descripcion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="138"
+						y="26"
+						width="69"
+						height="34"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-59"
+						positionType="Float"/>
+					<box>					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePROLFaltantesForm.faltanteWebValidado}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="207"
+						y="26"
+						width="69"
+						height="34"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-60"
+						positionType="Float"/>
+					<box>					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePROLFaltantesForm.faltanteWebNoValidado}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="276"
+						y="26"
+						width="69"
+						height="34"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-61"
+						positionType="Float"/>
+					<box>					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePROLFaltantesForm.faltanteOCR}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="345"
+						y="26"
+						width="69"
+						height="34"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-71"
+						positionType="Float"/>
+					<box>					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="8" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePROLFaltantesForm.totalFaltantes}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1"
+						y="0"
+						width="413"
+						height="26"
+						forecolor="#FFFFFF"
+						backcolor="#003399"
+						key="textField-175"
+						stretchType="RelativeToBandHeight"/>
+					<box>					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="12" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reportePROLFaltantesForm.titulo}]]></textFieldExpression>
+				</textField>
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="12"  isSplitAllowed="false" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="69"
+						height="12"
+						key="textField"/>
+					<box>					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_SAP}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="69"
+						y="0"
+						width="69"
+						height="12"
+						key="textField"/>
+					<box>					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{DESCRIPCION}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="138"
+						y="0"
+						width="69"
+						height="12"
+						key="textField-55"/>
+					<box>					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{FALTANTE_WEB_VALIDADO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="207"
+						y="0"
+						width="69"
+						height="12"
+						key="textField-56"/>
+					<box>					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{FALTANTE_WEB_NO_VALIDADO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="276"
+						y="0"
+						width="69"
+						height="12"
+						key="textField-57"/>
+					<box>					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{FALTANTE_OCR}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="345"
+						y="0"
+						width="69"
+						height="12"
+						key="textField-62"/>
+					<box>					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.5" lineColor="#999999"/>
+					<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{TOTAL_FALTANTES}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

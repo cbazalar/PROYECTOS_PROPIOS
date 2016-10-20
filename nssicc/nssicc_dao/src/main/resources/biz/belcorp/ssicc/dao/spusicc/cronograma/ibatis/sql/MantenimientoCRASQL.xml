@@ -1,0 +1,1081 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.cronograma.mantenimientoCRASQL">
+
+    <typeAlias alias="baseGenerico"						type="biz.belcorp.ssicc.dao.sisicc.model.Base"/>
+    <typeAlias alias="periodoCronograma"  				type="biz.belcorp.ssicc.dao.spusicc.cronograma.model.PeriodoCronograma"/>
+	
+	<resultMap id="baseResult"          class="baseGenerico">
+    	<result property="codigo" 		   column="CODIGO"/>
+    	<result property="descripcion" 	   column="DESCRIPCION"/>
+    </resultMap> 
+
+	<parameterMap id="paramExecuteCargaMatrizDias" class="java.util.Map">	
+	   <parameter property="codigoPais"      	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	    
+	</parameterMap>		
+
+    <resultMap id="periodoResult"        class="periodoCronograma"> 
+    	<result property="oid"						column="OID" />   	
+    	<result property="codigoPeriodo"			column="CODPER" />
+    	<result property="fechaInicio"				column="FECINI" />
+    	<result property="fechaFin"					column="FECFIN" />
+    	<result property="indicadorPeriodoCorto"	column="IND_PERI_CORT" />
+    	<result property="indicadorPeriodoCruce"	column="IND_PERI_CRUC" />
+    	<result property="duracion"				    column="DURACION" /> 	
+    </resultMap>
+
+    <procedure id="executeCargaMatrizDias" parameterMap="paramExecuteCargaMatrizDias">
+		{call cra_pkg_proce.CRA_PR_PROCE_CARGA_MATRI_DIAS(?) }
+	</procedure>
+	
+	<resultMap id="cargaMatrizDiasResult" class="java.util.HashMap">      
+		<result property="grupoZona" column="val_grup_zona"/>
+		<result property="dia1"      column="val_acti_dia1"/>
+		<result property="dia2"      column="val_acti_dia2"/>
+		<result property="dia3"      column="val_acti_dia3"/>
+		<result property="dia4"      column="val_acti_dia4"/>
+		<result property="dia5"      column="val_acti_dia5"/>
+		<result property="dia6"      column="val_acti_dia6"/>
+		<result property="dia7"      column="val_acti_dia7"/>
+		<result property="dia8"      column="val_acti_dia8"/>
+		<result property="dia9"      column="val_acti_dia9"/>
+		<result property="dia10"     column="val_acti_dia10"/>
+		<result property="dia11"     column="val_acti_dia11"/>
+		<result property="dia12"     column="val_acti_dia12"/>
+		<result property="dia13"     column="val_acti_dia13"/>
+		<result property="dia14"     column="val_acti_dia14"/>
+		<result property="dia15"     column="val_acti_dia15"/>
+		<result property="dia16"     column="val_acti_dia16"/>
+		<result property="dia17"     column="val_acti_dia17"/>
+		<result property="dia18"     column="val_acti_dia18"/>
+		<result property="dia19"     column="val_acti_dia19"/>
+		<result property="dia20"     column="val_acti_dia20"/>
+		<result property="dia21"     column="val_acti_dia21"/>  
+		<result property="oidGrupoZona"     column="oid_cabe_grup_zona"/>
+		<result property="secuencia"     column="val_secu"/>
+    </resultMap>
+	
+	<!-- Obtiene la lista de la matriz de dias generada en la tabla temporal -->
+	<select id="getCargaMatrizDias" resultMap="cargaMatrizDiasResult">		   
+
+		select val_grup_zona,
+		       val_acti_dia1,
+		       val_acti_dia2,
+		       val_acti_dia3,
+		       val_acti_dia4,
+		       val_acti_dia5,
+		       val_acti_dia6,
+		       val_acti_dia7,
+		       val_acti_dia8,
+		       val_acti_dia9,
+		       val_acti_dia10,
+		       val_acti_dia11,
+		       val_acti_dia12,
+		       val_acti_dia13,
+		       val_acti_dia14,
+		       val_acti_dia15,
+		       val_acti_dia16,
+		       val_acti_dia17,
+		       val_acti_dia18,
+		       val_acti_dia19,
+		       val_acti_dia20,
+		       val_acti_dia21,
+		       oid_cabe_grup_zona,
+		       val_secu
+		  from cra_tempo_matri_dias
+		 order by 1 
+		
+	</select> 
+
+	<resultMap id="getMatrizDiasResult" class="java.util.HashMap">      
+		<result property="oidMatrizDias"          column="oid_matr_dias"/>
+		<result property="nombreActividadOrigen"  column="nom_acti_ori"/>
+		<result property="ordenActividadOrigen"   column="num_dias_refe"/>
+	</resultMap>
+
+	<select id="getMatrizDias" parameterClass="java.util.Map"  resultMap="getMatrizDiasResult">								
+	SELECT MD.OID_MATR_DIAS, NVL(CAORI.NOM_ACTI,'') NOM_ACTI_ORI, 
+	 NVL(CRA_DIAS(CAORI.OID_ACTI,
+                    (SELECT GZ.COD_GRUP
+                       FROM CRA_CABEC_GRUPO_ZONA GZ, SEG_PAIS PA
+                      WHERE GZ.OID_CABE_GRUP_ZONA = #oidGrupoZona#
+                        AND GZ.PAIS_OID_PAIS = PA.OID_PAIS
+                        AND PA.COD_PAIS = #codigoPais#), #codigoPais#),0) + 1 num_dias_refe
+      FROM CRA_MATRI_DIAS MD, CRA_ACTIV CA, CRA_ACTIV CAORI
+     WHERE MD.CGZO_OID_CABE_GRUP_ZONA = #oidGrupoZona#
+       AND CA.OID_ACTI = MD.CACT_OID_ACTI
+       AND CA.NOM_ACTI = #nombreActividad#
+       AND CAORI.OID_ACTI(+) = MD.CACT_OID_ACTI_ORIG
+       AND CA.PAIS_OID_PAIS =
+           (SELECT PA.OID_PAIS FROM SEG_PAIS PA WHERE PA.COD_PAIS = #codigoPais#)
+				
+	</select>
+	
+   <resultMap id="getPintaMatrizDiasResult" class="java.util.HashMap">      
+		<result property="oidGrupoZona"   column="OID_GRUP_ZONA"/>
+		<result property="grupoZona"      column="VAL_GRUP_ZONA"/>
+		<result property="actividad"      column="VAL_ACTI"/>
+		<result property="orden"          column="VAL_DIA"/>		
+    </resultMap>
+		
+	<select id="getPintaMatrizDias" resultMap="getPintaMatrizDiasResult">		   
+		select OID_GRUP_ZONA,
+		       VAL_GRUP_ZONA,
+		       VAL_ACTI,
+		       VAL_DIA
+		  from CRA_TEMPO_MATRI_DIAS
+		 order by 1,4 		
+	</select>
+		
+	<update id="updateMatrizUpdateActividad" parameterClass="java.util.Map">
+	update cra_matri_dias cmd
+	   set cmd.num_dias_refe      = NVL((select ca.num_dias_desp
+	                                      from cra_activ ca
+	                                     where ca.pais_oid_pais =
+	                                           (select pa.oid_pais
+	                                              from seg_pais pa
+	                                             where pa.cod_pais = #codigoPais#)
+	                                       and ca.oid_acti = cmd.cact_oid_acti),
+	                                    0),
+	       cmd.cact_oid_acti_orig =
+	       (select ca.cact_oid_acti
+	          from cra_activ ca
+	         where ca.pais_oid_pais =
+	               (select pa.oid_pais from seg_pais pa where pa.cod_pais = #codigoPais#)
+	           and ca.oid_acti = cmd.cact_oid_acti),
+	      cmd.USU_MODI = #usuario#,
+          cmd.FEC_MODI = sysdate
+	 where cmd.cact_oid_acti = #id#
+	</update>
+
+	<delete id="updateMatrizDeleteActividad" parameterClass="java.util.Map">
+          delete from cra_matri_dias cmd
+          where cmd.cact_oid_acti_orig = #id#
+    </delete> 
+	
+	<update id="updateMatrizDias" parameterClass="java.util.Map">
+	    update cra_matri_dias cm
+          set cm.num_dias_refe =  #numeroDias#,
+          cm.USU_MODI = #usuario#,
+          cm.FEC_MODI = sysdate
+         where cm.oid_matr_dias = #oidMatrizDias#
+	</update>
+
+
+    <resultMap id="getMatrizDiasFueraPeriodoResult" class="java.util.HashMap">      
+		<result property="oidMatrizDias"               column="oid_matr_dias"/>
+		<result property="grupoZona"                   column="grupo_zona"/>				
+		<result property="descripcionActividad"        column="actividad"/>
+		<result property="numeroDias"                  column="num_dias_refe"/>
+		<result property="actividad"                   column="cact_oid_acti"/>
+		<result property="descripcionActividadOrigen"  column="actividad_origen"/>
+		<result property="numeroDiasReal"              column="ubicacion_real"/>
+		<result property="oidGrupoZona"                   column="oid_cabe_grup_zona"/>
+	</resultMap>
+
+	<select id="getMatrizDiasFueraPeriodo" parameterClass="java.util.Map"  resultMap="getMatrizDiasFueraPeriodoResult">
+	    select mat.oid_matr_dias,
+	           cab.nom_grup grupo_zona,
+	           ca.nom_acti actividad,
+	           mat.num_dias_refe,
+	           mat.cact_oid_acti,
+	           caOri.Nom_Acti actividad_origen,
+	           1 + cra_dias(mat.cact_oid_acti, cab.cod_grup, sp.cod_pais) ubicacion_real,
+	           cab.oid_cabe_grup_zona           
+	      from cra_matri_dias       mat,
+	           cra_cabec_grupo_zona cab,          
+	           cra_activ            ca,
+             cra_activ            caOri,
+	           seg_pais             sp
+	     where mat.cgzo_oid_cabe_grup_zona = cab.oid_cabe_grup_zona
+	     and sp.oid_pais = ca.pais_oid_pais
+	     and ca.oid_acti = mat.cact_oid_acti
+	     and caOri.Oid_Acti = mat.cact_oid_acti_orig
+	     and sp.cod_pais = #codigoPais#
+	     and 1 + cra_dias(mat.cact_oid_acti, cab.cod_grup, sp.cod_pais) > 21
+	    order by 2,7      
+	</select>
+	
+	<insert id="insertActividadMatrizDias" parameterClass="java.util.Map">
+		INSERT INTO CRA_MATRI_DIAS
+			  (OID_MATR_DIAS,
+			   CGZO_OID_CABE_GRUP_ZONA,
+			   CACT_OID_ACTI,
+			   NUM_DIAS_REFE,
+			   NUM_DIAS_FINA,
+			   NUM_DIAS_INTE,
+			   CACT_OID_ACTI_ORIG,
+			   NUM_CAMP_REFE,
+			   USU_REGI,
+			   FEC_REGI)
+			VALUES
+			  (CRA_MADI_SEQ.NEXTVAL,
+			   #oidGrupoZona#,
+			   #oidActividad#,
+			   (SELECT NVL(CA.Num_Dias_Desp, 0)
+			      FROM CRA_ACTIV CA, SEG_PAIS PA
+			     WHERE CA.OID_ACTI =  #oidActividad#
+			       AND CA.PAIS_OID_PAIS = PA.OID_PAIS
+			       AND PA.COD_PAIS = #codigoPais#),
+			   0,
+			   0,
+			   (SELECT NVL(CA.CACT_OID_ACTI, '')
+			      FROM CRA_ACTIV CA, SEG_PAIS PA
+			     WHERE CA.OID_ACTI = #oidActividad#
+			       AND CA.PAIS_OID_PAIS = PA.OID_PAIS
+			       AND PA.COD_PAIS = #codigoPais#),
+			   NULL,
+			   #usuario#,
+			   SYSDATE)
+	</insert>
+	
+	<select id="getPeriodoCorporativo" parameterClass="string" resultMap="periodoResult">
+		SELECT  '' OID, COD_PERI CODPER, 
+				NVL((SELECT TO_CHAR(CP.FEC_FINA + 1,'dd/mm/yyyy') FROM CRA_PERIO CP WHERE CP.VAL_NOMB_PERI LIKE '%'||(select TO_NUMBER(#value#,'9999') - 1 from dual)||'18%'),'01/01/'||#value#) FECINI,
+				NVL((SELECT TO_CHAR(CP.FEC_FINA + 1,'dd/mm/yyyy') FROM CRA_PERIO CP WHERE CP.VAL_NOMB_PERI LIKE '%'||(select TO_NUMBER(#value#,'9999') - 1 from dual)||'18%'),'01/01/'||#value#) FECFIN,
+				'0' IND_PERI_CORT, '0'  IND_PERI_CRUC, '21' DURACION		
+		  FROM SEG_PERIO_CORPO 
+		 WHERE VAL_ANIO= #value#
+	  ORDER BY COD_PERI
+	</select>
+	
+	<select id="getPeriodoCronograma" parameterClass="string" resultMap="periodoResult">
+		SELECT CP.OID_PERI OID, SPC.COD_PERI CODPER, TO_CHAR(CP.FEC_INIC, 'DD/MM/YYYY') FECINI, 
+		       TO_CHAR(CP.FEC_FINA ,'DD/MM/YYYY') FECFIN, CP.IND_PERI_CORT, CP.IND_PERI_CRUC, CP.FEC_FINA - CP.FEC_INIC + 1 DURACION
+		  FROM CRA_PERIO CP, SEG_PERIO_CORPO SPC, SEG_PAIS SP
+		 WHERE CP.PERI_OID_PERI = SPC.OID_PERI
+		   AND CP.PAIS_OID_PAIS = SP.OID_PAIS		   
+		   AND SPC.VAL_ANIO =  #value#
+		 ORDER BY 1			
+	</select>		
+	
+	<insert id="insertPeriodoCronograma" parameterClass="periodoCronograma">
+		<![CDATA[
+		INSERT INTO CRA_PERIO
+		  (OID_PERI,
+		   MARC_OID_MARC,
+		   CANA_OID_CANA,
+		   PAIS_OID_PAIS,
+		   ACCE_OID_ACCE,
+		   PERI_OID_PERI,
+		   FEC_INIC,
+		   FEC_FINA,
+		   VAL_ESTA,
+		   VAL_NOMB_PERI,
+		   IND_PERI_CORT,
+		   IND_PERI_CRUC,
+		   USU_REGI,
+		   FEC_REGI) 
+		   VALUES
+		  (CRA_PERD_SEQ.NEXTVAL,
+		   GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA(#codigoMarca#),
+		   GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CANAL(#codigoCanal#),
+		   GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_PAIS(#codigoPais#),
+		   (SELECT AC.OID_ACCE
+		             FROM SEG_ACCES AC
+		            WHERE AC.COD_ACCE = #codigoAcceso#
+		              AND AC.CANA_OID_CANA =
+		                  GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CANAL(#codigoCanal#)),
+		   (SELECT OID_PERI FROM SEG_PERIO_CORPO
+		       WHERE COD_PERI = #codigoPeriodo#),
+		   TO_DATE(#fechaInicio#, 'DD/MM/YYYY'),
+		   TO_DATE(#fechaFin#, 'DD/MM/YYYY'),
+		   1,
+		   #nombrePeriodo#,
+		   #indicadorPeriodoCorto#,
+		   #indicadorPeriodoCruce#,
+		   #usuario#,
+		   sysdate)					
+	    ]]>
+	</insert>
+	
+	<update id="modificaPeriodoCronograma" parameterClass="periodoCronograma">
+	<![CDATA[
+		UPDATE CRA_PERIO CP
+    	SET 
+          CP.FEC_INIC = TO_DATE(#fechaInicio#,'DD/MM/YYYY'),
+		  CP.FEC_FINA = TO_DATE(#fechaFin#,'DD/MM/YYYY'),
+          CP.IND_PERI_CORT = #indicadorPeriodoCorto#,
+          CP.IND_PERI_CRUC = #indicadorPeriodoCruce#,
+          CP.USU_MODI = #usuario#,
+          CP.FEC_MODI = sysdate
+    	WHERE
+		      CP.OID_PERI = #oid#
+	]]>
+	</update>
+
+	<parameterMap id="paramExecuteInsertPeriodoCorporativo" class="java.util.Map">	
+	   <parameter property="codigoPais"      	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	   <parameter property="anhio"      	    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		    
+	</parameterMap>		
+
+    <procedure id="executeInsertPeriodoCorporativo" parameterMap="paramExecuteInsertPeriodoCorporativo">
+		{call cra_pkg_proce.CRA_PR_PROCE_CARGA_PERIO_CORPO(?,?) }
+	</procedure>
+	
+	<select id="getPeriodoNuevoCronogramaList"  resultMap="periodoResult">
+		SELECT '' OID, COD_PERI CODPER, TO_CHAR(FEC_INIC, 'DD/MM/YYYY') FECINI, 
+		       TO_CHAR(FEC_FIN ,'DD/MM/YYYY') FECFIN, '0' IND_PERI_CORT, '0' IND_PERI_CRUC, DURAC DURACION
+		  FROM GTT_CRA_PERIO_NUEVO_CORPO
+		 ORDER BY 2		
+	</select>
+	
+	<resultMap id="getGruposResult" class="java.util.HashMap">      
+		<result property="codigo"               column="OID"/>
+		<result property="descripcion"        	column="DESCRIPCION"/>
+		<result property="estado"  				column="ESTADO"/>
+	</resultMap>
+	
+	<select id="getGrupos" parameterClass="java.util.Map" resultMap="getGruposResult">
+		 SELECT CAB.OID_CABE_GRUP_ZONA OID, CAB.NOM_GRUP DESCRIPCION,CAB.IND_ESTA  ESTADO
+  		  FROM CRA_CABEC_GRUPO_ZONA CAB 	      				
+		WHERE 1=1
+		<isNotEmpty property="oidGrupo">
+		   AND CAB.OID_CABE_GRUP_ZONA = #oidGrupo#
+        </isNotEmpty>
+        <isNotEmpty property="estado">		
+		    AND CAB.IND_ESTA = #estado#
+        </isNotEmpty>
+	</select>  
+	
+	<select id="getGrupoZonas" parameterClass="java.util.Map" resultMap="baseResult">
+		SELECT CAB.OID_CABE_GRUP_ZONA OID, CAB.NOM_GRUP DESCRIPCION
+  		  FROM CRA_CABEC_GRUPO_ZONA CAB
+  		ORDER BY 2
+	</select> 
+	
+    <parameterMap id="paramDeleteGrupoZona" class="java.util.Map">	
+	   <parameter property="oidGrupo"       				jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	 
+	   <parameter property="usuario"      					jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	      
+	</parameterMap>		
+
+    <procedure id="deleteGrupoZona" parameterMap="paramDeleteGrupoZona">
+		{call cra_pkg_proce.CRA_PR_DELETE_GRUPO_ZONA(?,?) }
+	</procedure> 
+	
+	<select id="getGrupoRegionNoAsignadas" resultMap="baseResult">		
+		SELECT DISTINCT (ZR.COD_REGI) CODIGO, ZR.DES_REGI DESCRIPCION
+		  FROM ZON_REGIO ZR, ZON_ZONA ZZ
+		 WHERE ZR.OID_REGI = ZZ.ZORG_OID_REGI
+		   AND NOT EXISTS
+		 (SELECT CD.ZZON_OID_ZONA
+		          FROM CRA_CABEC_GRUPO_ZONA CZ, CRA_DETAL_GRUPO_ZONA CD
+		         WHERE CD.CGZO_OID_CABE_GRUP_ZONA = CZ.OID_CABE_GRUP_ZONA
+		           AND ZZ.OID_ZONA = CD.ZZON_OID_ZONA
+		           AND CZ.IND_ESTA = '1')
+		 ORDER BY 2
+	</select> 
+
+	<select id="getGrupoZonaNoAsignadas"  parameterClass="java.util.Map" resultMap="baseResult">		
+		 SELECT DISTINCT (ZZ.OID_ZONA) CODIGO, ZZ.DES_ZONA DESCRIPCION
+		   FROM ZON_REGIO ZR, ZON_ZONA ZZ
+		  WHERE ZR.OID_REGI = ZZ.ZORG_OID_REGI
+		    AND NOT EXISTS
+		  (SELECT CD.ZZON_OID_ZONA
+		           FROM CRA_CABEC_GRUPO_ZONA CZ, CRA_DETAL_GRUPO_ZONA CD
+		          WHERE CD.CGZO_OID_CABE_GRUP_ZONA = CZ.OID_CABE_GRUP_ZONA
+		            AND ZZ.OID_ZONA = CD.ZZON_OID_ZONA
+		            AND CZ.IND_ESTA = '1')
+		  <isNotEmpty property="codigoRegion">  
+		   	<iterate prepend="AND" property="codigoRegion" open="(" close=")" conjunction="OR">
+      	 			ZR.COD_REGI = #codigoRegion[]#
+            </iterate>            
+         </isNotEmpty>  
+		  ORDER BY 2
+	</select>
+	
+	<select id="getZonaAsignadasGrupo" parameterClass="java.util.Map" resultMap="baseResult">		
+		     SELECT DISTINCT (ZZ.OID_ZONA) CODIGO, ZZ.DES_ZONA DESCRIPCION
+			  FROM ZON_REGIO ZR, ZON_ZONA ZZ
+			 WHERE ZR.OID_REGI = ZZ.ZORG_OID_REGI
+			   AND EXISTS
+			 (SELECT CD.ZZON_OID_ZONA
+			          FROM CRA_CABEC_GRUPO_ZONA CZ, CRA_DETAL_GRUPO_ZONA CD
+			         WHERE CD.CGZO_OID_CABE_GRUP_ZONA = CZ.OID_CABE_GRUP_ZONA
+			           AND ZZ.OID_ZONA = CD.ZZON_OID_ZONA
+			           <iterate prepend="AND" property="grupoZonaList" open="(" close=")" conjunction="OR">
+      	 		            CZ.OID_CABE_GRUP_ZONA = #grupoZonaList[]#
+                       </iterate>
+			           AND CZ.IND_ESTA = '1')
+			 ORDER BY 2
+	</select>
+	
+   	<select id="getZonasGrupoRegenerar" parameterClass="java.util.Map" resultMap="baseResult">        	
+		     SELECT DISTINCT (ZZ.OID_ZONA) CODIGO, ZZ.DES_ZONA DESCRIPCION
+			  FROM ZON_REGIO ZR, ZON_ZONA ZZ
+			 WHERE ZR.OID_REGI = ZZ.ZORG_OID_REGI
+			   AND EXISTS
+			 (SELECT CD.ZZON_OID_ZONA
+			          FROM CRA_CABEC_GRUPO_ZONA CZ, CRA_DETAL_GRUPO_ZONA CD
+			         WHERE CD.CGZO_OID_CABE_GRUP_ZONA = CZ.OID_CABE_GRUP_ZONA
+			           AND ZZ.OID_ZONA = CD.ZZON_OID_ZONA			          
+      	 		       AND CZ.OID_CABE_GRUP_ZONA = #oidGruposZona#         	 		                
+			           AND CZ.IND_ESTA = '1')
+			<isNotEmpty property="oidZonaReferencia"> 
+			   AND ZZ.OID_ZONA != #oidZonaReferencia#
+			</isNotEmpty> 
+			 ORDER BY 2
+	</select> 		
+	
+	<parameterMap id="paramInsertNombreGrupoZona" class="java.util.Map">	
+	   <parameter property="codigoPais"     				jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	 
+	   <parameter property="marca"      					jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	   <parameter property="canal"      					jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	   <parameter property="acceso"      					jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	   <parameter property="nombreGrupo"      				jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	   <parameter property="usuario"      					jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	   <parameter property="anhio"      					jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />    
+	</parameterMap>		
+
+    <procedure id="insertNombreGrupoZona" parameterMap="paramInsertNombreGrupoZona">
+		{call cra_pkg_proce.CRA_PR_INSER_GRUPO_ZONA(?,?,?,?,?,?,?) }
+	</procedure> 		
+	
+	<update id="updateNombreGrupoZona" parameterClass="java.util.Map">
+		UPDATE CRA_CABEC_GRUPO_ZONA CRA
+		 SET CRA.NOM_GRUP = #nombreGrupo#,
+		 CRA.USU_MODI=#usuario#,
+		 CRA.FEC_MODI=sysdate
+		 WHERE CRA.OID_CABE_GRUP_ZONA = #oidGrupo#
+	</update>
+	
+	<insert id="insertDetalleGrupo" parameterClass="java.util.Map">
+		<![CDATA[
+		       INSERT INTO CRA_DETAL_GRUPO_ZONA
+		         (OID_DETA_GRUP_ZONA,
+		          CGZO_OID_CABE_GRUP_ZONA,
+		          ZZON_OID_ZONA,
+		          USU_REGI,
+		          FEC_REGI)
+		       VALUES
+		         (CRA_DEGZ_SEQ.nextval,
+		          #oidGrupo#,
+		          #zona#,
+		          #usuario#,
+		          sysdate)		          
+	    ]]>
+	</insert>
+	
+	<delete id="deleteDetalleGrupo" parameterClass="java.util.Map">
+          delete from CRA_DETAL_GRUPO_ZONA
+          where CGZO_OID_CABE_GRUP_ZONA = #oidGrupo#
+    </delete> 
+    
+    <resultMap id="getActividadesResult"        class="java.util.HashMap"> 
+    	<result property="id"						column="OID_ACTI" />
+    	<result property="idClase"				    column="OID_CLAS_ACTI" />   	   	
+    	<result property="clase"					column="DES_CLAS_ACTI" />
+    	<result property="codigo"					column="COD_ACTI" />
+    	<result property="nombre"					column="NOM_ACTI" />
+    	<result property="tipo"						column="COD_TIPO_ACTI" />
+    	<result property="descripcionTipo"			column="DES_TIPO" />
+    	<result property="oidActiOrig"  			column="OID_ACTI_ORIG" />
+    	<result property="actividadOrigen"			column="ACTI_ORI" />
+    	<result property="indicadorDias"			column="IND_LABO" />
+    	<result property="descripcionLaborable"		column="DES_LABORABLE" />
+    	<result property="diasDesplazamiento"		column="NUM_DIAS_DESP" />
+    	<result property="estado"				    column="IND_ACTI" />   	
+    </resultMap>
+    
+    <select id="getActividadesExcepto"  parameterClass="java.util.Map" resultMap="baseResult">
+	   SELECT CAC.OID_ACTI CODIGO,
+	          CAC.COD_ACTI || ' - ' || CAC.NOM_ACTI DESCRIPCION
+	     FROM CRA_ACTIV CAC, SEG_PAIS SP
+	    WHERE SP.OID_PAIS = CAC.PAIS_OID_PAIS
+	      AND SP.COD_PAIS = #codigoPais#
+	      AND CAC.IND_ACTI = '1'
+	      AND CAC.OID_ACTI != #id#
+	    order by 1   						
+	</select>  
+    
+    <select id="getActividades" parameterClass="java.util.Map" resultMap="getActividadesResult">
+			    SELECT A.OID_ACTI,
+			          TO_CHAR(CL.OID_CLAS_ACTI)  OID_CLAS_ACTI,
+			        CL.DES_CLAS_ACTI,
+			        A.COD_ACTI,
+			        A.NOM_ACTI,
+			        TRIM(TO_CHAR(TRIM(A.COD_TIPO_ACTI))) COD_TIPO_ACTI,
+			        DECODE(A.COD_TIPO_ACTI,0,'FIJO','CON ORIGEN') DES_TIPO,
+			        TO_CHAR(B.OID_ACTI) OID_ACTI_ORIG,
+			        B.NOM_ACTI ACTI_ORI,
+			        TRIM(TO_CHAR(A.IND_LABO)) IND_LABO,
+	 	            DECODE(A.IND_LABO,0,'CONTINUOS','LABORABLES') DES_LABORABLE,
+			        TRIM(TO_CHAR(NVL(A.NUM_DIAS_DESP,0))) NUM_DIAS_DESP,
+			        TRIM(TO_CHAR(A.IND_ACTI)) IND_ACTI
+			   FROM CRA_ACTIV A, CRA_ACTIV B, CRA_CLASE_ACTIV CL, SEG_PAIS SP
+			  WHERE A.CLAC_OID_CLAS_ACTI = CL.OID_CLAS_ACTI
+			    AND A.CACT_OID_ACTI = B.OID_ACTI(+)
+			    AND A.PAIS_OID_PAIS = B.PAIS_OID_PAIS(+)
+			    AND A.PAIS_OID_PAIS = SP.OID_PAIS
+			   AND SP.COD_PAIS = #codigoPais#
+		<isNotEmpty prepend="AND" property="tipo">
+			    A.COD_TIPO_ACTI = #tipo#
+	    </isNotEmpty>
+	    <isNotEmpty prepend="AND" property="nombre">
+			    upper(A.NOM_ACTI) like '%' || upper(#nombre#) || '%' 
+		 </isNotEmpty> 
+		 <isNotEmpty prepend="AND" property="id">
+			    A.OID_ACTI = #id#  
+		 </isNotEmpty>   				
+        ORDER BY 1 
+	</select>   
+	
+	<update id="deleteActividad" parameterClass="java.util.Map">
+		UPDATE CRA_ACTIV AC
+		 SET AC.IND_ACTI = '0', AC.USU_MODI = #usuario#, AC.FEC_MODI = sysdate
+		 WHERE AC.OID_ACTI = #id#
+		 ANd AC.PAIS_OID_PAIS = (SELECT OID_PAIS FROM SEG_PAIS WHERE COD_PAIS = #codigoPais#)
+	</update> 
+	
+	<insert id="insertActividad" parameterClass="java.util.Map">
+		<![CDATA[
+		INSERT INTO CRA_ACTIV
+			  (
+			  MARC_OID_MARC ,     
+			  CANA_OID_CANA ,     
+			  DPTE_OID_DEPA ,     
+			  ACCE_OID_ACCE ,     
+			  OID_ACTI      ,     
+			  COD_ACTI      ,     
+			  CACT_OID_ACTI ,     
+			  COD_TIPO_ACTI ,     
+			  TIDC_OID_TIPO_DIRE ,
+			  NUM_DIAS_DESP ,     
+			  NUM_CAMP_ANTE ,    
+			  IND_EBEL      ,     
+			  IND_FEST      ,     
+			  IND_LABO      ,     
+			  CLAC_OID_CLAS_ACTI , 
+			  PAIS_OID_PAIS ,    
+			  NUM_CAMP_REFE ,     
+			  MENS_OID_MENS ,     
+			  USU_REGI      ,     
+			  FEC_REGI      ,     
+			  USU_MODI      ,     
+			  FEC_MODI      ,     
+			  NOM_ACTI      ,     
+			  IND_ACTI	    
+			  )
+			  VALUES 
+			  (
+			  GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA(#marca#),
+			  GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CANAL(#canal#),
+			  (SELECT OID_DEPA FROM SEG_DEPTO_EMPRE WHERE COD_DPTO='004'),
+			  NULL,
+			  CRA_CACT_SEQ.nextval,
+			  #codigo#,
+			  #actividadOrigen#,
+			  #tipo#,    
+			  NULL,
+			  #diasDesplazamiento#,
+			  0,
+			  0,
+			  NULL,
+			  #indicadorDias#,
+			  #clase#,
+			  (SELECT OID_PAIS FROM SEG_PAIS WHERE COD_PAIS=#codigoPais#),
+			  NULL,
+			  NULL,
+			  #usuario#,
+			  sysdate,
+			  NULL,
+			  NULL,
+			  #nombre#,
+			  '1'
+			  )
+	    ]]>
+	</insert>
+	
+	<update id="updateActividad" parameterClass="java.util.Map">
+		UPDATE CRA_ACTIV
+		   SET CLAC_OID_CLAS_ACTI = #clase#,
+		       NOM_ACTI           = #nombre#,
+		       COD_TIPO_ACTI      = #tipo#,
+		       CACT_OID_ACTI      = #actividadOrigen#,
+		       NUM_DIAS_DESP      = #diasDesplazamiento#,
+		       IND_LABO           = #indicadorDias#,
+		       USU_MODI           = #usuario#,
+		       FEC_MODI           = SYSDATE
+		 WHERE OID_ACTI = #id#
+		   AND PAIS_OID_PAIS =
+		       (SELECT OID_PAIS FROM SEG_PAIS WHERE COD_PAIS = #codigoPais#)
+	</update>  
+	
+	<select id="getClaseActividades" parameterClass="java.util.Map"  resultMap="baseResult">
+			 SELECT OID_CLAS_ACTI CODIGO, DES_CLAS_ACTI DESCRIPCION FROM CRA_CLASE_ACTIV
+	</select>  
+	
+	<parameterMap id="paramExecuteInsertDiaNoLaborable" class="java.util.Map">	
+	   <parameter property="codigoPais"      	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	 
+	   <parameter property="anhio"      		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	   <parameter property="codigoActividad"      					jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	   <parameter property="fecha"      					jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	   <parameter property="usuario"      	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />   
+	</parameterMap>		
+
+    <procedure id="executeInsertDiaNoLaborable" parameterMap="paramExecuteInsertDiaNoLaborable">
+		{call cra_pkg_proce.CRA_PR_PROCE_DIA_NO_LABOR(?,?,?,?,?) }
+	</procedure> 
+	
+	<procedure id="executeInsertDiaFeriado" parameterMap="paramExecuteInsertDiaNoLaborable">
+		{call cra_pkg_proce.CRA_PR_PROCE_DIA_FERIA(?,?,?,?,?) }
+	</procedure> 
+	
+	<procedure id="executeDeleteDiaNoLaborable" parameterMap="paramExecuteInsertDiaNoLaborable">
+		{call cra_pkg_proce.CRA_PR_DELET_DIA_NO_LABOR(?,?,?,?,?) }
+	</procedure> 
+	
+	<delete id="deleteFeriado" parameterClass="java.util.Map">
+             DELETE CRA_FERIA CFD
+			    WHERE exists
+			          (SELECT CF.OID_FERI
+			             FROM CRA_FERIA            CF,
+			                  CRA_ACTIV            CA,
+			                  CRA_CABEC_GRUPO_ZONA GZ,
+			                  SEG_PAIS             SP
+			            WHERE CF.CGZO_OID_CABE_GRUP_ZONA = GZ.OID_CABE_GRUP_ZONA
+			              AND CF.CACT_OID_ACTI = CA.OID_ACTI
+			              AND GZ.PAIS_OID_PAIS = CA.PAIS_OID_PAIS
+			              AND CA.PAIS_OID_PAIS = SP.OID_PAIS
+			              AND SP.COD_PAIS = #codigoPais#
+			              AND CF.NUM_ANIO = #anhio#
+			              AND CA.OID_ACTI = #codigoActividad#
+			              AND CF.IND_FEST = '1'
+			              AND CF.IND_NO_LABO = '0'
+			              AND CF.FEC_FERI = TO_DATE(#fecha#,'dd/mm/yyyy')
+			              AND CF.OID_FERI = CFD.OID_FERI)
+    </delete> 
+	
+	<insert id="insertAnhio" parameterClass="java.util.Map">
+		<![CDATA[
+		INSERT INTO 
+           CRA_CALEN (  
+                OID_CALE      , 
+                NUM_ANIO      ,
+                MARC_OID_MARC ,
+                CANA_OID_CANA ,
+                PAIS_OID_PAIS 
+                )
+            VALUES(
+                CRA_CALE_SEQ.Nextval,
+                #anhio#,
+                GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA(#marca#),
+			    GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CANAL(#canal#),
+			    (SELECT OID_PAIS FROM SEG_PAIS WHERE COD_PAIS=#codigoPais#)
+                )      
+	    ]]>
+	</insert>
+	
+	<select id="existeAnhio" parameterClass="java.util.Map" resultClass="int">
+	    SELECT COUNT(1)
+	      FROM CRA_CALEN CC, SEG_PAIS SP
+	     WHERE CC.PAIS_OID_PAIS = SP.OID_PAIS
+	       AND SP.COD_PAIS = #codigoPais#
+	       AND CC.NUM_ANIO = #anhio#
+	</select>
+	
+   <select id="existeFecha" parameterClass="java.util.Map" resultClass="int">
+	   SELECT COUNT(1)
+	     FROM CRA_FERIA CF, CRA_ACTIV CA, CRA_CABEC_GRUPO_ZONA GZ, SEG_PAIS SP
+	    WHERE CF.CGZO_OID_CABE_GRUP_ZONA = GZ.OID_CABE_GRUP_ZONA
+	      AND CF.CACT_OID_ACTI = CA.OID_ACTI
+	      AND GZ.PAIS_OID_PAIS = CA.PAIS_OID_PAIS
+	      AND CA.PAIS_OID_PAIS = SP.OID_PAIS
+	      AND SP.COD_PAIS = #codigoPais#
+	      AND CF.NUM_ANIO = #anhio#
+	      AND CA.OID_ACTI = #codigoActividad#
+	      AND CF.FEC_FERI = TO_DATE(#fecha#,'dd/mm/yyyy')  
+	</select>
+	
+	    <resultMap id="getCalendarioFeriadosResult"        class="java.util.HashMap"> 
+    	<result property="fecha"				    column="FEC_FERI_DIA" />
+    	<result property="fecha1"				    column="FEC_FERI" />   	   	    	
+    	<result property="dia"				        column="DIA" />
+    	<result property="indNoLabo"				column="IND_NO_LABO" />
+    	<result property="indTrap"				    column="IND_TRAP" />
+    </resultMap>
+    
+    <select id="getCalendarioFeriados" parameterClass="java.util.Map" resultMap="getCalendarioFeriadosResult">
+	  SELECT DISTINCT(TO_CHAR(CF.FEC_FERI,'dd/mm/yyyy')) FEC_FERI_DIA, 
+             CF.FEC_FERI, 
+             TRIM(TO_CHAR(CF.FEC_FERI, 'DAY', 'NLS_DATE_LANGUAGE = SPANISH')) DIA,
+             CF.IND_NO_LABO,
+             CF.IND_TRAP
+        FROM CRA_FERIA            CF,
+             CRA_ACTIV            CA,
+             CRA_CABEC_GRUPO_ZONA GZ,
+             SEG_PAIS             SP
+				 WHERE CF.CGZO_OID_CABE_GRUP_ZONA = GZ.OID_CABE_GRUP_ZONA
+				   AND CF.CACT_OID_ACTI = CA.OID_ACTI
+				   AND GZ.PAIS_OID_PAIS = CA.PAIS_OID_PAIS
+				   AND CA.PAIS_OID_PAIS = SP.OID_PAIS
+				   AND SP.COD_PAIS = #codigoPais#
+				   AND CF.NUM_ANIO = #anhio#
+         AND CA.OID_ACTI = #codigoActividad#
+         AND CF.IND_FEST = #indicadorFestivo#       
+         <isEqual property="indicadorFestivo" compareValue="1">
+				 AND CF.IND_NO_LABO = #indicadorLaborable#
+		 </isEqual>	
+         <isEqual property="indicadorLaborable" compareValue="">
+				AND CF.FEC_FERI BETWEEN (SELECT CP.FEC_INIC FROM CRA_PERIO CP WHERE CP.VAL_NOMB_PERI like '%' || #codigoPeriodo# || '%') AND 
+                                 (SELECT CP.FEC_FINA FROM CRA_PERIO CP WHERE CP.VAL_NOMB_PERI like '%' || #codigoPeriodo# || '%')        
+		 </isEqual>	 
+        ORDER BY CF.FEC_FERI
+
+	</select> 
+	 
+	<parameterMap id="paramExecuteGenerarCronogramaFase1" class="java.util.Map">	
+		<parameter property="codigoPeriodo"      	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="codigoPais"      	    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="cantidadColumnas"      jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT" />
+	    <parameter property="fechaInicio"           jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT" />
+	    <parameter property="usuario"               jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		    
+	</parameterMap>	
+
+    <procedure id="executeGenerarCronogramaFase1" parameterMap="paramExecuteGenerarCronogramaFase1">
+		{call cra_pkg_proce.CRA_PR_PROCE_GENER_CRONO_FASE1(?,?,?,?,?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteCargaCronogramaFase1" class="java.util.Map">	
+		<parameter property="codigoPeriodo"      	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="codigoPais"      	    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	    
+	    <parameter property="cantidadColumnas"      jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT" />
+	    <parameter property="fechaInicio"           jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT" />		    	     	  
+	</parameterMap>	
+
+    <procedure id="executeCargaCronogramaFase1" parameterMap="paramExecuteCargaCronogramaFase1">
+		{call cra_pkg_proce.CRA_PR_PROCE_CARGA_CRONO_FASE1(?,?,?,?) }
+	</procedure>
+
+    <resultMap id="getPintaCronogramaFase1Result" class="java.util.HashMap">      
+		<result property="oidGrupoZona"   column="OID_GRUP_ZONA"/>
+		<result property="grupoZona"      column="VAL_GRUP_ZONA"/>
+		<result property="fecha"          column="VAL_FECH"/>
+		<result property="actividad"      column="VAL_ACTI"/>
+		<result property="orden"          column="VAL_DIA"/>		
+    </resultMap>
+		
+	<select id="getPintaCronogramaFase1" resultMap="getPintaCronogramaFase1Result">		   
+		select OID_GRUP_ZONA,
+		       VAL_GRUP_ZONA,
+		       VAL_FECH,
+		       VAL_ACTI,
+		       VAL_DIA
+		  from CRA_TEMPO_CRONO_FASE1
+		 order by 1,5 		
+	</select> 
+
+	<parameterMap id="paramUpdateCronogramaFase1" class="java.util.Map">	
+		<parameter property="codigoPais"      		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="oidCrono"      	    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="oidGrupoZona"    	    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="diasDesplazamiento"    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="usuario"           	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	    
+	</parameterMap>	
+
+    <procedure id="updateCronogramaFase1" parameterMap="paramUpdateCronogramaFase1">
+		{call cra_pkg_proce.CRA_PR_PROCE_ACTUA_CRONO_FASE1(?,?,?,?,?) }
+	</procedure> 	
+	
+    <resultMap id="getDatosCronoFase1Result" class="java.util.HashMap">      
+		<result property="oid"   				column="OID_CRON_GRUP_ZONA"/>
+		<result property="nombreActividad"      column="NOM_ACTI"/>
+		<result property="nombreGrupo"      	column="NOM_GRUP"/>
+		<result property="desplazamiento"  	    column="VAL_FEC0"/>	
+		<result property="fechaPrevista"      	column="FEC_PREV"/>
+		<result property="indicadorLaborable"   column="IND_LABO"/>
+		<result property="oidActividadOrigen"   column="CACT_OID_ACTI"/>
+							
+    </resultMap>
+		
+	<select id="getDatosCronoFase1" parameterClass="java.util.Map"  resultMap="getDatosCronoFase1Result">		   
+	     SELECT CRONO.OID_CRON_GRUP_ZONA, AC.NOM_ACTI,  CAB.NOM_GRUP, crono.val_fec0, to_char(crono.fec_prev,'dd/mm/yyyy') fec_prev, AC.IND_LABO,AC.CACT_OID_ACTI
+		  FROM CRA_CRONO_GRUPO_ZONA CRONO,
+		       CRA_ACTIV            AC,
+		       CRA_PERIO            CP,
+		       SEG_PERIO_CORPO      SP,
+		       CRA_CABEC_GRUPO_ZONA CAB,
+		       seg_pais pa
+		 WHERE CRONO.PERD_OID_PERI = CP.OID_PERI
+		   AND CP.PERI_OID_PERI = SP.OID_PERI
+		   AND SP.COD_PERI = #periodo#
+		   AND CRONO.CACT_OID_ACTI = AC.OID_ACTI
+		   AND CAB.OID_CABE_GRUP_ZONA = CRONO.CGZO_OID_CABE_GRUP_ZONA
+		   and cab.pais_oid_pais = pa.oid_pais
+	       and cp.pais_oid_pais = cab.pais_oid_pais
+	       and ac.pais_oid_pais = cab.pais_oid_pais
+           and pa.cod_pais = #codigoPais#
+           AND CRONO.CGZO_OID_CABE_GRUP_ZONA = #oidGrupoZona#
+           <isNotEmpty property="nombreActividad">
+           			AND AC.NOM_ACTI = #nombreActividad#
+          </isNotEmpty>
+          <isNotEmpty property="oidActividad">
+           			AND AC.OID_ACTI = #oidActividad#
+          </isNotEmpty>
+	</select>
+	
+	<select id="getCronogramaFase1Existente" parameterClass="java.util.Map" resultClass="java.lang.Integer">      
+	     SELECT COUNT(*)
+		   FROM CRA_CRONO_GRUPO_ZONA CRONO,
+		        CRA_PERIO            CP,
+		        SEG_PERIO_CORPO      SP,
+		        SEG_PAIS             PA
+		  WHERE CRONO.PERD_OID_PERI = CP.OID_PERI
+		  AND CP.PERI_OID_PERI = SP.OID_PERI
+		  AND SP.COD_PERI = #codigoPeriodo#
+		  AND PA.COD_PAIS = #codigoPais#
+ 	</select> 
+	
+	<select id="getZonasCronograma" parameterClass="java.util.Map"  resultMap="baseResult">		
+		SELECT ZZ.OID_ZONA CODIGO, ZZ.DES_ZONA DESCRIPCION
+		  FROM CRA_DETAL_GRUPO_ZONA DGZ, ZON_ZONA ZZ, CRA_CABEC_GRUPO_ZONA CGZ
+		 WHERE DGZ.ZZON_OID_ZONA = ZZ.OID_ZONA
+		   AND DGZ.CGZO_OID_CABE_GRUP_ZONA = CGZ.OID_CABE_GRUP_ZONA
+		   AND CGZ.PAIS_OID_PAIS = #oidPais#
+		   AND CGZ.IND_ESTA = '1'
+		 ORDER BY 2	
+	</select>
+	
+    <parameterMap id="paramExecuteCargaCronogramaFase2" class="java.util.Map">	
+		<parameter property="codigoPeriodo"      	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="codigoPais"      	    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="oidZona"       	    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="cantidadColumnas"      jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT" />
+	    <parameter property="fechaInicio"           jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT" />
+	</parameterMap>	
+
+    <procedure id="executeCargaCronogramaFase2" parameterMap="paramExecuteCargaCronogramaFase2">
+		{call cra_pkg_proce.CRA_PR_PROCE_CARGA_CRONO_FASE2(?,?,?,?,?) }
+	</procedure>	
+	
+	<parameterMap id="paramExecuteCargaCronogramaFase2" class="java.util.Map">	
+		<parameter property="codigoPeriodo"      	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="codigoPais"      	    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="oidZona"       	    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="cantidadColumnas"      jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT" />
+	    <parameter property="fechaInicio"           jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT" />
+	    <parameter property="usuario"       	    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	    	    	  
+	</parameterMap>	
+	
+    <procedure id="executeGenerarCronogramaFase2" parameterMap="paramExecuteCargaCronogramaFase2">
+		{call cra_pkg_proce.CRA_PR_PROCE_GENER_CRONO_FASE2(?,?,?,?,?,?) }
+	</procedure>	
+
+    <resultMap id="cargaCronogramaFase2Result" class="java.util.HashMap">   
+        <result property="oidGrupoZona"   column="OID_GRUP_ZONA"/>   
+		<result property="oidZona"        column="OID_ZONA"/>
+		<result property="zona"           column="VAL_ZONA"/>
+		<result property="fecha"          column="VAL_FECH"/>
+		<result property="actividad"      column="VAL_ACTI"/>
+		<result property="orden"          column="VAL_DIA"/>		
+    </resultMap>
+    
+   <delete id="deleteTemporalFase2">
+    <![CDATA[
+        DELETE FROM CRA_TEMPO_CRONO_FASE2
+    ]]>
+    </delete>
+    
+	<select id="getPintaCronogramaFase2"  resultMap="cargaCronogramaFase2Result">		
+		select OID_GRUP_ZONA,
+		               OID_ZONA,
+				       VAL_ZONA,
+				       VAL_FECH,
+				       VAL_ACTI,
+				       VAL_DIA
+				  from CRA_TEMPO_CRONO_FASE2
+				 order by 1,2,6 			
+	</select>
+	
+	<resultMap id="getDatosCronoFase2Result" class="java.util.HashMap">      
+		<result property="oid"   				column="OID_CRON"/>
+		<result property="fechaInicio"          column="FEC_INIC"/>
+		<result property="nombreActividad"      column="NOM_ACTI"/>
+		<result property="indicadorLaborable"   column="IND_LABO"/>
+		<result property="oidActividadOrigen"   column="CACT_OID_ACTI"/>
+		<result property="nombreZona"      	    column="DES_ZONA"/>
+		<result property="desplazamiento"  	    column="VAL_FEC0"/>	
+		<result property="fechaPrevista"      	column="FEC_PREV"/>	
+		<result property="oidGrupoZona"      	column="OID_CABE_GRUP_ZONA"/>					
+    </resultMap>    
+    
+	<select id="getDatosCronoFase2" parameterClass="java.util.Map"  resultMap="getDatosCronoFase2Result">		
+			SELECT CRONO.OID_CRON, TO_CHAR(CP.FEC_INIC,'DD/MM/YYYY') FEC_INIC, AC.NOM_ACTI,AC.IND_LABO,AC.CACT_OID_ACTI,  
+			       ZZ.DES_ZONA, CRONO.VAL_FEC0, TO_CHAR(CRONO.FEC_INIC,'DD/MM/YYYY') FEC_PREV, CCGZ.OID_CABE_GRUP_ZONA
+			  FROM CRA_CRONO CRONO,
+			       CRA_ACTIV            AC,
+			       CRA_PERIO            CP,
+			       SEG_PERIO_CORPO      SP,
+			       ZON_ZONA             ZZ,
+			       SEG_PAIS             PA,
+			       CRA_CABEC_GRUPO_ZONA CCGZ,
+                   CRA_DETAL_GRUPO_ZONA CDGZ
+			 WHERE CRONO.PERD_OID_PERI = CP.OID_PERI
+			   AND CP.PERI_OID_PERI = SP.OID_PERI
+			   AND SP.COD_PERI = #periodo#
+			   AND CRONO.CACT_OID_ACTI = AC.OID_ACTI
+			   <isNotEmpty property="nombreActividad">
+           			AND AC.NOM_ACTI = #nombreActividad#
+           	   </isNotEmpty>
+           	   <isNotEmpty property="oidActividad">
+           			AND AC.OID_ACTI = #oidActividad#
+           	   </isNotEmpty>			   
+			   AND AC.PAIS_OID_PAIS = PA.OID_PAIS
+	       AND PA.COD_PAIS = #codigoPais#
+	       AND CRONO.ZZON_OID_ZONA = ZZ.OID_ZONA
+	       AND CCGZ.PAIS_OID_PAIS = PA.OID_PAIS
+	       and ac.pais_oid_pais = CCGZ.PAIS_OID_PAIS
+           AND CCGZ.OID_CABE_GRUP_ZONA= CDGZ.CGZO_OID_CABE_GRUP_ZONA
+           AND CDGZ.ZZON_OID_ZONA = ZZ.OID_ZONA
+	       AND ZZ.OID_ZONA = #oidZona#
+	</select>
+
+	<parameterMap id="paramUpdateCronogramaFase2" class="java.util.Map">	
+		<parameter property="codigoPais"      		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="oidCrono"      	    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="oidGrupoZona"    	    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="diasDesplazamiento"    jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="usuario"               jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />  	   
+	</parameterMap>	
+
+    <procedure id="updateCronogramaFase2" parameterMap="paramUpdateCronogramaFase2">
+		{call cra_pkg_proce.CRA_PR_PROCE_ACTUA_CRONO_FASE2(?,?,?,?,?) }
+	</procedure>  
+
+	<parameterMap id="paramDeleteCronogramaFase2" class="java.util.Map">		    
+	    <parameter property="codigoPeriodo"         jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="oidZona"    	        jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	    	   
+	</parameterMap>	
+	
+    <procedure id="executeDeleteCronogramaFase2" parameterMap="paramDeleteCronogramaFase2">
+		{call cra_pkg_proce.CRA_PR_PROCE_DELET_CRONO_FASE2(?,?) }
+	</procedure> 
+		
+	<select id="getCodigoActividadExistente" parameterClass="java.util.Map" resultClass="java.lang.Integer">      
+		SELECT COUNT(CA.COD_ACTI)
+		  FROM CRA_ACTIV CA
+		 WHERE CA.PAIS_OID_PAIS  = (SELECT SP.OID_PAIS FROM SEG_PAIS SP WHERE SP.COD_PAIS =  #codigoPais#)
+		   AND CA.COD_ACTI = #codigoActividad#
+ 	</select>   
+ 	
+    <parameterMap id="paramCopiaCronogramaPorZonaFase2" class="java.util.Map">		    
+    	<parameter property="codigoPais"         jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		    
+	    <parameter property="codigoPeriodo"         jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	    
+	    <parameter property="oidZona"    	        jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="zonaReferencia"    	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="oidActividad"      	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="usuario"    	        jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />			    	   
+	</parameterMap>	
+	
+    <procedure id="executeCopiaCronogramaPorZonaFase2" parameterMap="paramCopiaCronogramaPorZonaFase2">
+		{call cra_pkg_proce.CRA_PR_COPIA_CRONO_ZONA_FASE2(?,?,?,?,?,?) }
+	</procedure>
+	
+   <select id="getActuaFechaFase1" parameterClass="java.util.Map" resultClass="string">      
+     SELECT TO_CHAR(CGZPA.FEC_PREV +
+                    CRA_PKG_PROCE.CRA_FN_CALCU_DESPL_VALID(#codigoPais#,
+                                                           #oidGrupoZona#,
+                                                           CGZ.CACT_OID_ACTI,
+                                                           CGZPA.FEC_PREV,
+                                                           NVL(#diasDesplazamiento#,0)),
+                    'DD/MM/YYYY') FECHA
+       FROM CRA_CRONO_GRUPO_ZONA CGZ,
+            CRA_CRONO_GRUPO_ZONA CGZPA,
+            CRA_ACTIV            CA,
+            SEG_PAIS             PA
+      WHERE CGZ.OID_CRON_GRUP_ZONA = #oidCrono#
+        AND CGZ.CACT_OID_ACTI = CA.OID_ACTI
+        AND CA.PAIS_OID_PAIS = PA.OID_PAIS
+        AND PA.COD_PAIS = #codigoPais#
+        AND CGZPA.CGZO_OID_CABE_GRUP_ZONA = CGZ.CGZO_OID_CABE_GRUP_ZONA
+        AND CGZPA.PERD_OID_PERI = CGZ.PERD_OID_PERI
+        AND CGZPA.CACT_OID_ACTI = NVL(CA.CACT_OID_ACTI,  (select cca.oid_acti
+                  from cra_activ cca
+                 where upper(cca.nom_acti) like '%INICIO DE PERIODO%'
+                   and cca.pais_oid_pais = pa.oid_pais)
+                   )		
+ 	</select> 
+ 	
+   <select id="getActuaFechaFase2" parameterClass="java.util.Map" resultClass="string">      
+     SELECT TO_CHAR(CRPA.FEC_INIC + 
+     				CRA_PKG_PROCE.CRA_FN_CALCU_DESPL_VALID(#codigoPais#,
+                                                           #oidGrupoZona#,
+                                                           CR.CACT_OID_ACTI,
+                                                           CRPA.FEC_INIC,
+                                                           NVL(#diasDesplazamiento#,0))
+				, 'DD/MM/YYYY') FECHA
+       FROM CRA_CRONO CR, CRA_CRONO CRPA, CRA_ACTIV CA, SEG_PAIS PA
+      WHERE CR.OID_CRON = #oidCrono#
+        AND CR.CACT_OID_ACTI = CA.OID_ACTI
+        AND CA.PAIS_OID_PAIS = PA.OID_PAIS
+        AND PA.COD_PAIS = #codigoPais#
+        AND CRPA.ZZON_OID_ZONA = CR.ZZON_OID_ZONA
+        AND CRPA.PERD_OID_PERI = CR.PERD_OID_PERI
+        AND CRPA.CACT_OID_ACTI = NVL(CA.CACT_OID_ACTI,  (select cca.oid_acti
+                  from cra_activ cca
+                 where upper(cca.nom_acti) like '%INICIO DE PERIODO%'
+                   and cca.pais_oid_pais = pa.oid_pais)
+                   )		
+ 	</select> 
+ 	 
+ 	<update id="updateIndCalendario" parameterClass="java.util.Map">
+	     update cra_feria cf
+          set
+          <isNotEmpty property="indNoLaborable"> 
+          		cf.ind_no_labo = #indNoLaborable#,
+          </isNotEmpty>	
+          <isNotEmpty property="indTransporte"> 
+              cf.ind_trap    = #indTransporte#,
+          </isNotEmpty>	
+              cf.usu_modi    = #usuario#,
+              cf.fec_modi    = sysdate
+        where cf.num_anio = #anhio#
+          and cf.fec_feri = TO_DATE(#fecha#,'dd/mm/yyyy') 
+          and exists
+        (select null
+                 from cra_activ ca, cra_cabec_grupo_zona gz, seg_pais sp
+                where cf.cgzo_oid_cabe_grup_zona = gz.oid_cabe_grup_zona
+                  and cf.cact_oid_acti = ca.oid_acti
+                  and gz.pais_oid_pais = ca.pais_oid_pais
+                  and ca.pais_oid_pais = sp.oid_pais
+                  and sp.cod_pais = #codigoPais#
+                  <isNotEmpty property="codigoActividad"> 
+                  AND CA.OID_ACTI = #codigoActividad#
+                   </isNotEmpty>	
+                  )    
+	</update>
+	
+	<select id="getFeriadoValidoAnhio" parameterClass="java.util.Map" resultClass="java.lang.Integer"> 
+	<![CDATA[      
+	 select count(*)
+       from (select (SELECT cp.fec_inic
+                       FROM CRA_PERIO CP
+                      WHERE CP.VAL_NOMB_PERI LIKE '%' || #anhio# || '01%') fec_ini,
+                    (SELECT cp.fec_fina
+                       FROM CRA_PERIO CP
+                      WHERE CP.VAL_NOMB_PERI LIKE '%' || #anhio# || '18%') fec_fin
+               from dual) b
+      where TO_DATE(#fecha#, 'dd/mm/yyyy') >= b.fec_ini
+        and TO_DATE(#fecha#, 'dd/mm/yyyy') <= b.fec_fin
+         ]]>  
+ 	</select>
+ 	
+ 	<parameterMap id="paramCopiarCalendarioPorActividad" class="java.util.Map">		    
+	    <parameter property="anhio"                 jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	    
+	    <parameter property="oidActiReferencia"    	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="oidActiRegenerar"    	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="usuario"    	        jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />			    	   
+	</parameterMap>	
+	
+    <procedure id="executeCopiarCalendarioPorActividad" parameterMap="paramCopiarCalendarioPorActividad">
+		{call cra_pkg_proce.CRA_PR_COPIA_CALEN_POR_ACTIV(?,?,?,?) }
+	</procedure>
+ 	
+	<select id="getFechaCronoFase2" parameterClass="java.util.Map" resultClass="java.lang.String">
+		SELECT CRA_PKG_PROCE.CRA_FN_GET_FECHA_CRONO_FASE2(#codigoPais#,#codigoPeriodo#,#codigoActiv#,#codigoZona#) FROM DUAL
+   	</select>
+ 	
+</sqlMap>  

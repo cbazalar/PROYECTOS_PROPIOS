@@ -1,0 +1,747 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.ProcesosMAVSQL">
+
+  <typeAlias alias="baseGenericoOID" type="biz.belcorp.ssicc.dao.sisicc.model.BaseOID"/>
+
+  <resultMap id="baseResultOID"       class="baseGenericoOID">
+    	<result property="oid" 		    column="OID" 	/>		
+    	<result property="descripcion" 	column="DESCRIPCION"/>
+  </resultMap>
+    
+  <resultMap id="gerentesRegionesResult" class="java.util.HashMap">														
+		<result property="oidRegion" 		column="OID_REGI" 	javaType="java.lang.String"/>								
+		<result property="codigoRegion" 	column="COD_REGI"/>									
+		<result property="region"			column="DES_REGI"/>								
+		<result property="oidGerente"		column="OID_CLIE_GERE" javaType="java.lang.String"/>	
+		<result property="oidCliente"		column="OID_CLIE" javaType="java.lang.String"/>	
+		<result property="codigoCliente"	column="COD_CLIE"/>
+		<result property="nombreCliente"	column="NOM_CLIE"/>
+		<result property="reemplazo"		column="DES_REEM"/>
+    </resultMap>														
+
+    <select id="getGerentesRegiones" parameterClass="java.util.Map" resultMap="gerentesRegionesResult">
+   	    SELECT OID_REGI,
+		       COD_REGI,
+		       DES_REGI,
+		       OID_CLIE_GERE,
+		       NVL(OID_CLIE_GERE, OID_CLIE_REEM) OID_CLIE,
+		       (CASE WHEN OID_CLIE_GERE IS NOT NULL THEN GEN_PKG_GENER.GEN_FN_DEVUELVE_COD_CLIE(OID_CLIE_GERE)
+		             WHEN OID_CLIE_REEM IS NOT NULL THEN GEN_PKG_GENER.GEN_FN_DEVUELVE_COD_CLIE(OID_CLIE_REEM)
+		             ELSE NULL
+		        END) COD_CLIE,
+		       (CASE WHEN OID_CLIE_GERE IS NOT NULL THEN 
+		       			GEN_PKG_GENER.GEN_FN_CLIEN_DATOS(GEN_PKG_GENER.GEN_FN_DEVUELVE_COD_CLIE(OID_CLIE_GERE), 'NOM_CLIE')
+		             WHEN OID_CLIE_REEM IS NOT NULL THEN 
+		             	GEN_PKG_GENER.GEN_FN_CLIEN_DATOS(GEN_PKG_GENER.GEN_FN_DEVUELVE_COD_CLIE(OID_CLIE_REEM), 'NOM_CLIE')
+		             ELSE NULL
+		        END) NOM_CLIE,
+		       (CASE WHEN OID_CLIE_GERE IS NULL AND OID_CLIE_REEM IS NOT NULL THEN 'Reemplazo'
+		             ELSE NULL
+		        END) DES_REEM
+		FROM       
+		      (SELECT OID_REGI, COD_REGI, DES_REGI, 
+		             CLIE_OID_CLIE OID_CLIE_GERE,
+		             MAV_PKG_PROCE.FN_MAV_OBTEN_GEREN_REGIO(OID_REGI, #codigoMarca#, #codigoCanal#, #codigoPeriodo#) OID_CLIE_REEM              
+		        FROM ZON_REGIO R, SEG_MARCA M, SEG_CANAL C
+		       WHERE R.IND_ACTI = 1
+		         AND R.IND_BORR = 0
+		         AND R.MARC_OID_MARC  = M.OID_MARC
+		         AND C.OID_CANA = R.CANA_OID_CANA
+		         AND M.COD_MARC  = #codigoMarca#
+		         AND C.COD_CANA = #codigoCanal#)       
+		ORDER BY COD_REGI         		         
+    </select>
+
+    <parameterMap id="paramExecuteAsignacionGerenteRegion" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="oidRegion" jdbcType="NUMBER" mode="IN"/>
+		<parameter property="codigoCliente" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeAsignacionGerenteRegion" parameterMap="paramExecuteAsignacionGerenteRegion" >
+		{call MAV_PKG_PROCE.MAV_PR_ASIGN_GEREN_REGIO( ?, ?, ?, ?, ?, ?, ? )}
+	</procedure>
+	
+    <resultMap id="gerentesZonasResult" class="java.util.HashMap">														
+		<result property="oidRegion" 		column="OID_REGI" 	javaType="java.lang.String"/>								
+		<result property="oidZona"  		column="OID_ZONA" 	javaType="java.lang.String"/>
+		<result property="codigoRegion" 	column="COD_REGI"/>									
+		<result property="codigoZona" 	    column="COD_ZONA"/>
+		<result property="zona"	    		column="DES_ZONA"/>								
+		<result property="oidGerente"		column="OID_CLIE_GERE" javaType="java.lang.String"/>	
+		<result property="oidCliente"		column="OID_CLIE" javaType="java.lang.String"/>	
+		<result property="codigoCliente"	column="COD_CLIE"/>
+		<result property="nombreCliente"	column="NOM_CLIE"/>
+		<result property="reemplazo"		column="DES_REEM"/>
+    </resultMap>														
+
+    <select id="getGerentesZonas" parameterClass="java.util.Map" resultMap="gerentesZonasResult">
+   	    SELECT OID_REGI,
+   	           OID_ZONA,
+		       COD_REGI,
+		       COD_ZONA,
+		       DES_ZONA,
+		       OID_CLIE_GERE,
+		       NVL(OID_CLIE_GERE, OID_CLIE_REEM) OID_CLIE,
+		       (CASE WHEN OID_CLIE_GERE IS NOT NULL THEN GEN_PKG_GENER.GEN_FN_DEVUELVE_COD_CLIE(OID_CLIE_GERE)
+		             WHEN OID_CLIE_REEM IS NOT NULL THEN GEN_PKG_GENER.GEN_FN_DEVUELVE_COD_CLIE(OID_CLIE_REEM)
+		             ELSE NULL
+		        END) COD_CLIE,
+		       (CASE WHEN OID_CLIE_GERE IS NOT NULL THEN 
+		       			GEN_PKG_GENER.GEN_FN_CLIEN_DATOS(GEN_PKG_GENER.GEN_FN_DEVUELVE_COD_CLIE(OID_CLIE_GERE), 'NOM_CLIE')
+		             WHEN OID_CLIE_REEM IS NOT NULL THEN 
+		             	GEN_PKG_GENER.GEN_FN_CLIEN_DATOS(GEN_PKG_GENER.GEN_FN_DEVUELVE_COD_CLIE(OID_CLIE_REEM), 'NOM_CLIE')
+		             ELSE NULL
+		        END) NOM_CLIE,
+		       (CASE WHEN OID_CLIE_GERE IS NULL AND OID_CLIE_REEM IS NOT NULL THEN 'Reemplazo'
+		             ELSE NULL
+		        END) DES_REEM
+		FROM       
+		      (SELECT R.OID_REGI, Z.OID_ZONA, 
+		      		  R.COD_REGI, Z.COD_ZONA, 
+		      		  Z.DES_ZONA,
+   	                  Z.CLIE_OID_CLIE OID_CLIE_GERE,
+ 		              MAV_PKG_PROCE.FN_MAV_OBTEN_GEREN_ZONA(Z.OID_ZONA, #codigoMarca#, #codigoCanal#, #codigoPeriodo#) OID_CLIE_REEM              
+		         FROM ZON_ZONA Z, ZON_REGIO R, SEG_MARCA M, SEG_CANAL C
+		        WHERE Z.IND_ACTI = 1
+		          AND Z.IND_BORR = 0
+		          AND Z.MARC_OID_MARC  = M.OID_MARC
+		          AND C.OID_CANA = Z.CANA_OID_CANA
+                  AND Z.ZORG_OID_REGI = R.OID_REGI
+		          AND M.COD_MARC  = #codigoMarca#
+		          AND C.COD_CANA = #codigoCanal#)       
+		ORDER BY COD_REGI, COD_ZONA       		         
+    </select>
+    	
+    <parameterMap id="paramExecuteAsignacionGerenteZona" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="oidRegion" jdbcType="NUMBER" mode="IN"/>
+		<parameter property="oidZona" jdbcType="NUMBER" mode="IN"/>
+		<parameter property="codigoCliente" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeAsignacionGerenteZona" parameterMap="paramExecuteAsignacionGerenteZona" >
+		{call MAV_PKG_PROCE.MAV_PR_ASIGN_GEREN_ZONA( ?, ?, ?, ?, ?, ?, ?, ? )}
+	</procedure>
+	    
+    <resultMap id="remisionesMaterialPromocionalResult" class="java.util.HashMap">														
+		<result property="codigoPeriodo"	column="COD_PERI"/>								
+		<result property="codigoCliente" 	column="COD_CLIE"/>
+		<result property="numeroSolicitud" 	column="VAL_NUME_SOLI" javaType="java.lang.String"/>									
+		<result property="tipoGuia" 	    column="TIP_GUIA"/>
+		<result property="cargo"	   		column="VAL_CARG"/>								
+		<result property="regionZona"		column="REG_ZONA"/>	
+		<result property="estado"       	column="IND_ESTA"/>
+    </resultMap>														
+
+    <select id="getRemisionesMaterialPromocional" parameterClass="java.util.Map" resultMap="remisionesMaterialPromocionalResult">
+   	    SELECT cor.COD_PERI,
+		       GEN_PKG_GENER.GEN_FN_DEVUELVE_COD_CLIE(psc.CLIE_OID_CLIE) COD_CLIE, 
+		  	   con.VAL_NUME_SOLI, 
+		       pq_apl_aux.VALOR_GEN_I18N_SICC(#oidIdioma#, tsp.TSOL_OID_TIPO_SOLI, 'PED_TIPO_SOLIC') TIP_GUIA,
+		       MAV_PKG_PROCE.FN_MAV_OBTEN_CARGO_GEREN(psc.Clie_Oid_Clie)  VAL_CARG,
+			     (SELECT reg.COD_REGI || ' - ' || zon.cod_zona  FROM zon_zona zon, zon_regio reg 
+		         WHERE zon.clie_oid_clie = psc.clie_oid_clie AND zon.IND_ACTI = 1 AND zon.IND_BORR = 0
+			         AND zon.ZORG_OID_REGI = reg.OID_REGI AND reg.IND_ACTI = 1 AND reg.IND_BORR= 0) REG_ZONA, 
+		       'No Impresa' IND_ESTA
+		  FROM PED_SOLIC_CABEC psc,
+			   PED_SOLIC_CABEC con,
+		       CRA_PERIO crp,
+		       SEG_PERIO_CORPO cor,
+			   (SELECT DISTINCT TIP.OID_TIPO_SOLI_PAIS, TIP.TSOL_OID_TIPO_SOLI 
+		          FROM MAV_ACTIV ACT, PED_TIPO_SOLIC_PAIS TIP 
+		         WHERE ACT.TSPA_OID_TIPO_SOLI_PAIS_DEST = TIP.OID_TIPO_SOLI_PAIS
+		           AND ACT.OID_ACTI = #oidActividad#
+		        ) tsp
+		  WHERE con.PERD_OID_PERI = psc.PERD_OID_PERI
+		    AND psc.SOCA_OID_SOLI_CABE = con.OID_SOLI_CABE
+		    
+	   	   	<![CDATA[		               
+			    AND con.ESSO_OID_ESTA_SOLI <> 4
+		    ]]>		   		               
+			     
+		    AND tsp.OID_TIPO_SOLI_PAIS = psc.TSPA_OID_TIPO_SOLI_PAIS
+		    AND psc.PERD_OID_PERI = crp.OID_PERI
+		    AND crp.PERI_OID_PERI = cor.OID_PERI
+		    
+		    <isNotEmpty prepend="AND" property="fechaFacturacion">		    
+		    	psc.FEC_FACT = TO_DATE(#fechaFacturacion#,'DD/MM/YYYY')
+ 		    </isNotEmpty>
+ 		    		    
+		    <isNotEmpty prepend="AND" property="oidCliente">
+ 		        psc.CLIE_OID_CLIE = #oidCliente#
+ 		    </isNotEmpty>
+		    
+		    <isNotEmpty prepend="AND" property="oidPeriodo">
+ 		        psc.PERD_OID_PERI = #oidPeriodo#
+ 		    </isNotEmpty>
+		    
+		  ORDER BY 1, 6, 2       		         
+    </select>
+    	 
+    <resultMap id="datosRemisionesMaterialPromocionalResult" class="java.util.HashMap">														
+		<result property="oidPeriodo"	column="OID_PERI" javaType="java.lang.String"/>								
+		<result property="oidCliente" 	column="OID_CLIE" javaType="java.lang.String"/>
+    </resultMap>														
+
+    <select id="getDatosRemisionesMaterialPromocional" parameterClass="java.util.Map" resultMap="datosRemisionesMaterialPromocionalResult">
+   	    SELECT (SELECT A.OID_PERI
+				  FROM CRA_PERIO A, SEG_MARCA B, SEG_CANAL C, SEG_PERIO_CORPO D
+				 WHERE A.MARC_OID_MARC = B.OID_MARC
+				   AND A.CANA_OID_CANA = C.OID_CANA
+				   AND A.PERI_OID_PERI = D.OID_PERI
+				   AND B.COD_MARC = #codigoMarca#
+				   AND C.COD_CANA = #codigoCanal#
+				   AND D.COD_PERI = #codigoPeriodo# ) OID_PERI,
+		      (select OID_CLIE
+		        from MAE_CLIEN
+		       WHERE COD_CLIE = #codigoCliente#) OID_CLIE
+		FROM dual         
+    </select>
+        
+    <resultMap id="abastecimientoMaterialResult" class="java.util.HashMap">														
+		<result property="codigoPeriodo"		column="COD_PERI"/>								
+		<result property="fechaFacturacion" 	column="FEC_FACT"/>
+		<result property="codigoSAP" 		column="COD_SAP"/>
+		<result property="oidProducto" 		column="OID_PROD" javaType="java.lang.String"/>									
+		<result property="producto" 	    column="DES_PROD"/>
+		<result property="solicitada"		column="NUM_UNID_DEMA_REAL" javaType="java.lang.String"/>								
+		<result property="entregada"		column="NUM_UNID_ATEN" javaType="java.lang.String"/>	
+		<result property="pendiente"       	column="NUM_UNID_PEND" javaType="java.lang.String"/>
+    </resultMap>														
+
+    <select id="getAbastecimientoMaterial" parameterClass="java.util.Map" resultMap="abastecimientoMaterialResult">
+		SELECT cor.COD_PERI,
+		       TO_CHAR(psc.FEC_FACT, 'dd/MM/yyyy') FEC_FACT,
+		       pro.COD_SAP,       
+		       psp.PROD_OID_PROD OID_PROD,
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(#oidIdioma#, psp.prod_oid_prod, 'MAE_PRODU') DES_PROD,
+		       sum(psp.NUM_UNID_DEMA_REAL) NUM_UNID_DEMA_REAL,
+		       sum(psp.NUM_UNID_ATEN) NUM_UNID_ATEN,
+		       sum(psp.NUM_UNID_DEMA_REAL - psp.NUM_UNID_ATEN) NUM_UNID_PEND
+		  FROM ped_solic_cabec psc, 
+		       ped_solic_cabec b, 
+		       ped_solic_posic psp,
+		       CRA_PERIO crp,
+		       SEG_PERIO_CORPO cor,
+		       MAE_PRODU pro,
+		       (SELECT TSPA_OID_TIPO_SOLI_PAIS_DEST FROM MAV_ACTIV WHERE OID_ACTI = #oidActividad#) tsp
+		 WHERE tsp.TSPA_OID_TIPO_SOLI_PAIS_DEST = psc.TSPA_OID_TIPO_SOLI_PAIS
+		 
+		 	<isNotEmpty prepend="AND" property="oidPeriodo">
+		   		psc.PERD_OID_PERI = #oidPeriodo#
+		   	</isNotEmpty>
+
+		 	<isNotEmpty prepend="AND" property="fechaFacturacion">
+		   		psc.fec_fact = TO_DATE(#fechaFacturacion#,'DD/MM/YYYY')
+		   	</isNotEmpty>
+		   		
+		   AND psc.OID_SOLI_CABE = psp.SOCA_OID_SOLI_CABE
+		   AND B.perd_oid_peri = psc.perd_oid_peri
+		   AND psc.soca_oid_soli_cabe = B.OID_SOLI_CABE
+		   
+	   	   	<![CDATA[		   
+			   AND B.ESSO_OID_ESTA_SOLI <> 4
+			   AND psp.ESPO_OID_ESTA_POSI <> 2
+		    ]]>
+		    		   
+		   AND psc.PERD_OID_PERI = crp.OID_PERI
+		   AND crp.PERI_OID_PERI = cor.OID_PERI
+		   AND psp.Prod_Oid_Prod = pro.Oid_Prod
+		 group by cor.COD_PERI, psc.fec_fact, pro.cod_sap, psp.prod_oid_prod
+     </select>
+        
+    <!-- OBTIENE LA LISTA DE ACTIVIDADES POR PAIS Y CANAL -->
+    <select id="getListaActividades" parameterClass="java.util.Map"  resultMap="baseResultOID">
+		SELECT  OID_ACTI AS OID,
+				gen_i18n_sicc_pais.val_i18n AS DESCRIPCION
+		FROM MAV_ACTIV,
+			 MAE_TIPO_CLIEN,
+			 gen_i18n_sicc_pais
+		WHERE gen_i18n_sicc_pais.val_oid = MAV_ACTIV.Oid_Acti
+		      AND MAE_TIPO_CLIEN.OID_TIPO_CLIE = MAV_ACTIV.TICL_OID_TIPO_CLIE
+			  AND attr_enti = 'MAV_ACTIV'		
+			  
+			<isNotEmpty prepend="AND" property="codigoPais">
+				  MAV_ACTIV.PAIS_OID_PAIS  = gen_pkg_gener.GEN_FN_DEVUELVE_ID_PAIS(#codigoPais#)
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="codigoCanal">
+				  MAV_ACTIV.CANA_OID_CANA = gen_pkg_gener.GEN_FN_DEVUELVE_ID_CANAL(#codigoCanal#)
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="codigoMarca">
+				  MAV_ACTIV.MARC_OID_MARC = gen_pkg_gener.GEN_FN_DEVUELVE_ID_MARCA(#codigoMarca#)
+			</isNotEmpty>
+			
+			<isNotEmpty prepend="AND" property="codigoTipoCliente">
+				  MAE_TIPO_CLIEN.COD_TIPO_CLIE  = #codigoTipoCliente#
+			</isNotEmpty>
+			
+ 	   ORDER BY 2
+    </select>
+        
+    <resultMap id="datosHistoricoMaterialPromocionalResult" class="java.util.HashMap">														
+		<result property="oidPeriodo"	column="OID_PERI" javaType="java.lang.String"/>								
+		<result property="oidCliente" 	column="OID_CLIE" javaType="java.lang.String"/>
+    </resultMap>
+            
+    <select id="getDatosHistoricoMaterialPromocional" parameterClass="java.util.Map" resultMap="datosHistoricoMaterialPromocionalResult">
+   	    SELECT (SELECT A.OID_PERI
+				  FROM CRA_PERIO A, SEG_MARCA B, SEG_CANAL C, SEG_PERIO_CORPO D
+				 WHERE A.MARC_OID_MARC = B.OID_MARC
+				   AND A.CANA_OID_CANA = C.OID_CANA
+				   AND A.PERI_OID_PERI = D.OID_PERI
+				   AND B.COD_MARC = #codigoMarca#
+				   AND C.COD_CANA = #codigoCanal#
+				   AND D.COD_PERI = #codigoPeriodo# ) OID_PERI,
+				DECODE(#codigoCliente#, '', MAV_PKG_PROCE.FN_MAV_OBTEN_GEREN_HISTO(#codigoMarca#, #codigoCanal#, #codigoPeriodo#, 
+										#codigoRegion#, #codigoZona#), (select OID_CLIE from MAE_CLIEN WHERE COD_CLIE = #codigoCliente#)) OID_CLIE
+		FROM dual         
+    </select>
+        
+    <resultMap id="historicoMaterialPromocionalResult" class="java.util.HashMap">														
+		<result property="codigoPeriodo"	column="COD_PERI"/>								
+		<result property="codigoCliente" 	column="COD_CLIE"/>
+		<result property="numeroSolicitud" 	column="VAL_NUME_SOLI" javaType="java.lang.String"/>									
+		<result property="fechaFacturacion" column="FEC_FACT"/>
+		<result property="codigoVenta"		column="VAL_CODI_VENT"/>								
+		<result property="codigoSAP"		column="COD_SAP"/>	
+		<result property="producto"       	column="DES_PROD"/>
+		<result property="solicitada"      	column="NUM_UNID_DEMA_REAL" javaType="java.lang.String"/>
+		<result property="entregada"       	column="NUM_UNID_ATEN" javaType="java.lang.String"/>
+		<result property="diferencia"      	column="NUM_DIFE" javaType="java.lang.String"/>
+		<result property="tipoOferta"      	column="DES_TIPO_OFER"/>
+    </resultMap>														
+
+    <select id="getHistoricoMaterialPromocional" parameterClass="java.util.Map" resultMap="historicoMaterialPromocionalResult">
+   	    SELECT cor.COD_PERI,
+			   GEN_PKG_GENER.GEN_FN_DEVUELVE_COD_CLIE(psc.CLIE_OID_CLIE) COD_CLIE,  
+			   b.VAL_NUME_SOLI, 
+		       TO_CHAR(psc.fec_fact,'dd/MM/yyyy') FEC_FACT, 
+		       psp.VAL_CODI_VENT,
+			   mp.COD_SAP, 
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(#oidIdioma#, psp.prod_oid_prod, 'MAE_PRODU') DES_PROD, 
+		       psp.NUM_UNID_DEMA_REAL NUM_UNID_DEMA_REAL,  
+		       psp.NUM_UNID_ATEN NUM_UNID_ATEN,
+			   (psp.NUM_UNID_DEMA_REAL - psp.NUM_UNID_ATEN) NUM_DIFE, 
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(#oidIdioma#, ofedet.TOFE_OID_TIPO_OFER, 'PRE_TIPO_OFERT') DES_TIPO_OFER 
+		  FROM ped_solic_cabec psc,
+		  	   ped_solic_cabec b,
+			   ped_solic_posic psp,
+		  	   pre_ofert_detal ofedet,
+		 	   pre_tipo_ofert pto,
+		  	   mae_produ MP,
+		       cra_perio cra,
+		       seg_perio_corpo cor,
+		       (select pro.tspa_oid_tipo_soli_pais from ped_tipo_solic_proce pro, bel_opera ope
+		       where pro.oper_oid_oper = ope.oid_oper and ope.cod_oper = 'MAV012') tsp
+		 WHERE psc.clie_oid_clie = #oidCliente#
+		   AND psc.OID_SOLI_CABE = psp.SOCA_OID_SOLI_CABE 
+		   AND psc.PERD_OID_PERI = #oidPeriodo#
+		   AND B.perd_oid_peri = psc.perd_oid_peri
+		   AND psc.soca_oid_soli_cabe = B.OID_SOLI_CABE
+		   
+	   	   	<![CDATA[		   
+	      	   AND B.ESSO_OID_ESTA_SOLI <> 4 
+			   AND psp.ESPO_OID_ESTA_POSI <> 2
+		    ]]>
+		    			      
+		   AND ofedet.OID_DETA_OFER = psp.OFDE_OID_DETA_OFER
+		   AND ofedet.PROD_OID_PROD = psp.prod_oid_prod 
+		   AND pto.oid_tipo_ofer = ofedet.TOFE_OID_TIPO_OFER
+		   AND psc.TSPA_OID_TIPO_SOLI_PAIS = tsp.tspa_oid_tipo_soli_pais
+		   AND psp.prod_oid_prod = mp.OID_PROD
+		   AND psc.perd_oid_peri = cra.oid_peri
+		   AND cra.peri_oid_peri = cor.oid_peri
+		 ORDER BY COD_SAP      		         
+    </select>
+         
+    <resultMap id="cabeceraArmadoGeneralResult" class="java.util.HashMap">
+    	<result property="oidPeriodo"		column="PERD_OID_PERI" javaType="java.lang.String"/>														
+		<result property="codigoPeriodo"	column="COD_PERI"/>								
+		<result property="fechaFacturacion"	column="FEC_FACT"/>
+		<result property="oidTipoOferta"   	column="TOFE_OID_TIPO_OFER" javaType="java.lang.String"/>
+		<result property="tipoOferta"   	column="DES_TIPO_OFER"/>
+		<result property="oidProducto"     	column="OID_PROD" javaType="java.lang.String"/>
+		<result property="codigoSAP"    	column="COD_SAP"/>
+		<result property="producto"     	column="DES_PROD"/>
+		<result property="entregada"	 	column="NUM_UNID_ATEN" javaType="java.lang.String"/>									
+    </resultMap>														
+
+    <select id="getCabeceraArmadoGeneral" parameterClass="java.util.Map" resultMap="cabeceraArmadoGeneralResult">
+   	    SELECT DISTINCT 
+   	           psc.PERD_OID_PERI,
+	           cor.COD_PERI,
+	           TO_CHAR(psc.fec_fact,'dd/MM/yyyy') FEC_FACT, 
+	           ofedet.TOFE_OID_TIPO_OFER,
+	           pq_apl_aux.Valor_Gen_I18n_Sicc(#oidIdioma#, ofedet.TOFE_OID_TIPO_OFER, 'PRE_TIPO_OFERT') DES_TIPO_OFER,
+	           pro.OID_PROD,
+	           pro.COD_SAP, 
+	           pq_apl_aux.Valor_Gen_I18n_Sicc(#oidIdioma#, psp.prod_oid_prod, 'MAE_PRODU') DES_PROD, 
+	           psp.NUM_UNID_ATEN
+		  FROM ped_solic_cabec psc,
+		       ped_solic_cabec b,
+			   ped_solic_posic psp,
+			   pre_ofert_detal ofedet,
+	           (SELECT TSPA_OID_TIPO_SOLI_PAIS_DEST FROM MAV_ACTIV WHERE MAV_ACTIV.OID_ACTI = #oidActividad#) tsp,
+	           cra_perio cra,
+	           seg_perio_corpo cor,
+	           mae_produ pro
+	     WHERE psc.OID_SOLI_CABE = psp.SOCA_OID_SOLI_CABE
+	     
+   		 	<isNotEmpty prepend="AND" property="oidPeriodo">
+		   		psc.PERD_OID_PERI = #oidPeriodo#
+		   	</isNotEmpty>
+
+		 	<isNotEmpty prepend="AND" property="fechaFacturacion">
+		   		psc.fec_fact = TO_DATE(#fechaFacturacion#,'DD/MM/YYYY')
+		   	</isNotEmpty>
+
+		   AND B.perd_oid_peri = psc.perd_oid_peri
+		   AND psc.soca_oid_soli_cabe = B.OID_SOLI_CABE
+			  
+	   	   	<![CDATA[				  
+			  AND B.ESSO_OID_ESTA_SOLI <> 4 
+			  AND psp.ESPO_OID_ESTA_POSI <> 2
+		    ]]>
+			     
+		   AND ofedet.OID_DETA_OFER = psp.OFDE_OID_DETA_OFER
+		   AND ofedet.PROD_OID_PROD = psp.prod_oid_prod 
+		   AND psc.tspa_oid_tipo_soli_pais = tsp.TSPA_OID_TIPO_SOLI_PAIS_DEST 
+	       AND psc.perd_oid_peri = cra.oid_peri
+	       AND cra.peri_oid_peri = cor.oid_peri
+	       AND psp.prod_oid_prod = pro.oid_prod
+		   AND psp.NUM_UNID_ATEN > 0
+	     ORDER BY 2,3,5,7,9      		         
+    </select>
+
+    <resultMap id="detalleArmadoGeneralResult" class="java.util.HashMap">
+		<result property="codigoPeriodo"	column="COD_PERI"/>
+		<result property="numeroSolicitud"	column="VAL_NUME_SOLI"/>								
+		<result property="fechaFacturacion"	column="FEC_FACT"/>
+		<result property="tipoOferta"   	column="DES_TIPO_OFER"/>
+		<result property="codigoSAP"    	column="COD_SAP"/>
+		<result property="producto"     	column="DES_PROD"/>
+		<result property="entregada"	 	column="NUM_UNID_ATEN" javaType="java.lang.String"/>
+		<result property="regionZona"     	column="REG_ZONA"/>
+		<result property="codigoCliente"   	column="COD_CLIE"/>									
+    </resultMap>														
+
+    <select id="getDetalleArmadoGeneral" parameterClass="java.util.Map" resultMap="detalleArmadoGeneralResult">
+		SELECT cor.COD_PERI,
+		       b.VAL_NUME_SOLI,
+		       TO_CHAR(psc.FEC_FACT,'dd/MM/yyyy') FEC_FACT, 
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(#oidIdioma#, ofedet.TOFE_OID_TIPO_OFER, 'PRE_TIPO_OFERT') DES_TIPO_OFER,
+		       pro.COD_SAP, 
+		       pq_apl_aux.Valor_Gen_I18n_Sicc(#oidIdioma#, psp.prod_oid_prod, 'MAE_PRODU') DES_PROD, 
+		       psp.NUM_UNID_ATEN,
+		       MAV_PKG_PROCE.FN_MAV_OBTEN_REGIO_ZONA(psc.CLIE_OID_CLIE) REG_ZONA,
+		       GEN_PKG_GENER.GEN_FN_DEVUELVE_COD_CLIE(psc.CLIE_OID_CLIE) COD_CLIE
+		  FROM ped_solic_cabec psc,
+		       ped_solic_cabec b,
+		       ped_solic_posic psp,
+		       pre_ofert_detal ofedet,
+		       (SELECT TSPA_OID_TIPO_SOLI_PAIS_DEST FROM MAV_ACTIV WHERE MAV_ACTIV.OID_ACTI = #oidActividad#) tsp,
+		       cra_perio cra,
+		       seg_perio_corpo cor,
+		       mae_produ pro
+		 WHERE psc.OID_SOLI_CABE = psp.SOCA_OID_SOLI_CABE 
+		   AND psc.PERD_OID_PERI = #oidPeriodo#
+		   AND psc.fec_fact = TO_DATE(#fechaFacturacion#,'DD/MM/YYYY')
+		   AND B.perd_oid_peri = psc.perd_oid_peri
+		   AND psc.soca_oid_soli_cabe = B.OID_SOLI_CABE
+		   
+	   	   	<![CDATA[				  
+			   AND B.ESSO_OID_ESTA_SOLI <> 4 
+			   AND psp.ESPO_OID_ESTA_POSI <> 2
+   		    ]]>
+   		    
+		   AND ofedet.OID_DETA_OFER = psp.OFDE_OID_DETA_OFER
+		   AND ofedet.PROD_OID_PROD = psp.prod_oid_prod 
+		   AND psc.tspa_oid_tipo_soli_pais = tsp.TSPA_OID_TIPO_SOLI_PAIS_DEST 
+		   AND psc.perd_oid_peri = cra.oid_peri
+		   AND cra.peri_oid_peri = cor.oid_peri
+		   AND psp.prod_oid_prod = pro.oid_prod
+		   AND ofedet.TOFE_OID_TIPO_OFER = #oidTipoOferta#
+		   AND psp.num_unid_aten = #unidadesAtendidas#
+		   AND pro.oid_prod = #oidProducto#
+		 ORDER BY 4, 5, 7, 8    
+   </select>
+         
+    <resultMap id="planillaEntregaMaterialResult" class="java.util.HashMap">
+    	<result property="oidSolicitud"	 	column="OID_SOLI_CABE" javaType="java.lang.String"/>
+		<result property="codigoRegion"		column="COD_REGI"/>
+		<result property="codigoPeriodo"	column="COD_PERI"/>								
+		<result property="fechaFacturacion"	column="FEC_FACT"/>
+		<result property="codigoZona"		column="COD_ZONA"/>
+		<result property="nombreCliente"   	column="NOM_CLIE"/>
+		<result property="direccionCliente" column="DIR_CLIE"/>
+		<result property="telefonoCliente" 	column="TEL_CLIE"/>
+		<result property="celularCliente"  	column="CEL_CLIE"/>
+		<result property="ciudadCliente"   	column="CIU_CLIE"/>
+		<result property="numeroCajas"	 	column="NUM_CAJAS" javaType="java.lang.String"/>
+    </resultMap>														
+
+    <select id="getPlanillaEntregaMaterial" parameterClass="java.util.Map" resultMap="planillaEntregaMaterialResult">
+		SELECT psc.OID_SOLI_CABE,
+		       MAV_PKG_PROCE.FN_MAV_OBTEN_DATOS_CLIEN(psc.clie_oid_clie, 'RegionGerenteZona') COD_REGI,
+		 	   s.COD_PERI,
+			   TO_CHAR(psc.fec_fact, 'dd/MM/yyyy') FEC_FACT, 
+		       MAV_PKG_PROCE.FN_MAV_OBTEN_DATOS_CLIEN(psc.clie_oid_clie, 'CodigoZonaGerenteZona') COD_ZONA,
+		       MAV_PKG_PROCE.FN_MAV_OBTEN_DATOS_CLIEN(psc.clie_oid_clie, 'NombreCompleto') NOM_CLIE,
+		       MAV_PKG_PROCE.FN_MAV_OBTEN_DATOS_CLIEN(psc.clie_oid_clie, 'Direccion') DIR_CLIE,
+		       MAV_PKG_PROCE.FN_MAV_OBTEN_DATOS_CLIEN(psc.clie_oid_clie, 'TelefonoFijo') TEL_CLIE,
+		       MAV_PKG_PROCE.FN_MAV_OBTEN_DATOS_CLIEN(psc.clie_oid_clie, 'Celular') CEL_CLIE,     
+			     ' ' CIU_CLIE, 
+		       (SELECT NUM_CAJAS FROM MAV_PEDID_CAJA WHERE SOCA_OID_SOLI_CABE = psc.OID_SOLI_CABE) NUM_CAJAS
+		  FROM ped_solic_cabec psc,
+		   	   ped_solic_cabec b,
+		       cra_perio c,
+		       seg_perio_corpo s,
+		       (SELECT TSPA_OID_TIPO_SOLI_PAIS_DEST FROM MAV_ACTIV WHERE MAV_ACTIV.OID_ACTI = #oidActividad#) tsp
+		 WHERE psc.tspa_oid_tipo_soli_pais = tsp.tspa_oid_tipo_soli_pais_dest
+		 
+			<isNotEmpty prepend="AND" property="oidPeriodo">
+		   		psc.PERD_OID_PERI = #oidPeriodo#
+		   	</isNotEmpty>
+
+		 	<isNotEmpty prepend="AND" property="fechaFacturacion">
+		   		psc.fec_fact = TO_DATE(#fechaFacturacion#,'DD/MM/YYYY')
+		   	</isNotEmpty>
+		   			 
+		   AND B.perd_oid_peri = psc.perd_oid_peri
+		   AND psc.soca_oid_soli_cabe = B.OID_SOLI_CABE
+		   
+	   	   	<![CDATA[		   
+		   		AND B.ESSO_OID_ESTA_SOLI <> 4
+   		    ]]>
+   		    		   		 
+		   AND psc.perd_oid_peri = c.oid_peri
+		   AND c.peri_oid_peri = s.oid_peri
+		 ORDER BY 5    
+   </select>
+         
+    <parameterMap id="paramExecuteAsignacionNumeroCajas" class="map">
+		<parameter property="oidSolicitud" jdbcType="NUMBER" mode="IN"/>
+		<parameter property="numeroCajas" jdbcType="NUMBER" mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeAsignacionNumeroCajas" parameterMap="paramExecuteAsignacionNumeroCajas" >
+		{call MAV_PKG_PROCE.MAV_PR_ASIGN_NUMER_CAJAS( ?, ?, ? )}
+	</procedure>
+	     
+	<delete id="deleteCargaMasiva" parameterClass="java.util.Map">
+  		TRUNCATE TABLE MAV_TMP_CARGA_MASIV
+  	</delete>
+  		     
+	<insert id="insertCargaMasiva" parameterClass="java.util.Map">
+		INSERT INTO MAV_TMP_CARGA_MASIV
+		    (NUM_FILA,
+			 COD_PAIS,
+			 CAM_DESP,
+			 COD_ACTI,
+			 COD_TIPO_OFER,
+			 COD_PROD,
+			 IND_ENVI_MENS,
+			 NUM_UNID,
+			 COD_CONS,
+			 COD_REGI,
+			 COD_ZONA,
+			 EST_VALI)
+		VALUES 
+			(#numeroFila#, 
+			 #codigoPais#, 
+			 #campanaDespacho#, 
+			 #actividad#,
+			 #tipoOferta#,
+			 #codigoProducto#,
+			 #indEnviaMensaje#,
+			 #cantidad#,
+			 #codigoConsultora#,
+			 #codigoRegion#,
+			 #codigoZona#,
+			 0)    
+    </insert>
+    	 
+    <resultMap id="resumenCargaMasivaResult" class="java.util.HashMap">														
+		<result property="codigoPais"		column="COD_PAIS"/>								
+		<result property="campanaDespacho"	column="CAM_DESP"/>
+		<result property="actividad"		column="COD_ACTI"/>
+		<result property="tipoOferta"		column="COD_TIPO_OFER"/>
+		<result property="codigoProducto"	column="COD_PROD"/>
+		<result property="indEnviaMensaje"	column="IND_ENVI_MENS"/>
+		<result property="totalRegistros" 	column="NUM_TOTA" javaType="java.lang.String"/>
+    </resultMap>														
+
+    <select id="getResumenCargaMasiva" parameterClass="java.util.Map" resultMap="resumenCargaMasivaResult">
+   	    SELECT COD_PAIS, 
+		       CAM_DESP, 
+		       COD_ACTI, 
+		       COD_TIPO_OFER, 
+		       COD_PROD, 
+		       IND_ENVI_MENS,
+		       COUNT(1) NUM_TOTA
+		  FROM MAV_TMP_CARGA_MASIV
+		 WHERE EST_VALI = 1
+		 GROUP BY COD_PAIS, CAM_DESP, COD_ACTI, COD_TIPO_OFER, COD_PROD, IND_ENVI_MENS         
+    </select>
+        	             
+	<resultMap id="erroresCargaMasivaResult" class="java.util.HashMap">														
+		<result property="numeroFila"				column="NUM_FILA" javaType="java.lang.String"/>								
+		<result property="codigoPais"				column="COD_PAIS"/>
+		<result property="campanaDespacho"			column="CAM_DESP"/>
+		<result property="codigoActividad"			column="COD_ACTI"/>
+		<result property="actividad"				column="DES_ACTI"/>
+		<result property="tipoCliente"				column="DES_TIPO_CLIE"/>
+		<result property="codigoTipoOferta"			column="COD_TIPO_OFER"/>
+		<result property="tipoOferta"				column="DES_TIPO_OFER"/>
+		<result property="codigoProducto"			column="COD_PROD"/>
+		<result property="indEnviaMensaje"			column="IND_ENVI_MENS"/>
+		<result property="cantidad"					column="NUM_UNID"/>
+		<result property="codigoConsultora"			column="COD_CONS"/>
+		<result property="codigoRegion"				column="COD_REGI"/>
+		<result property="codigoZona"				column="COD_ZONA"/>
+		<result property="mensajeError"				column="MEN_ERRO"/>
+    </resultMap>														
+
+    <select id="getErroresCargaMasiva" parameterClass="java.util.Map" resultMap="erroresCargaMasivaResult">
+   	    SELECT TMP.NUM_FILA,
+		       TMP.COD_PAIS,
+		       TMP.CAM_DESP,
+		       TMP.COD_ACTI,
+		       TMP.COD_ACTI || ' - ' || PQ_APL_AUX.Valor_Gen_I18n_Sicc(1, ACT.OID_ACTI, 'MAV_ACTIV') DES_ACTI,
+		       PQ_APL_AUX.Valor_Gen_I18n_Sicc(1, ACT.TICL_OID_TIPO_CLIE, 'MAE_TIPO_CLIEN') DES_TIPO_CLIE,
+		       TMP.COD_TIPO_OFER,
+		       PQ_APL_AUX.Valor_Gen_I18n_Sicc(1, TOF.OID_TIPO_OFER, 'PRE_TIPO_OFERT') DES_TIPO_OFER,       
+		       TMP.COD_PROD,
+		       TMP.IND_ENVI_MENS,
+		       TMP.NUM_UNID,
+		       TMP.COD_CONS,
+		       TMP.COD_REGI,
+		       TMP.COD_ZONA,
+		       TMP.MEN_ERRO
+		  FROM MAV_TMP_CARGA_MASIV TMP,
+		       MAV_ACTIV ACT,
+		       PRE_TIPO_OFERT TOF
+		 WHERE TMP.EST_VALI = 9
+		   AND TMP.COD_ACTI = ACT.OID_ACTI(+)
+		   AND TMP.COD_TIPO_OFER = TOF.COD_TIPO_OFER(+)
+		 ORDER BY NUM_FILA        
+    </select>        	             
+        
+	<parameterMap id="paramExecuteValidarCargaMasiva" class="map">
+		<parameter property="codigoPais" 	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeValidarCargaMasiva" parameterMap="paramExecuteValidarCargaMasiva" >
+		{call MAV_PKG_PROCE.MAV_PR_VALID_CARGA_MASIV( ?, ? )}
+	</procedure>
+	
+	<parameterMap id="paramExecuteActualizarCargaMasiva" class="map">
+		<parameter property="codigoPais" 	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeActualizarCargaMasiva" parameterMap="paramExecuteActualizarCargaMasiva" >
+		{call MAV_PKG_PROCE.MAV_PR_ACTUA_CARGA_MASIV( ?, ? )}
+	</procedure>
+	     
+	<parameterMap id="paramExecuteGenerarEnvios" class="map">
+		<parameter property="codigoPais" 	  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoActividad" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoTipoMav" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario"   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeGenerarEnvios" parameterMap="paramExecuteGenerarEnvios" >
+		{call MAV_PKG_PROCE.MAV_PR_GENER_ENVIO( ?, ?, ?, ?, ? )}
+	</procedure>     
+	
+	<parameterMap id="paramExecuteFacturacionGerentes" class="map">
+		<parameter property="codigoPais" 	  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoActividad" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario"   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeFacturacionGerentes" parameterMap="paramExecuteFacturacionGerentes" >
+		{call MAV_PKG_PROCE.MAV_PR_FACTU_GEREN( ?, ?, ?, ? )}
+	</procedure>
+	     
+	<select id="getExisteMAVEnvios" parameterClass="java.util.Map" resultClass="java.lang.Integer">
+		SELECT COUNT(1)
+	      FROM MAV_PARAM_CONFI M
+	     WHERE M.PAIS_COD_PAIS = #codigoPais#
+	       AND M.CAM_PARA_MAV = #codigoPeriodo#
+	       AND M.COD_ESTA_MAV = 2
+	       
+	       <isNotEmpty property="codigoActividad"> 
+	       	 AND M.COD_ACTI = #codigoActividad#
+	       </isNotEmpty>
+	       
+<isNotEmpty property="codigoTipoMav"> 
+	       	 AND M.TICL_OID_TIPO_CLIE = #codigoTipoMav#
+	       </isNotEmpty>
+	       
+	       AND M.EST_REGI = '1'
+	       AND M.IND_ACTI = '1'
+	</select>
+		        	                   
+	<select id="getExisteMatrizFacturacion" parameterClass="java.util.Map" resultClass="java.lang.Integer">
+	SELECT COUNT(1)
+      FROM seg_perio_corpo a,
+           cra_perio       b,
+           seg_canal       c,
+           seg_marca       d,
+           PRE_MATRI_FACTU_CABEC x 
+     WHERE a.cod_peri = #codigoPeriodo#
+       AND a.oid_peri = b.peri_oid_peri
+       AND b.cana_oid_cana = c.oid_cana
+       AND b.marc_oid_marc = d.oid_marc
+       AND c.cod_cana = 'VD'
+       AND d.cod_marc = 'T'
+       AND b.oid_peri = x.PERD_OID_PERI
+	</select>	        	                   
+	
+	<parameterMap id="paramExecuteReporteAtencionFechaCampanha" class="map">
+		<parameter property="codigoTipoReporte"  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoRadio"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoTipoMav"      jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="flagRangoFechas"    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="oidPais"            jdbcType="NUMBER" mode="IN"/>
+		<parameter property="codigoPeriodo"      jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoTipoOferta"   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoActividad"    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoProducto"     jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="fechaInicio"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="fechaFin"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoTipoCargo"    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoIndicadorEnvio"    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeReporteAtencionFechaCampanha" parameterMap="paramExecuteReporteAtencionFechaCampanha" >
+		{call MAV_PKG_PROCE.MAV_PR_REPOR_ATENC_CAMPA( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )}
+	</procedure>
+	                 
+	<parameterMap id="paramExecuteActualizarGerentesDirectorio" class="map">
+		<parameter property="codigoUsuario"   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+	<procedure id="executeActualizarGerentesDirectorio" parameterMap="paramExecuteActualizarGerentesDirectorio" >
+		{call MAV_PKG_PROCE.MAV_PR_ACTUA_ENVIO_MASIV( ? )}
+	</procedure>
+	                 
+</sqlMap>

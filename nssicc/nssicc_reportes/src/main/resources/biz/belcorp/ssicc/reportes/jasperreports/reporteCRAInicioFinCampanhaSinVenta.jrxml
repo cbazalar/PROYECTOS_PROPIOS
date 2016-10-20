@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteCRAInicioFinCampanhaSinVenta"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Landscape"
+		 pageWidth="765"
+		 pageHeight="595"
+		 columnWidth="765"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="oidIdioma" isForPrompting="true" class="java.lang.Long">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("oidIdioma")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="oidPais" isForPrompting="true" class="java.lang.Long">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("oidPais")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="oidMarca" isForPrompting="true" class="java.lang.Long">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("oidMarca")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="oidCanal" isForPrompting="true" class="java.lang.Long">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("oidCanal")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="anio" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("anio")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="oidPeriodo" isForPrompting="true" class="java.lang.Long">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("oidPeriodo")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicionFechaInicio" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicionFechaInicio")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicionFechaFinal" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicionFechaFinal")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[SELECT   fec_perio_f.val_nomb_peri,
+         cro1.fec_inic fec_inic_fact,
+         cro2.fec_inic fec_fina_fact,
+         fec_perio_f.fec_inic fec_inic_camp,
+         fec_perio_f.fec_fina fec_fina_camp,
+         gen_pais.val_i18n pais
+    FROM (SELECT per.peri_oid_peri AS periodocorporativo,
+                 per.oid_peri AS periodo_fact, per.val_nomb_peri,
+                 per.pais_oid_pais,
+                 (SELECT crono.oid_cron
+                    FROM (SELECT   *
+                              FROM cra_crono, cra_activ act
+                             WHERE cra_crono.cact_oid_acti = act.oid_acti
+                               AND act.cod_acti = 'FA'
+			          $P!{condicionFechaInicio}
+				  $P!{condicionFechaFinal}
+                          ORDER BY cra_crono.fec_inic ASC) crono
+                   WHERE crono.perd_oid_peri = per.oid_peri AND ROWNUM = 1)
+                                                           AS oid_crono_min_f,
+                 (SELECT crono.oid_cron
+                    FROM (SELECT   *
+                              FROM cra_crono, cra_activ act
+                             WHERE cra_crono.cact_oid_acti = act.oid_acti
+                               AND act.cod_acti = 'FA'
+			          $P!{condicionFechaInicio}
+				  $P!{condicionFechaFinal}
+                          ORDER BY cra_crono.fec_inic DESC) crono
+                   WHERE crono.perd_oid_peri = per.oid_peri AND ROWNUM = 1)
+                                                           AS oid_crono_max_f,
+                 per.fec_inic, per.fec_fina
+            FROM cra_perio per, seg_perio_corpo cor
+           WHERE per.peri_oid_peri = cor.oid_peri
+             AND per.pais_oid_pais IN ($P{oidPais})
+             AND per.marc_oid_marc = $P{oidMarca}
+             AND per.cana_oid_cana = $P{oidCanal}
+             AND per.acce_oid_acce =
+                             (SELECT oid_acce
+                                FROM seg_acces
+                               WHERE cod_acce = 'GZ' AND cana_oid_cana = $P{oidCanal})
+             AND cor.val_anio = $P{anio}
+             AND per.oid_peri = $P{oidPeriodo}) fec_perio_f,
+         (SELECT per.peri_oid_peri AS periodocorporativo_v,
+                 per.oid_peri AS periodo_venta,
+                 (SELECT crono.oid_cron
+                    FROM (SELECT   *
+                              FROM cra_crono, cra_activ act
+                             WHERE cra_crono.cact_oid_acti = act.oid_acti
+                               AND act.cod_acti = 'CV'
+                          ORDER BY cra_crono.fec_inic ASC) crono
+                   WHERE crono.perd_oid_peri = per.oid_peri AND ROWNUM = 1)
+                                                              oid_crono_min_v,
+                 (SELECT crono.oid_cron
+                    FROM (SELECT   *
+                              FROM cra_crono, cra_activ act
+                             WHERE cra_crono.cact_oid_acti = act.oid_acti
+                               AND act.cod_acti = 'CV'
+                          ORDER BY cra_crono.fec_inic DESC) crono
+                   WHERE crono.perd_oid_peri = (per.oid_peri + 1)
+                     AND ROWNUM = 1) oid_crono_max_v
+            FROM cra_perio per) fec_perio_v,
+         cra_crono cro1,
+         cra_crono cro2,
+         (SELECT gen.val_oid, gen.val_i18n
+            FROM v_gen_i18n_sicc gen
+           WHERE gen.attr_enti = 'SEG_PAIS' AND gen.idio_oid_idio = $P{oidIdioma}) gen_pais
+   WHERE fec_perio_f.periodo_fact = fec_perio_v.periodo_venta
+     AND fec_perio_f.oid_crono_min_f = cro1.oid_cron(+)
+     AND fec_perio_f.oid_crono_max_f = cro2.oid_cron(+)
+     AND fec_perio_f.pais_oid_pais = gen_pais.val_oid(+)
+GROUP BY fec_perio_f.val_nomb_peri,
+         cro1.fec_inic,
+         cro2.fec_inic,
+         fec_perio_f.fec_inic,
+         fec_perio_f.fec_fina,
+         gen_pais.val_i18n
+ORDER BY fec_perio_f.val_nomb_peri,
+         cro1.fec_inic,
+         cro2.fec_inic,
+         fec_perio_f.fec_inic,
+         fec_perio_f.fec_fina]]></queryString>
+
+	<field name="val_nomb_peri" class="java.lang.String"/>
+	<field name="pais" class="java.lang.String"/>
+	<field name="fec_inic_fact" class="java.util.Date"/>
+	<field name="fec_inic_camp" class="java.util.Date"/>
+	<field name="fec_fina_camp" class="java.util.Date"/>
+	<field name="fec_fina_fact" class="java.util.Date"/>
+
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="36"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="143"
+						y="1"
+						width="165"
+						height="19"
+						key="textField-1"
+						stretchType="RelativeToBandHeight"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="10" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCRAInicioFinCampanhaForm.facturacion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="21"
+						width="81"
+						height="15"
+						backcolor="#CCCCCC"
+						key="textField-2"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true" isPdfEmbedded ="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCRAInicioFinCampanhaForm.periodo}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="81"
+						y="21"
+						width="118"
+						height="15"
+						backcolor="#CCCCCC"
+						key="textField-3"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true" isPdfEmbedded ="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCRAInicioFinCampanhaForm.inicioFactu}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="199"
+						y="21"
+						width="150"
+						height="15"
+						backcolor="#CCCCCC"
+						key="textField-4"/>
+					<box>					<topPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="0.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.25" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true" isPdfEmbedded ="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteCRAInicioFinCampanhaForm.finFactu}]]></textFieldExpression>
+				</textField>
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="15"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="86"
+						height="15"
+						key="textField"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Double" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineStyle="Double" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{val_nomb_peri}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="EEE, MMM d" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="86"
+						y="0"
+						width="118"
+						height="15"
+						key="textField"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineStyle="Double" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineStyle="Double" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.util.Date"><![CDATA[$F{fec_inic_fact}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="EEE, MMM d" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="204"
+						y="0"
+						width="145"
+						height="15"
+						key="textField-7"/>
+					<box>					<pen lineWidth="0.0" lineColor="#999999"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="0.0" lineStyle="Double" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Double" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.util.Date"><![CDATA[$F{fec_fina_fact}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

@@ -1,0 +1,3173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.lec.MantenimientoLECSQL">
+    
+    <typeAlias alias="prgrCorporativo" 	     	    type="biz.belcorp.ssicc.dao.spusicc.lec.model.ProgramaCorporativo"/>
+    <typeAlias alias="baseGenerico"                 type="biz.belcorp.ssicc.dao.sisicc.model.Base"/>
+    <typeAlias alias="nivelLEC" 			        type="biz.belcorp.ssicc.dao.spusicc.lec.model.Nivel"/>
+    <typeAlias alias="objetivoCobranzaLEC" 			type="biz.belcorp.ssicc.dao.spusicc.lec.model.ObjetivoCobranza"/>
+    <typeAlias alias="tramObjetivoCobranzaLEC" 		type="biz.belcorp.ssicc.dao.spusicc.lec.model.TramoObjetivoCobranza"/>
+    <typeAlias alias="ambitoGeograficoLEC" 			type="biz.belcorp.ssicc.dao.spusicc.lec.model.AmbitoGeografico"/>
+    <typeAlias alias="cobranzaTramoLEC" 			type="biz.belcorp.ssicc.dao.spusicc.lec.model.CobranzaTramo"/>
+    <typeAlias alias="bonoCampanaLEC" 			    type="biz.belcorp.ssicc.dao.spusicc.lec.model.BonoCampana"/>
+    <typeAlias alias="bonoLanzamientoLEC" 			type="biz.belcorp.ssicc.dao.spusicc.lec.model.BonoLanzamiento"/>
+    <typeAlias alias="bonoLanzamientoProductoLEC" 	type="biz.belcorp.ssicc.dao.spusicc.lec.model.BonoLanzamientoProducto"/>
+    <typeAlias alias="bonoNivelLEC" 			    type="biz.belcorp.ssicc.dao.spusicc.lec.model.BonoNivel"/>
+    <typeAlias alias="programaCanastaPremiLEC" 		type="biz.belcorp.ssicc.dao.spusicc.lec.model.ProgramaCanastaPremi"/>
+    <typeAlias alias="programaDesempenioLEC" 		type="biz.belcorp.ssicc.dao.spusicc.lec.model.ProgramaDesempenio"/>
+    <typeAlias alias="programaEtapaCampanaLEC" 		type="biz.belcorp.ssicc.dao.spusicc.lec.model.ProgramaEtapaCampana"/>
+    <typeAlias alias="canastaLEC" 				    type="biz.belcorp.ssicc.dao.spusicc.lec.model.Canasta"/>
+    <typeAlias alias="canastaDetalleLEC" 			type="biz.belcorp.ssicc.dao.spusicc.lec.model.CanastaDetalle"/>
+  	<typeAlias alias="campanaExigenciaLEC" 			type="biz.belcorp.ssicc.dao.spusicc.lec.model.CampanaExigencia"/>
+    <typeAlias alias="nivelTramoLEC" 			    type="biz.belcorp.ssicc.dao.spusicc.lec.model.NivelTramo"/>
+    <typeAlias alias="rankingLEC" 			    	type="biz.belcorp.ssicc.dao.spusicc.lec.model.Ranking"/>
+    <typeAlias alias="rankingNivelLEC" 			    type="biz.belcorp.ssicc.dao.spusicc.lec.model.RankingNivel"/>
+  
+   	<resultMap id="baseResult"      class="baseGenerico">
+    	<result property="codigo" 		column="CODIGO" 	/>
+    	<result property="descripcion" 	column="DESCRIPCION"/>
+    </resultMap> 
+    
+    <select id="getTipoTramo" parameterClass="java.util.Map" resultMap="baseResult">
+		select COD_TIPO_TRAM as codigo,
+		       DES_TIPO_TRAM as descripcion 
+		from SSICC_COMUN.lec_tipo_tramo
+		where ind_acti = '1'
+		<![CDATA[
+		  and EST_REGI <> '9'
+		 ]]>
+	</select>
+    
+    
+     <select id="getTipoCarga" parameterClass="java.util.Map" resultMap="baseResult">
+		select cod_tipo_carg as codigo,des_carg as descripcion from lec_tipo_carga where ind_acti=1
+		<isNotNull property="indGrup" >
+		 and ind_grup=#indGrup#
+		</isNotNull>
+		order by cod_tipo_carg
+	</select>
+	
+	<select id="getTipoBonoLanzamiento" parameterClass="java.util.Map" resultMap="baseResult">
+		select COD_TIPO_BONO as codigo,
+		       DES_TIPO_BONO as descripcion 
+		from LEC_TIPO_BONO
+		where ind_acti=1
+		<isNotNull property="codigoTipoMedicion" >
+		 and LTME_COD_TIPO_MEDI = #codigoTipoMedicion#
+		</isNotNull>
+	</select>
+	
+	<select id="getCampanhaInicialPrograma" parameterClass="java.util.Map" resultClass="string">
+		<![CDATA[ SELECT CAM_INIC  FROM LEC_PROGR
+         where pais_cod_pais=#codigoPais# and cam_inic <=#campana# and nvl(cam_fin,#campana#)>=#campana#
+	     ]]>
+	</select>
+	
+	<select id="getPrograma" parameterClass="java.util.Map" resultMap="baseResult">
+		<![CDATA[ SELECT cod_prog as codigo,nom_prog as descripcion  FROM LEC_PROGR
+         where pais_cod_pais=#codigoPais# and cam_inic <=#campana# and nvl(cam_fin,#campana#)>=#campana#
+	     ]]>
+	</select>
+	
+	<select id="getNumeroRegistrosResultadosLet" parameterClass="java.util.Map" resultClass="java.lang.Integer">
+		select count(*) from LEC_LIDER_SECCI_RESUL where lpro_cod_prog = #codigoPrograma#
+	</select>
+	
+	
+	<select id="getNumeroCarga" resultClass="string">
+		SELECT CAST(LEC_SEQ_NUMEROCARGA.NEXTVAL AS VARCHAR2(10)) as incremento from dual
+    </select>    
+    
+    <insert id="insertCargaDatos" parameterClass="java.util.Map" >
+           insert into Lec_Progr_Carga_Dato_Masiv(
+            PAIS_COD_PAIS,
+            LPRO_COD_PROG,
+            cod_tipo_carg,
+            Num_Carg,
+            Num_Secu,
+            Val_Dato_1,Val_Dato_2,val_dato_3,val_dato_4,Val_Dato_5,val_dato_6
+           ,val_dato_7,val_dato_8,Val_Dato_9,val_dato_10,Ind_Regi_Proc,ind_regi_erra,Val_Erro,Fec_Crea,Usu_Crea)
+           values(
+            #codigoPais#,
+            #codigoPrograma#,
+            #tipoCarga#,
+            #numeroCarga#,
+            #numeroFila#,
+            #ValorDato1#,#ValorDato2#,#ValorDato3#,#ValorDato4#,#ValorDato5#,#ValorDato6#,#ValorDato7#,#ValorDato8#,#ValorDato9#,#ValorDato10#,'0','0','0',sysdate,#codigoUsuario#)    
+    </insert>
+    
+    <resultMap id="getCargaDatosListResult"  class="java.util.HashMap">
+		<result property="numeroFila"	      column="NUM_FILA"/>
+		<result property="codigoCliente"	  column="CLIE_COD_CLIE"/>
+		<result property="codigoMotivo"       column="COD_MOTI_RECH"/>
+		<result property="descripcionMotivo"  column="DES_RECH"/>
+    </resultMap>
+	
+    <select id="getCargaDatosList" parameterClass="java.util.Map" resultMap="getCargaDatosListResult">
+		 SELECT car.Num_Secu NUM_FILA, car.VAL_DATO_1 CLIE_COD_CLIE, car.Val_Erro COD_MOTI_RECH,'  '  DES_RECH
+		 FROM Lec_Progr_Carga_Dato_Masiv car
+		 WHERE car.NUM_CARG = #numeroCarga# and car.ind_regi_erra='1'
+		 ORDER BY car.Num_Secu        
+	</select>
+	
+    <resultMap id="getListaIntermediaResult"  class="java.util.HashMap">
+		<result property="codigoPais"	      column="PAIS_COD_PAIS"/>
+		<result property="codigoPrograma"	  column="LPRO_COD_PROG"/>
+		<result property="tipoCarga"          column="COD_TIPO_CARG"/>
+		<result property="numeroCarga"        column="NUM_CARG"/>
+		<result property="numeroSecuencia"    column="NUM_SECU"/>
+		<result property="datoUno"    		  column="VAL_DATO_1"/>
+		<result property="datoDos"    		  column="VAL_DATO_2"/>
+		<result property="datoTres"    		  column="VAL_DATO_3"/>
+		<result property="datoCuatro"    		  column="VAL_DATO_4"/>
+		<result property="datoCinco"    		  column="VAL_DATO_5"/>
+		<result property="datoSeis"    		  column="VAL_DATO_6"/>
+		<result property="datoSiete"    		  column="VAL_DATO_7"/>
+		<result property="datoOcho"    		  column="VAL_DATO_8"/>
+		<result property="datoNueve"    		  column="VAL_DATO_9"/>
+		<result property="datoDiez"    		  column="VAL_DATO_10"/>		
+    </resultMap>
+	
+    <select id="getListaIntermedia" parameterClass="java.util.Map" resultMap="getListaIntermediaResult">
+		 select PAIS_COD_PAIS,LPRO_COD_PROG,COD_TIPO_CARG,NUM_CARG,NUM_SECU,VAL_DATO_1,VAL_DATO_2,VAL_DATO_3,VAL_DATO_4,VAL_DATO_5,VAL_DATO_6
+  		  ,VAL_DATO_7,VAL_DATO_8,VAL_DATO_9,VAL_DATO_10 from Lec_Progr_Carga_Dato_Masiv
+		 WHERE NUM_CARG = #numeroCarga# 
+	</select>
+    
+    <select id="getNextCodigoProgramaCorporativo" resultClass="string">
+		   SELECT TRIM (TO_CHAR (NVL (MAX (TO_NUMBER(COD_PROG)), 0) + 1, '000')) COD_PROG
+  		  FROM lec_progr
+	</select>
+	
+<insert id="insertProgramaCorporativo" parameterClass="prgrCorporativo">
+		insert into lec_progr 
+		(PAIS_COD_PAIS   ,
+ 		 COD_PROG           ,
+		 CAM_INIC           ,
+  		 NOM_PROG           ,
+  		 CAM_FIN            ,
+  		 IND_PROG_RECO      ,
+  		 NUM_ACTI_SECC_APTA ,
+  		 IND_POSI_LIDE      ,
+         NUM_CAMP_PROY_PEDI ,
+         VAL_PORC_DESV_CAPI ,
+         VAL_PORC_DESV_ACTI ,
+         VAL_OBJE_PORC_ACTI ,
+         VAL_OBJE_CAPI      ,
+         NUM_NIVE_CAPI      ,
+         IND_ACTI_OBJE_COBR ,
+         IND_TIPO_ORIG_PEDI ,
+         NUM_CAMP_MANT_NIVE ,
+         NUM_CAMP_TOLE_NIVE ,
+         NUM_CAMP_MEDI_DESE ,
+         NUM_BAJA_AUTO      ,
+         NUM_CAMP_EVAL      ,
+         IND_INSC_PORT		,
+         IND_INSC_COME		,
+         IND_EXIG_CURS      ,
+         IND_EXIG_PEDI_LIDE ,
+         LTCO_COD_TIPO_COMI ,
+         NUM_CAMP_GRAC      ,
+         USU_CREA           ,
+         FEC_CREA           ,
+         IND_ACTI			,
+         IND_FERI			,
+         IND_CANA			,
+         IND_DESE_NUEV		,
+         IND_GANA_PEDI		,
+         IND_DESE_META_INGR	,
+         IND_DESE_INGR_CAPI ,
+         IND_NUEV_EXIT) 
+		 values (#codigoPais#, 
+		 #codigoPrograma#, 
+		 #periodoInicio#, 
+		 #descripcionPrograma#,
+		 #periodoFin#, 
+		 #programaRecono#, 
+		 TO_NUMBER(#nroMinActSec#), 
+		 #insPosiLider#,
+		 null,
+		 null, 
+		 null, 
+		 null, 
+     	 null,
+    	 null,
+		 #actCobranza#, 
+		 #pedidoWeb#,
+		 TO_NUMBER(#nivNroCampMante#), 
+		 TO_NUMBER(#nivNroCampTole#), 
+		 #numCampMediDese#, 
+		 #numBajaAuto#, 
+		 #numCampEval#, 
+		 #insPortalFFVV#,
+		 #insSistCome#,
+		 #exigCursoCamb#,
+		 #exigPedPersona#,
+		 #codTipoComi#,
+		 TO_NUMBER(#codCamPerGrac#),
+		 #auditInfo.updatedBy#, 
+		 SYSDATE,
+		 '1',
+		 #indicadorFeriado#,
+		 #indicadorDespachoCanasta#,
+		 #indicadorConsiderarNuevas#,
+		 #indicadorGanaciaDePedido#,
+		 #indicadorConsiderarMetasIngresos#,
+		 #indicadorconsiderarCapitalizacion#,
+		 #indicadorExitoNuevas#)
+ 	</insert>
+ 	
+ 	<resultMap id="getProgramaCorporativoListResult"  class="java.util.HashMap">
+	    <result property="codigoPais" 				  column="PAIS_COD_PAIS" />
+        <result property="codigoPrograma" 			  column="COD_PROG" />
+    	<result property="periodoInicio" 			  column="CAM_INIC" />
+    	<result property="descripcionPrograma" 	      column="NOM_PROG" />
+    	<result property="periodoFin" 				  column="CAM_FIN" />    	
+    	<result property="indProgReco" 				  column="IND_PROG_RECO" />
+    	<result property="nroMinActSec" 			  column="NUM_ACTI_SECC_APTA" />
+    	<result property="insPosiLider" 			  column="IND_POSI_LIDE" />
+    	<result property="numCampProyPedi" 			  column="NUM_CAMP_PROY_PEDI" />
+    	<result property="valPorcDesvCapi" 		      column="VAL_PORC_DESV_CAPI" />
+    	<result property="valPorcDevActi" 			  column="VAL_PORC_DESV_ACTI" />
+    	<result property="valObjePorcActi" 			  column="VAL_OBJE_PORC_ACTI" />
+    	<result property="valObjeCapi" 				  column="VAL_OBJE_CAPI" />
+    	<result property="numNiveCapi" 				  column="NUM_NIVE_CAPI" />
+    	<result property="actCobranza" 		      column="IND_ACTI_OBJE_COBR" />
+    	<!-- Pedido WEB -->
+    	<result property="pedidoWeb" 			  column="IND_TIPO_ORIG_PEDI" />
+    	<result property="numCampGrac" 				  column="NUM_CAMP_GRAC" />
+    	<result property="nivNroCampMante" 		  column="NUM_CAMP_MANT_NIVE" />
+    	<result property="nivNroCampTole"	          column="NUM_CAMP_TOLE_NIVE" />
+    	<result property="numCampMediDese"	          column="NUM_CAMP_MEDI_DESE" />
+    	<result property="numBajaAuto"	              column="NUM_BAJA_AUTO" />
+    	<result property="numCampEval"	              column="NUM_CAMP_EVAL" />
+    	<result property="insPortalFFVV"	          column="IND_INSC_PORT" />
+    	<result property="insSistCome"	              column="IND_INSC_COME" />
+    	<result property="exigCursoCamb"	          column="IND_EXIG_CURS" />
+    	<result property="exigPedPersona"	          column="IND_EXIG_PEDI_LIDE" />
+    	<result property="codTipoComi"	              column="LTCO_COD_TIPO_COMI" />
+    	<result property="codCamPerGrac"	          column="NUM_CAMP_GRAC" />
+     	<result property="estado"	 		   		  column="IND_ACTI" />
+     	<result property="indicadorFeriado"	 		  column="IND_FERI" />
+     	<result property="indicadorConsiderarNuevas"  column="IND_DESE_NUEV" />
+    	<!-- RCR PER-SICC-2015-0429 -->
+     	<result property="indicadorConsiderarMetasIngresos"  column="IND_DESE_META_INGR" />
+     	<!-- PER-SiCC-2015-0548 -->
+     	<result property="indicadorconsiderarCapitalizacion"  column="IND_DESE_INGR_CAPI" />
+     	<result property="indicadorExitoNuevas"  			  column="IND_NUEV_EXIT" />
+    </resultMap>
+    
+	<select id="getProgramaCorporativoList" parameterClass="java.util.Map" resultMap="getProgramaCorporativoListResult" >
+		SELECT PAIS_COD_PAIS   ,
+ 		 COD_PROG           ,
+		 CAM_INIC           ,
+  		 NOM_PROG           ,
+  		 CAM_FIN            ,
+  		 IND_PROG_RECO      ,
+  		 NUM_ACTI_SECC_APTA ,
+  		 IND_POSI_LIDE      ,
+         NUM_CAMP_PROY_PEDI ,
+         VAL_PORC_DESV_CAPI ,
+         VAL_PORC_DESV_ACTI ,
+         VAL_OBJE_PORC_ACTI ,
+         VAL_OBJE_CAPI      ,
+         NUM_NIVE_CAPI      ,
+         IND_ACTI_OBJE_COBR ,
+         IND_TIPO_ORIG_PEDI ,
+         NUM_CAMP_GRAC      ,
+         NUM_CAMP_MANT_NIVE ,
+         NUM_CAMP_TOLE_NIVE ,
+         NUM_CAMP_MEDI_DESE ,
+         NUM_BAJA_AUTO      ,
+         to_char(NUM_CAMP_EVAL)   NUM_CAMP_EVAL,
+         IND_INSC_PORT		,
+         IND_INSC_COME		,
+         IND_EXIG_CURS      ,
+         IND_EXIG_PEDI_LIDE ,
+         LTCO_COD_TIPO_COMI ,
+         TO_CHAR(NUM_CAMP_GRAC)  NUM_CAMP_GRAC ,
+         IND_ACTI,
+         IND_FERI,
+         IND_DESE_NUEV,
+         IND_DESE_META_INGR,
+         IND_DESE_INGR_CAPI,
+         IND_NUEV_EXIT
+		  FROM LEC_PROGR
+		 WHERE PAIS_COD_PAIS = #codigoPais#
+		 <isNotEmpty property="codigoPrograma">
+		   AND COD_PROG = #codigoPrograma#
+		 </isNotEmpty>
+		 <isNotEmpty property="descripcionPrograma">
+		   AND NOM_PROG like #descripcionPrograma#
+		 </isNotEmpty>
+		   AND IND_ACTI = 1
+		 ORDER BY 2
+	</select>
+    
+    <select id="getTipoDesempenioList" parameterClass="java.util.Map" resultMap="baseResult">
+		SELECT COD_TIPO_DESE CODIGO,
+		       DES_TIPO_DESE DESCRIPCION
+		FROM LEC_TIPO_DESEM 
+		WHERE IND_ACTI = '1'
+		<isNotEmpty property="codigoTipoDese">
+		     AND COD_TIPO_DESE = #codigoTipoDese#
+		</isNotEmpty>
+	</select>
+
+ 	 <select id="getTipoNivelList" parameterClass="java.util.Map" resultMap="baseResult">
+		 	select cod_nive CODIGO,des_nive DESCRIPCION
+		 	from lec_nivel
+		    WHERE IND_ACTI = '1'
+		    <![CDATA[
+			  AND VAL_PESO_NIVE > 0
+			 ]]>
+		    <isNotEmpty property="codigoNivel">
+		     AND cod_nive = #codigoNivel#
+		    </isNotEmpty>
+	  </select>
+	  	 <select id="getTipoMediList" parameterClass="java.util.Map" resultMap="baseResult">
+		 	select cod_tipo_medi as codigo,des_tipo_medi as descripcion from Lec_Tipo_Medic
+		    WHERE IND_ACTI = '1'
+		    <isNotEmpty property="codigoTipoMedi">
+		     AND cod_tipo_medi = #codigoTipoMedi#
+		    </isNotEmpty>
+	  </select>
+	   <select id="getTipoMediCobList" parameterClass="java.util.Map" resultMap="baseResult">
+		 	select Cod_Tipo_Medi_Cobr as codigo,
+		 	       Cod_Tipo_Medi_Cobr ||' - '|| des_tipo_medi_cobr as descripcion 
+		 	from Lec_Tipo_Medic_Cobra
+			where ind_acti=1
+		    <isNotEmpty property="codigoTipoMedi">
+		     AND Cod_Tipo_Medi_Cobr = #codigoTipoMediCo#
+		    </isNotEmpty>
+	  </select>
+ 	  
+
+<insert id="insertNivelTramo" parameterClass="nivelTramoLEC">
+		insert into lec_progr_nivel_tramo 
+		(PAIS_COD_PAIS,
+  		LPRO_COD_PROG,
+  		LNIV_COD_NIVE,
+  		COD_TRAM,
+  		VAL_PORC_COMI_PEDI_CONS,
+  		VAL_PORC_COMI_PEDI_NCON,
+  		VAL_PORC_COMI_TOLE,
+  		PNRA_COD_RANG,
+  		USU_CREA,
+  		FEC_CREA,
+  		USU_MODI,
+  		FEC_MODI,
+  		IND_ACTI) 
+		values (#codigoPais#, 
+		 #codigoPrograma#, 
+		 #codigoNivel#,
+		 #codigoTramo#, 
+		 TO_NUMBER(#valPorComiPediCons#,'99.99'),
+         TO_NUMBER(#valPorComiPediNCon#,'99.99'),
+         TO_NUMBER(#valPorComiTole#,'99.99'), 
+         #codigoRangoComision#,        
+		 #auditInfo.updatedBy#, 
+		 SYSDATE,
+		 null,
+		 null,
+		 '1')
+ 	</insert> 
+ 	
+ <update id="updateNivelTramo" parameterClass="nivelTramoLEC">
+	update lec_progr_nivel_tramo 
+		SET 
+		VAL_PORC_COMI_PEDI_CONS = TO_NUMBER(#valPorComiPediCons#,'99.99'),
+  		VAL_PORC_COMI_PEDI_NCON = TO_NUMBER(#valPorComiPediNCon#,'99.99'),
+  		VAL_PORC_COMI_TOLE = TO_NUMBER(#valPorComiTole#,'99.99'),  
+  		PNRA_COD_RANG =  #codigoRangoComision#,  
+  		USU_MODI = #auditInfo.updatedBy#, 
+  		FEC_MODI = SYSDATE,
+  		IND_ACTI = '1'
+	 WHERE PAIS_COD_PAIS = #codigoPais#
+		   AND LPRO_COD_PROG = #codigoPrograma#
+		   AND LNIV_COD_NIVE = #codigoNivel#
+		   AND COD_TRAM = #codigoTramo#  
+		   AND PNRA_COD_RANG = #codigoRangoComision# 
+ </update> 	
+ 
+ <delete id="deleteNivelTramo" parameterClass="nivelTramoLEC">
+	delete from lec_progr_nivel_tramo 
+	WHERE PAIS_COD_PAIS = #codigoPais#
+		   AND LPRO_COD_PROG = #codigoPrograma#
+		   AND LNIV_COD_NIVE = #codigoNivel#
+		   AND COD_TRAM = #codigoTramo#  
+		   AND PNRA_COD_RANG = #codigoRangoComision#
+ </delete> 	
+ 
+<resultMap id="getNivelTramoListResult"  class="java.util.HashMap">
+	    <result property="codigoPais" 				  column="PAIS_COD_PAIS" />
+        <result property="codigoPrograma" 			  column="LPRO_COD_PROG" />
+    	<result property="nivel" 			          column="NIVEL" />    
+    	<result property="codigoNivel" 			      column="LNIV_COD_NIVE" />
+    	<result property="codigoTramo" 	      		  column="cod_tram" />
+    	<result property="tramo" 			    	  column="tramo" />    	
+    	<result property="valPorComiPediCons" 		  column="val_porc_comi_pedi_cons" />
+    	<result property="valPorComiPediNCon" 		  column="val_porc_comi_pedi_ncon" />
+    	<result property="valPorComiTole" 			  column="val_porc_comi_tole" />
+    	<result property="codigoRangoComision" 		  column="pnra_cod_rang" />
+    	<result property="codigoNivelRango" 		  column="cod_nive_rang" />
+    	<result property="descriRangoComision" 		  column="rango" />
+    	<result property="estado"	 		   		  column="IND_ACTI" />
+    	<result property="campannaVigencia"	 		  column="campa_vige" />
+    </resultMap>
+    
+ <select id="getNivelTramoList" parameterClass="java.util.Map" resultMap="getNivelTramoListResult" >
+	 SELECT nt.pais_cod_pais,
+	        nt.lpro_cod_prog,
+	        nt.lniv_cod_nive,
+	        nt.cod_tram,
+	        nt.val_porc_comi_pedi_cons,
+	        nt.val_porc_comi_pedi_ncon,
+	        nt.val_porc_comi_tole,
+	        nt.pnra_cod_rang,
+	        nr.cod_nive_rang,
+	        nr.cod_rang || ' - ' || nr.des_rang || ' - ' || nr.val_mont_mini || ' - ' || nr.val_mont_maxi as rango,
+	        'TRAMO '|| to_char(nt.cod_tram) tramo,
+	        lniv.des_nive nivel,
+	        nt.IND_ACTI,
+	        nr.cam_inic || ' - ' || nr.cam_fina campa_vige
+	 FROM lec_progr_nivel_tramo nt,LEC_PROGR_COBRA_TRAMO ot,LEC_PROGR_NIVEL n,lec_nivel lniv, lec_progr_nivel_rango nr
+	where nt.pais_cod_pais=ot.pais_cod_pais and nt.lpro_cod_prog=ot.lpro_cod_prog and nt.cod_tram=ot.cod_tram
+	and nt.pais_cod_pais=n.pais_cod_pais and nt.lpro_cod_prog=n.lpro_cod_prog and nt.lniv_cod_nive=n.lniv_cod_nive
+	and n.lniv_cod_nive=lniv.cod_nive
+	and nr.cod_rang= nt.pnra_cod_rang
+	AND nt.PAIS_COD_PAIS = #codigoPais#
+		 <isNotEmpty property="codigoPrograma">
+		   AND nt.LPRO_COD_PROG = #codigoPrograma#
+		 </isNotEmpty>
+		 <isNotEmpty property="codigoNivel">
+		   AND nt.lniv_cod_nive = #codigoNivel#
+		 </isNotEmpty>
+		 <isNotEmpty property="codigoTramo">
+		   AND nt.cod_tram = #codigoTramo#
+		 </isNotEmpty>
+		 <isNotEmpty property="codigoRango">
+		   AND nt.pnra_cod_rang = #codigoRango#
+		 </isNotEmpty>
+		   AND nt.IND_ACTI = 1
+		 ORDER BY nt.lniv_cod_nive, nt.cod_tram, nt.pnra_cod_rang,
+</select>
+
+     <insert id="insertProgramaNivel" parameterClass="nivelLEC">
+		insert into LEC_PROGR_NIVEL 
+		(PAIS_COD_PAIS,
+  		LPRO_COD_PROG,
+  		LNIV_COD_NIVE,
+  		NUM_MINI_PEDI,
+  		NUM_MAXI_PEDI,
+  		TOL_PEDI,
+  		TOL_PORC,
+  		MON_PEDI_CONS,
+  		MON_PEDI_NCON,
+  		MON_TOLE,
+  		MON_MINI_VENT_CATA,
+  		MON_MAXI_VENT_CATA,
+  		USU_CREA,
+  		FEC_CREA,
+  		USU_MODI,
+  		FEC_MODI,
+  		IND_ACTI,
+  		VAL_MONT_TOLE_VENT,
+  		IND_TIPO_META,
+  		NUM_META_INGR,
+  		IND_COND_CAPI,
+  		NUM_META_CAPI) 
+		 values (#codigoPais#, 
+		 #codigoPrograma#, 
+		 #codigoNivel#,
+		 #nroPedidoInicial#, 
+		 #nroPedidoFinal#,
+         #tolePedido#,
+         #tolePorc#,
+         TO_NUMBER(#montPediCons#,'999999999.99'),
+         TO_NUMBER(#montPediNCon#,'999999999.99'),
+         TO_NUMBER(#montTole#,'999999999.99'),
+         TO_NUMBER(#montoVentaMinimo#,'999999999.99'),
+         TO_NUMBER(#montoVentaMaximo#,'999999999.99'),        
+		 #auditInfo.updatedBy#, 
+		 SYSDATE,
+		 null,
+		 null,
+		 '1',
+		 TO_NUMBER(#montoVentaTolerancia#,'999999999.99'),
+		 #indicadorTipoMeta#,
+		 TO_NUMBER(#ingresoMeta#,'999999999999'),
+		 TO_NUMBER(#condCapitalizacion#,'9'),
+		 TO_NUMBER(#metaCapitalizacion#,'99999999'))
+ 	</insert> 
+ 	<update id="updateProgramaNivel" parameterClass="nivelLEC">
+	  update LEC_PROGR_NIVEL set
+		PAIS_COD_PAIS=#codigoPais#,
+  		LPRO_COD_PROG=#codigoPrograma#,
+  		LNIV_COD_NIVE=#codigoNivel#,
+  		NUM_MINI_PEDI=#nroPedidoInicial#,
+  		NUM_MAXI_PEDI=#nroPedidoFinal#,
+  		TOL_PEDI=#tolePedido#,
+  		TOL_PORC=#tolePorc#,
+  		MON_PEDI_CONS= TO_NUMBER(#montPediCons#,'999999999.99'),
+  		MON_PEDI_NCON=TO_NUMBER(#montPediNCon#,'999999999.99'),
+  		MON_TOLE=TO_NUMBER(#montTole#,'999999999.99'),
+  		MON_MINI_VENT_CATA = TO_NUMBER(#montoVentaMinimo#,'999999999.99'),
+        MON_MAXI_VENT_CATA= TO_NUMBER(#montoVentaMaximo#,'999999999.99'),       
+  		USU_MODI= #auditInfo.updatedBy#,
+  		FEC_MODI=SYSDATE,
+  		IND_ACTI= 1,
+  		VAL_MONT_TOLE_VENT = TO_NUMBER(#montoVentaTolerancia#,'999999999.99'),
+  		IND_TIPO_META = #indicadorTipoMeta#,
+  		NUM_META_INGR = TO_NUMBER(#ingresoMeta#,'999999999999'),
+  		IND_COND_CAPI = TO_NUMBER(#condCapitalizacion#,'9'),
+  		NUM_META_CAPI = TO_NUMBER(#metaCapitalizacion#,'99999999')
+	  where PAIS_COD_PAIS=#codigoPais# and LPRO_COD_PROG=#codigoPrograma# and 	LNIV_COD_NIVE=#codigoNivel#
+ 	</update> 
+ 	<resultMap id="getProgramaNivelListResult"  class="java.util.HashMap">
+	    <result property="codigoPais" 				  column="PAIS_COD_PAIS" />
+        <result property="codigoPrograma" 			  column="LPRO_COD_PROG" />
+    	<result property="nivel" 			          column="NIVEL" />    
+    	<result property="codigoNivel" 			      column="LNIV_COD_NIVE" />
+    	<result property="nroPedidoInicial" 	      column="NUM_MINI_PEDI" />
+    	<result property="nroPedidoFinal" 			  column="NUM_MAXI_PEDI" />    	
+    	<result property="tolePedido" 				  column="TOL_PEDI" />
+    	<result property="tolePorc" 			      column="TOL_PORC" />
+    	<result property="montPediCons" 			  column="MON_PEDI_CONS" />
+    	<result property="montPediNCon" 			  column="MON_PEDI_NCON" />
+    	<result property="montTole" 		          column="MON_TOLE" />
+    	<result property="montoVentaMinimo"	 		  column="MON_MINI_VENT_CATA" />
+    	<result property="montoVentaMaximo"	 		  column="MON_MAXI_VENT_CATA" />
+    	<result property="estado"	 		   		  column="IND_ACTI" />
+    	<result property="montoVentaTolerancia"	 	  column="VAL_MONT_TOLE_VENT" />
+    	<result property="indicadorTipoMeta"	 	  column="IND_TIPO_META" />
+    	<!-- RCR PER-SICC-2015-0429 -->
+    	<result property="ingresoMeta"	 	  		  column="NUM_META_INGR" />
+    	<!-- PER-SiCC-2015-0548 -->
+    	<result property="condCapitalizacion"	 	  		  column="IND_COND_CAPI" />
+    	<result property="metaCapitalizacion"	 	  		  column="NUM_META_CAPI" />
+    </resultMap>
+    
+	<select id="getProgramaNivelList" parameterClass="java.util.Map" resultMap="getProgramaNivelListResult" >
+	select a.PAIS_COD_PAIS,
+      a.LPRO_COD_PROG,
+      n.des_nive NIVEL,
+      a.LNIV_COD_NIVE,
+      a.NUM_MINI_PEDI,
+      a.NUM_MAXI_PEDI,
+      a.TOL_PEDI,
+      a.TOL_PORC,
+      a.MON_PEDI_CONS,
+      a.MON_PEDI_NCON,
+      a.MON_TOLE,
+      a.MON_MINI_VENT_CATA,
+      a.MON_MAXI_VENT_CATA,
+      a.IND_ACTI,
+      a.VAL_MONT_TOLE_VENT,
+      a.IND_TIPO_META,
+      a.NUM_META_INGR,
+      a.IND_COND_CAPI,
+      a.NUM_META_CAPI
+      from lec_progr_nivel a,lec_nivel n
+      where a.lniv_cod_nive=n.cod_nive
+		 AND a.PAIS_COD_PAIS = #codigoPais#
+		 <isNotEmpty property="codigoPrograma">
+		   AND a.LPRO_COD_PROG = #codigoPrograma#
+		 </isNotEmpty>
+		  <isNotEmpty property="codigoNivel">
+		   AND a.LNIV_COD_NIVE = #codigoNivel#
+		 </isNotEmpty>
+		   AND a.IND_ACTI = 1
+		   AND N.VAL_PESO_NIVE > 0
+		 ORDER BY 
+		    a.LPRO_COD_PROG,
+		    a.LNIV_COD_NIVE
+	</select>
+	
+ 	<delete id="deleteProgramaNivel" parameterClass="nivelLEC">
+		delete from  lec_progr_nivel 
+		WHERE   PAIS_COD_PAIS = #codigoPais# 
+		  AND   LPRO_COD_PROG = #codigoPrograma# 
+		  and 	LNIV_COD_NIVE=#codigoNivel#
+	</delete>
+ 	
+ 	
+ 		<select id="getNextCodTramo" resultClass="string">
+		SELECT CAST(LEC_SEQ_COBRA_TRAMO.NEXTVAL AS VARCHAR2(10)) as codTramo from dual
+    </select> 
+    	<select id="getNextCodAmbitGeogr" resultClass="string">
+		SELECT CAST(LEC_SEQ_AMBIT_GEOGR.NEXTVAL AS VARCHAR2(10)) as ambitGeogr from dual
+    </select> 
+    
+ 	<insert id="insertCobranzaTramo" parameterClass="cobranzaTramoLEC">
+ 	      INSERT INTO LEC_PROGR_COBRA_TRAMO(PAIS_COD_PAIS, LPRO_COD_PROG, COD_TRAM, NUM_TRAM, USU_CREA, FEC_CREA, IND_ACTI)
+			VALUES(
+			#codigoPais#,
+			#codigoPrograma#,
+			#codTramo#,
+			#numTramo#,
+			#auditInfo.updatedBy#,
+			SYSDATE,
+			'1')
+ 	 </insert>
+ 	 <update id="updateCobranzaTramo" parameterClass="cobranzaTramoLEC">
+ 	  update  LEC_PROGR_COBRA_TRAMO 
+ 	  set 
+         PAIS_COD_PAIS=#codigoPais#,
+         LPRO_COD_PROG=#codigoPrograma#,
+         COD_TRAM=#codTramo#,
+         NUM_TRAM=#numTramo#,
+         USU_MODI= #auditInfo.updatedBy#,
+  		 FEC_MODI=SYSDATE,
+  		 IND_ACTI= 1
+      where  PAIS_COD_PAIS=#codigoPais# and LPRO_COD_PROG=#codigoPrograma# and COD_TRAM=#codTramo#
+ 	 </update>
+ 	 
+ 	 <resultMap id="getProgramaCobranzaTramoListResult"  class="java.util.HashMap">
+	    <result property="codigoPais" 				     column="PAIS_COD_PAIS" />
+        <result property="codigoPrograma" 			     column="LPRO_COD_PROG" />
+    	<result property="codTramo" 			         column="COD_TRAM" />    
+    	<result property="descripcion" 			         column="DESCRIPCION" />
+    	<result property="numTramo" 	      		     column="NUM_TRAM" />
+    	<result property="estado"	 		   		     column="IND_ACTI" />
+    </resultMap>
+    
+	<select id="getProgramaCobranzaTramoList" parameterClass="java.util.Map" resultMap="getProgramaCobranzaTramoListResult" >
+		  select PAIS_COD_PAIS,
+		  LPRO_COD_PROG,
+		  COD_TRAM,
+		  'TRAMO ' ||NUM_TRAM DESCRIPCION,
+		   NUM_TRAM,
+		   IND_ACTI 
+		   from LEC_PROGR_COBRA_TRAMO
+		 WHERE  PAIS_COD_PAIS = #codigoPais#
+		 <isNotEmpty property="codigoPrograma">
+		   AND LPRO_COD_PROG = #codigoPrograma#
+		 </isNotEmpty>
+		 <isNotEmpty property="codTramo">
+		   AND COD_TRAM = #codTramo#
+		 </isNotEmpty>
+		 <isNotEmpty property="estadoRegistro">
+		   AND IND_ACTI = #estadoRegistro#
+		 </isNotEmpty>
+		 ORDER BY 2
+	</select>
+ 	  <delete id="deleteCobranzaTramo" parameterClass="cobranzaTramoLEC">
+ 	 	update LEC_PROGR_COBRA_TRAMO 
+		set IND_ACTI = 0
+		WHERE     PAIS_COD_PAIS = #codigoPais# 
+		AND     LPRO_COD_PROG = #codigoPrograma#
+		<isNotEmpty property="codTramo">
+		AND COD_TRAM = #codTramo#
+		</isNotEmpty>		
+	</delete>
+	
+ 	<insert id="insertAmbitoGeografico" parameterClass="ambitoGeograficoLEC">
+ 	        INSERT INTO LEC_PROGR_AMBIT_GEOGR(PAIS_COD_PAIS,LPRO_COD_PROG,LTUG_COD_TIPO_USO_GEOG,SEC_AMBI_GEOG,IND_PAIS,CAM_REGI
+ 	        <isNotEmpty property="codigoRegion">
+		     , COD_REGI
+		    </isNotEmpty>
+		    <isNotEmpty property="codigoZona">
+		     , COD_ZONA
+		    </isNotEmpty>
+		    ,IND_EXCL,USU_CREA,FEC_CREA,IND_ACTI)
+		    VALUES(#codigoPais#,#codigoPrograma#,#codTipoUso#,#secuencia#,#indPais#,#campanaProceso#
+		    <isNotEmpty property="codigoRegion">
+		     , #codigoRegion#
+		    </isNotEmpty>
+		    <isNotEmpty property="codigoZona">
+		     , #codigoZona#
+		    </isNotEmpty>
+		    ,#indicadorExclu#,#auditInfo.updatedBy#,SYSDATE,'1')
+ 	 </insert>
+ 	 <delete id="deleteAmbitoGeografico" parameterClass="ambitoGeograficoLEC">
+ 	 	update LEC_PROGR_AMBIT_GEOGR
+ 	 	set ind_acti = 0,
+ 	    usu_modi = #auditInfo.updatedBy#,
+ 	    fec_modi = sysdate 
+		WHERE PAIS_COD_PAIS = #codigoPais# 
+		  AND LPRO_COD_PROG = #codigoPrograma#
+		<isNotEmpty property="codTipoUso">
+		  AND LTUG_COD_TIPO_USO_GEOG= #codTipoUso#
+		</isNotEmpty>
+		<isNotEmpty property="secuencia">
+		  AND SEC_AMBI_GEOG = #secuencia#
+		</isNotEmpty>
+	</delete>
+	
+	<delete id="deleteAmbitoGeograficoFisico" parameterClass="ambitoGeograficoLEC">
+ 	 	delete from LEC_PROGR_AMBIT_GEOGR
+		WHERE     PAIS_COD_PAIS = #codigoPais# 
+		AND LPRO_COD_PROG = #codigoPrograma#
+		AND LTUG_COD_TIPO_USO_GEOG= #codTipoUso#
+	</delete>
+	
+	 <update id="updateAmbitoGeografico" parameterClass="ambitoGeograficoLEC">
+ 	 	update LEC_PROGR_AMBIT_GEOGR set 
+ 	 	ind_pais=#indPais#
+ 	 	<isNotEmpty property="codigoRegion">
+		     ,cod_regi= #codigoRegion#
+		</isNotEmpty>
+		<isNotEmpty property="codigoZona">
+		     ,COD_ZONA= #codigoZona#
+		</isNotEmpty> 	 	
+ 	 	,cam_regi=#campanaProceso#, ind_acti=1
+ 	 	,usu_modi=#auditInfo.updatedBy#
+		WHERE     PAIS_COD_PAIS = #codigoPais# 
+		AND     LPRO_COD_PROG = #codigoPrograma#
+		<isNotEmpty property="codTipoUso">
+		AND LTUG_COD_TIPO_USO_GEOG= #codTipoUso#
+		</isNotEmpty>
+		<isNotEmpty property="secuencia">
+		AND SEC_AMBI_GEOG = #secuencia#
+		</isNotEmpty>
+	</update>
+ 	  <resultMap id="getAmbitoGeograficoListResult"  class="java.util.HashMap">
+	    <result property="codigoPais" 				     column="PAIS_COD_PAIS" />
+        <result property="codigoPrograma" 			     column="LPRO_COD_PROG" />
+    	<result property="secuencia" 			         column="SEC_AMBI_GEOG" />    
+    	<result property="indPais" 			         	 column="IND_PAIS" />
+    	<result property="campanaProceso" 	      		 column="CAM_REGI" />
+    	<result property="codigoRegion"	 		   		 column="COD_REGI" />    	
+    	<result property="codigoZona" 			         column="COD_ZONA" />
+        <result property="estado" 			     		 column="IND_ACTI" />
+     	<result property="region" 	      		     	 column="REGION" />
+    	<result property="zona"	 		   		     	 column="ZONA" />
+    	<result property="indicadorExclu"	 		   	 column="IND_EXCL" />
+    	<result property="codTipoUso"	 		   		  column="LTUG_COD_TIPO_USO_GEOG" />    	
+      </resultMap>
+    
+	<select id="getAmbitoGeograficoList" parameterClass="java.util.Map" resultMap="getAmbitoGeograficoListResult" >
+		select ag.PAIS_COD_PAIS,
+		       ag.LPRO_COD_PROG,
+		       ag.SEC_AMBI_GEOG,
+		       ag.CAM_REGI,
+  	           zr.des_regi Region,
+  	           zz.des_zona as Zona,
+  	           zr.cod_regi,
+  	           zz.cod_zona,
+  	           ag.IND_ACTI,
+  	           ag.ind_pais,
+  	           ag.IND_EXCL,
+  	           ag.LTUG_COD_TIPO_USO_GEOG   
+  	    from  LEC_PROGR_AMBIT_GEOGR ag
+ 		left join ZON_REGIO ZR on ag.cod_regi=zr.cod_regi and ag.cod_regi=zr.cod_regi
+		left join  ZON_ZONA ZZ on ZR.OID_REGI = ZZ.ZORG_OID_REGI and ag.cod_zona=zz.cod_zona
+		 WHERE  ag.PAIS_COD_PAIS = #codigoPais#
+		 <isNotEmpty property="codigoPrograma">
+		   AND ag.LPRO_COD_PROG = #codigoPrograma#
+		 </isNotEmpty>
+		 <isNotEmpty property="codTipoUso">
+		   AND ag.LTUG_COD_TIPO_USO_GEOG = #codTipoUso#
+		 </isNotEmpty>
+		  <isNotEmpty property="secuencia">
+		   AND ag.SEC_AMBI_GEOG = #secuencia#
+		 </isNotEmpty>
+		   AND ag.IND_ACTI = 1
+		 ORDER BY 2, ag.PAIS_COD_PAIS, ag.CAM_REGI, zz.cod_zona
+	</select>
+ 	 <insert id="insertObjetivoCobranza" parameterClass="objetivoCobranzaLEC">
+ 	      INSERT INTO LEC_PROGR_COBRA_OBJET(PAIS_COD_PAIS,LPRO_COD_PROG,LTUG_COD_TIPO_USO_GEOG,LPAG_SEC_AMBI_GEOG,LTMC_COD_TIPO_MEDI_COBR,
+			USU_CREA,FEC_CREA,IND_ACTI, NUM_DIAS_EXTR)
+			VALUES(#codigoPais#, #codigoPrograma#, '01', #secuencia#, #codTipoMedi#
+          ,#auditInfo.updatedBy#,  SYSDATE, '1', #nroDiasExtras#)
+ 	     </insert> 
+ 	     
+ 	  <update id="deleteObjetivoCobranza" parameterClass="objetivoCobranzaLEC">
+ 	      update LEC_PROGR_COBRA_OBJET
+ 	      set ind_acti = 0,
+ 	      usu_modi = #auditInfo.updatedBy#,
+ 	      fec_modi = sysdate 
+ 	      where PAIS_COD_PAIS = #codigoPais# 
+		   AND LPRO_COD_PROG = #codigoPrograma#
+ 	       AND LPAG_SEC_AMBI_GEOG=#secuencia#
+ 	       AND LTUG_COD_TIPO_USO_GEOG='01'
+ 	   </update> 
+ 	   
+ 	   <update id="updateObjetivoCobranza" parameterClass="objetivoCobranzaLEC">
+ 	      update LEC_PROGR_COBRA_OBJET set 
+ 	        usu_modi=#auditInfo.updatedBy#,
+ 	        LPAG_SEC_AMBI_GEOG=#secuencia#,
+ 	        LTMC_COD_TIPO_MEDI_COBR=#codTipoMedi#,
+ 	        NUM_DIAS_EXTR=#nroDiasExtras#,
+ 	        FEC_MODI = SYSDATE
+ 	       where PAIS_COD_PAIS = #codigoPais# 
+		   AND LPRO_COD_PROG = #codigoPrograma#
+ 	       AND LPAG_SEC_AMBI_GEOG=#secuencia#
+ 	       AND LTMC_COD_TIPO_MEDI_COBR=#codTipoMedi#
+ 	       AND LTUG_COD_TIPO_USO_GEOG='01'			
+ 	   </update> 
+ 	  <resultMap id="getObjetivoCobranzaListResult"  class="java.util.HashMap">
+	    <result property="codigoPais" 				     column="PAIS_COD_PAIS" />
+        <result property="codigoPrograma" 			     column="LPRO_COD_PROG" />
+    	<result property="secuencia" 			         column="SEC_AMBI_GEOG" />    
+    	<result property="indPais" 			         	 column="IND_PAIS" />
+    	<result property="campanaProceso" 	      		 column="CAM_REGI" />
+    	<result property="codRegion"	 		   		 column="COD_REGI" />    	
+    	<result property="codZona" 				         column="COD_ZONA" />
+        <result property="estado" 			     		 column="IND_ACTI" />
+    	<result property="codTipoMedi" 			         column="LTMC_COD_TIPO_MEDI_COBR" />    
+    	<result property="nroDiasExtras" 			     column="NUM_DIAS_EXTR" />
+    	<result property="region" 	      		     	 column="REGION" />
+    	<result property="zona"	 		   		     	 column="ZONA" />
+      </resultMap>
+    
+	<select id="getObjetivoCobranzaList" parameterClass="java.util.Map" resultMap="getObjetivoCobranzaListResult" >
+		 select ag.PAIS_COD_PAIS,
+		        ag.LPRO_COD_PROG,
+		        ag.SEC_AMBI_GEOG,
+		        ag.IND_PAIS,
+		        ag.CAM_REGI,
+ 	            ag.COD_REGI,
+ 	            ag.COD_ZONA,  
+ 	            ob.IND_ACTI,
+ 	            ob.LTMC_COD_TIPO_MEDI_COBR,
+ 	            null NUM_DIAS_EXTR,
+ 	            zr.des_regi Region,
+ 	            zz.des_zona as Zona
+			from lec_progr_cobra_objet ob,
+			     lec_progr_ambit_geogr ag
+			left join ZON_REGIO ZR on ag.cod_regi=zr.cod_regi 
+			left join  ZON_ZONA ZZ on ZR.OID_REGI = ZZ.ZORG_OID_REGI  and ag.cod_zona=zz.cod_zona
+			where ob.lpag_sec_ambi_geog=ag.sec_ambi_geog
+			and   ob.PAIS_COD_PAIS = #codigoPais# and ag.PAIS_COD_PAIS=#codigoPais#
+		 <isNotEmpty property="codigoPrograma">
+		   AND ob.LPRO_COD_PROG = #codigoPrograma# and ag.LPRO_COD_PROG=#codigoPrograma#
+		 </isNotEmpty>		 
+		 <isNotEmpty property="codTipoUso">
+		   AND ob.LTUG_COD_TIPO_USO_GEOG = #codTipoUso# and ag.LTUG_COD_TIPO_USO_GEOG=#codTipoUso#
+		 </isNotEmpty>
+		 <isNotEmpty property="codTipoMedi">
+		   AND ob.LTMC_COD_TIPO_MEDI_COBR = #codTipoMedi# 
+		 </isNotEmpty>
+		 <isNotEmpty property="secuencia">
+		   AND ob.LPAG_SEC_AMBI_GEOG = #secuencia# and ag.SEC_AMBI_GEOG=#secuencia#
+		 </isNotEmpty>
+		 <isNotEmpty property="codigoRegion">
+		   AND ag.COD_REGI = #codigoRegion#
+		 </isNotEmpty>
+		 <isNotEmpty property="codigoZona">
+		   AND ag.COD_ZONA = #codigoZona#
+		 </isNotEmpty>
+		   AND ob.IND_ACTI = 1
+		 ORDER BY 2
+	</select> 
+ 
+ 	      <insert id="insertTramoObjetivoCobranza" parameterClass="tramObjetivoCobranzaLEC">
+ 	       INSERT INTO LEC_PROGR_COBRA_OBJET_TRAMO(PAIS_COD_PAIS,LPRO_COD_PROG,LTUG_COD_TIPO_USO_GEOG,LPAG_SEC_AMBI_GEOG,LTMC_COD_TIPO_MEDI_COBR,LPCT_COD_TRAM,NUM_DIAS,VAL_PORC_COBR,VAL_PORC_MINI_COBR,LTPR_COD_TIPO_PREM				
+				,USU_CREA,FEC_CREA,IND_ACTI, NUM_DIAS_EXTR)
+				VALUES(#codigoPais#, #codigoPrograma#, '01', #secuencia#, #codTipoMedi#, #codTramo#,#nroDias#,
+				#dporcCob#, #dprocMinCob#,null
+				 ,#auditInfo.updatedBy#,SYSDATE,'1', #nroDiasExtras#)
+ 	     </insert> 
+ 	     
+ 	   <update id="deleteTramoObjetivoCobranza" parameterClass="tramObjetivoCobranzaLEC">
+ 	      update LEC_PROGR_COBRA_OBJET_TRAMO
+ 	      set 
+ 	      IND_ACTI = 0,
+ 	      usu_modi = #auditInfo.updatedBy#,
+ 	      fec_modi = sysdate 
+ 	      where PAIS_COD_PAIS = #codigoPais# 
+		   AND LPRO_COD_PROG = #codigoPrograma#
+ 	       AND LPAG_SEC_AMBI_GEOG=#secuencia#
+ 	       AND LTUG_COD_TIPO_USO_GEOG='01'
+           AND LTMC_COD_TIPO_MEDI_COBR = #codTipoMedi#
+		   AND LPCT_COD_TRAM = #codTramo#
+ 	   </update>
+ 	    
+ 	   <update id="updateTramoObjetivoCobranza" parameterClass="tramObjetivoCobranzaLEC">
+ 	      update LEC_PROGR_COBRA_OBJET_TRAMO 
+ 	      set usu_modi=#auditInfo.updatedBy#,
+ 	          NUM_DIAS_EXTR=#nroDiasExtras#,
+ 	          NUM_DIAS=#nroDias#,
+ 	          VAL_PORC_COBR=#dporcCob#,
+ 	          VAL_PORC_MINI_COBR= #dprocMinCob#,
+ 	          FEC_MODI = SYSDATE
+ 	          <isNotEmpty property="estado">
+ 	          	,IND_ACTI = #estado#
+ 	          </isNotEmpty>
+ 	       where PAIS_COD_PAIS = #codigoPais# 
+		   AND LPRO_COD_PROG = #codigoPrograma#
+ 	       AND LPAG_SEC_AMBI_GEOG=#secuencia#
+ 	       AND LTUG_COD_TIPO_USO_GEOG='01'
+           AND LTMC_COD_TIPO_MEDI_COBR = #codTipoMedi#
+		   AND LPCT_COD_TRAM = #codTramo#		
+ 	   </update> 
+ 	  <resultMap id="getTramoObjetivoCobranzaListResult"  class="java.util.HashMap">
+	    <result property="codigoPais" 				     column="PAIS_COD_PAIS" />
+        <result property="codigoPrograma" 			     column="LPRO_COD_PROG" />
+    	<result property="nroDias" 			         	 column="NUM_DIAS" />    	
+    	<result property="porcCob" 	      		 		 column="val_porc_cobr" />
+    	<result property="procMinCob"	 		   		 column="val_porc_mini_cobr" />    	
+    	<result property="codTramo" 				     column="COD_TRAM" />
+        <result property="nroTramo" 			     	 column="TRAMO" />
+    	<result property="region" 			             column="Region" />
+    	<result property="codRegion" 	      		     column="cod_regi" />
+    	<result property="zona"	 		   		     	 column="Zona" />
+    	<result property="codZona"	 		   		     column="cod_zona" />
+    	<result property="estado"	 		   		     column="IND_ACTI" />
+    	<result property="indPais" 			         	 column="IND_PAIS" />
+    	<result property="nroDiasExtras" 		       	 column="num_dias_extr" />
+    	<result property="codTipoMedi" 		       	     column="LTMC_COD_TIPO_MEDI_COBR" />
+    	<result property="descTipoMedi" 		       	 column="des_tipo_medi_cobr" />
+    	<result property="secuencia" 		       	     column="LPAG_SEC_AMBI_GEOG" />
+      </resultMap>
+    
+	<select id="getTramoObjetivoCobranzaList" parameterClass="java.util.Map" resultMap="getTramoObjetivoCobranzaListResult" >
+		SELECT obt.PAIS_COD_PAIS,
+		       obt.LPRO_COD_PROG,
+		       obt.LTMC_COD_TIPO_MEDI_COBR,
+		       obt.LTMC_COD_TIPO_MEDI_COBR || ' - ' || d.des_tipo_medi_cobr des_tipo_medi_cobr,
+		       obt.LPAG_SEC_AMBI_GEOG,
+		       obt.num_dias,
+		       val_porc_cobr,
+		       val_porc_mini_cobr, 
+		       ot.COD_TRAM,
+		       ot.COD_TRAM TRAMO,
+               zr.des_regi Region,
+               zz.des_zona as Zona,
+               zr.cod_regi,
+               zz.cod_zona,
+               obt.IND_ACTI,
+               ag.ind_pais,
+               obt.num_dias_extr
+          FROM LEC_PROGR_COBRA_OBJET_TRAMO OBT,
+               Lec_Tipo_Medic_Cobra d,
+		       LEC_PROGR_COBRA_TRAMO       OT,
+		       LEC_PROGR_AMBIT_GEOGR       AG
+		       
+		  LEFT JOIN ZON_REGIO ZR  ON AG.COD_REGI = ZR.COD_REGI
+		  LEFT JOIN ZON_ZONA ZZ  ON ZR.OID_REGI = ZZ.ZORG_OID_REGI
+		                         AND AG.COD_ZONA = ZZ.COD_ZONA
+		 WHERE OBT.PAIS_COD_PAIS = OT.PAIS_COD_PAIS
+		   AND OBT.LPRO_COD_PROG = OT.LPRO_COD_PROG
+		   AND OBT.LPCT_COD_TRAM = OT.COD_TRAM
+		   
+		   AND OBT.PAIS_COD_PAIS = AG.PAIS_COD_PAIS
+           AND OBT.LPRO_COD_PROG = AG.LPRO_COD_PROG
+		   AND OBT.LPAG_SEC_AMBI_GEOG = AG.SEC_AMBI_GEOG
+		   AND OBT.LTMC_COD_TIPO_MEDI_COBR = d.cod_tipo_medi_cobr
+		   AND obt.PAIS_COD_PAIS = #codigoPais#
+		 <isNotEmpty property="codigoPrograma">
+		   AND obt.LPRO_COD_PROG = #codigoPrograma#
+		 </isNotEmpty>
+		 <isNotEmpty property="secuencia">
+		   AND obt.LPAG_SEC_AMBI_GEOG = #secuencia#
+		 </isNotEmpty>
+		   AND obt.LTUG_COD_TIPO_USO_GEOG ='01'
+		 <isNotEmpty property="codigoTipoMedi">
+		   AND obt.LTMC_COD_TIPO_MEDI_COBR = #codigoTipoMedi#
+		 </isNotEmpty>
+		 <isNotEmpty property="codTramo">
+		   AND obt.LPCT_COD_TRAM = #codTramo#
+		 </isNotEmpty>
+		 
+		 <isEmpty property="estadoRegistro">
+		 	AND obt.IND_ACTI = 1
+		 </isEmpty>
+		 
+		 <isNotEmpty property="estadoRegistro">
+		 	AND obt.IND_ACTI = #estadoRegistro#
+		 </isNotEmpty>		   
+		   
+		 ORDER BY 2, 4, ot.COD_TRAM
+	</select>
+	      <insert id="insertBonoCampana" parameterClass="bonoCampanaLEC">
+	       insert into lec_progr_bono_campa(
+	          pais_cod_pais,
+	          lpro_cod_prog,
+	          cam_lanz,
+	          usu_crea,
+	          fec_crea,
+	          ind_acti)
+		   values(
+		   #codigoPais#, 
+           #codigoPrograma#,
+           #campanaLanzamiento#
+		   ,#auditInfo.updatedBy#,SYSDATE,'1')
+	     </insert>
+		<delete id="deleteBonoCampana" parameterClass="bonoCampanaLEC">
+ 	      delete from  lec_progr_bono_campa  
+ 	      where PAIS_COD_PAIS = #codigoPais# 
+		   AND LPRO_COD_PROG = #codigoPrograma#
+ 	       AND cam_lanz=#campanaLanzamiento#
+ 	   </delete> 
+ 	   <update id="updateBonoCampana" parameterClass="bonoCampanaLEC">
+ 	       update lec_progr_bono_campa  
+ 	       set cam_lanz=#campanaLanzamiento#, usu_modi=#auditInfo.updatedBy#, FEC_MODI = SYSDATE
+ 	      where PAIS_COD_PAIS = #codigoPais# 
+		   AND LPRO_COD_PROG = #codigoPrograma#
+ 	       AND cam_lanz=#campanaLanzamiento#	
+ 	   </update>  
+ 	  <resultMap id="getBonoCampanaListResult"  		class="java.util.HashMap">
+	    <result property="codigoPais" 				      column="PAIS_COD_PAIS" />
+        <result property="codigoPrograma" 			      column="LPRO_COD_PROG" />
+    	<result property="campanaLanzamiento" 			  column="cam_lanz" />
+    	<result property="indActi"	 	  				  column="ind_acti" />    	
+      </resultMap>
+    
+	<select id="getBonoCampanaList" parameterClass="java.util.Map" resultMap="getBonoCampanaListResult" >
+		  select pais_cod_pais,lpro_cod_prog,cam_lanz,ind_acti
+	      from lec_progr_bono_campa
+     	 where   PAIS_COD_PAIS = #codigoPais#
+		 <isNotEmpty property="codigoPrograma">
+		   AND LPRO_COD_PROG = #codigoPrograma#
+		 </isNotEmpty>
+		 <isNotEmpty property="campanaLanzamiento">
+		   AND cam_lanz = #campanaLanzamiento#
+		 </isNotEmpty>
+		   AND IND_ACTI = 1
+		 ORDER BY 2, 3
+	</select>  
+ 	      <insert id="insertBonoLanzamiento" parameterClass="bonoLanzamientoLEC">
+ 	       insert into lec_progr_bono_lanza(
+ 	         pais_cod_pais,
+ 	         lpro_cod_prog,
+ 	         lpbc_cam_lanz,
+ 	         num_lanz,
+ 	         ltme_cod_tipo_medi,
+ 	         usu_crea,
+ 	         fec_crea,
+ 	         ind_acti) 	       
+ 	       	VALUES(
+ 	       	 #codigoPais#, 
+ 	       	 #codigoPrograma#, 
+ 	       	 #campanaLanzamiento#, 
+ 	       	 #nroLanzamiento#, 
+ 	       	 #codTipoMedicion#,
+ 	       	 #auditInfo.updatedBy#,
+ 	       	 SYSDATE,'1')
+ 	     </insert> 
+		<delete id="deleteBonoLanzamiento" parameterClass="bonoLanzamientoLEC">
+ 	      delete from lec_progr_bono_lanza 
+ 	      where PAIS_COD_PAIS = #codigoPais# 
+		   AND LPRO_COD_PROG = #codigoPrograma#
+ 	       AND lpbc_cam_lanz=#campanaLanzamiento#
+ 	       AND NUM_LANZ=#nroLanzamiento#
+ 	   </delete> 
+ 	   <update id="updateBonoLanzamiento" parameterClass="bonoLanzamientoLEC">
+ 	       update lec_progr_bono_lanza 
+ 	       set lpbc_cam_lanz=#campanaLanzamiento#,
+ 	           ltme_cod_tipo_medi=#codTipoMedicion#,
+ 	           num_lanz=#nroLanzamiento#,
+ 	           usu_modi=#auditInfo.updatedBy#, 
+ 	           FEC_MODI = SYSDATE
+ 	      where PAIS_COD_PAIS = #codigoPais# 
+		   AND LPRO_COD_PROG = #codigoPrograma#
+ 	       AND lpbc_cam_lanz=#campanaLanzamiento#
+ 	       AND ltme_cod_tipo_medi=#codTipoMedicion#
+ 	 </update> 
+ 	   
+ 	 <resultMap id="getBonoLanzamientoListResult"    class="java.util.HashMap">
+	    <result property="codigoPais" 				      column="PAIS_COD_PAIS" />
+        <result property="codigoPrograma" 			      column="LPRO_COD_PROG" />
+    	<result property="campanaLanzamiento" 			  column="lpbc_cam_lanz" />
+    	<result property="nroLanzamiento"	 	  		  column="LPBL_NUM_LANZ" />  
+    	<result property="codTipoMedi" 			          column="LTME_COD_TIPO_MEDI" />
+        <result property="tipoMedi" 			          column="des_tipo_medi" />
+    	<result property="codBonoNivel" 			      column="ltbo_cod_tipo_bono" />
+    	<result property="bonoNivel"	 	  		      column="des_tipo_bono" />  
+    	<result property="codigoProducto"	 	  		  column="cod_sap" />  
+    	<result property="codNivel"	 	  		          column="LNIV_COD_NIVE" />  
+    	<result property="nivel"	 	  		          column="des_nive" /> 
+    	<result property="secuenciaBonoNivel" 			  column="sec_bono_nive" />
+    	<result property="monPrem" 			              column="MON_PREM" />
+    	<result property="exigencia" 			          column="VAL_PORC_OBJE" />
+    	<result property="indActi" 			              column="ind_acti" />  	
+     </resultMap>
+    
+	<select id="getBonoLanzamientoList" parameterClass="java.util.Map" resultMap="getBonoLanzamientoListResult" >
+		  SELECT 
+			 a.pais_cod_pais,
+			 a.lpro_cod_prog,
+			 a.lpbc_cam_lanz,
+			 a.LPBL_NUM_LANZ,
+			 a.ltbo_cod_tipo_bono,
+			 e.des_tipo_bono,
+			 a.LNIV_COD_NIVE,
+			 c.des_nive,
+			 a.sec_bono_nive,
+			 b.LTME_COD_TIPO_MEDI,
+			 d.des_tipo_medi,
+			 f.cod_sap,
+			 A.MON_PREM,
+			 a.VAL_PORC_OBJE,
+			 a.ind_acti 
+		   FROM
+			   lec_progr_bono_nivel a,
+			   lec_progr_bono_lanza b,
+			   Lec_nivel c,
+			   lec_tipo_medic d,
+			   lec_tipo_bono e,
+			   lec_progr_bono_lanza_produ f
+		 WHERE a.pais_cod_pais = b.pais_cod_pais
+			  AND a.lpro_cod_prog = b.lpro_cod_prog
+			  AND a.lpbc_cam_lanz = b.lpbc_cam_lanz
+			  AND a.lpbl_num_lanz = b.num_lanz
+			  AND b.ltme_cod_tipo_medi = d.cod_tipo_medi
+			  AND a.lniv_cod_nive = c.cod_nive
+			  AND a.ltbo_cod_tipo_bono = e.cod_tipo_bono
+			  
+			  AND b.pais_cod_pais = f.pais_cod_pais
+			  AND b.lpro_cod_prog = f.lpro_cod_prog
+			  AND b.lpbc_cam_lanz = f.lpbc_cam_lanz
+			  AND b.num_lanz = f.lpbl_num_lanz
+			  AND e.ind_tipo_bono = 'L'
+			  
+			  AND a.PAIS_COD_PAIS = #codigoPais#
+			  AND A.LPRO_COD_PROG = #codigoPrograma#
+		 <isNotEmpty property="campanaLanzamiento">
+		   AND A.lpbc_cam_lanz = #campanaLanzamiento#
+		 </isNotEmpty>
+		 <isNotEmpty property="nroLanzamiento">
+		   AND A.LPBL_NUM_LANZ = #nroLanzamiento#
+		 </isNotEmpty>
+		 <isNotEmpty property="codTipoBono">
+		   AND A.ltbo_cod_tipo_bono = #codTipoBono#
+		 </isNotEmpty>
+		 <isNotEmpty property="codNivel">
+		   AND A.LNIV_COD_NIVE = #codNivel#
+		 </isNotEmpty>
+		   AND A.IND_ACTI = 1
+		 ORDER BY  
+		     a.lpbc_cam_lanz,
+			 a.LPBL_NUM_LANZ,
+			 b.LTME_COD_TIPO_MEDI,
+			 a.ltbo_cod_tipo_bono,
+			 a.LNIV_COD_NIVE 
+	</select>  
+	
+	<select id="getBonoLanzamientoMaxNroLanzamiento" parameterClass="java.util.Map" resultClass="int" >
+		select MAX(bl.num_lanz)
+	      from lec_progr_bono_lanza bl
+        where bl.PAIS_COD_PAIS = #codigoPais#
+		   AND bl.LPRO_COD_PROG = #codigoPrograma#
+	</select>  
+	
+	<select id="getExisteBonoLanzamiento" parameterClass="java.util.Map" resultClass="int" >
+		select COUNT(bl.num_lanz)
+	    from lec_progr_bono_lanza bl
+        where bl.PAIS_COD_PAIS = #codigoPais#
+		AND bl.LPRO_COD_PROG = #codigoPrograma#
+		AND bl.LPBC_CAM_LANZ = #campanaLanzamiento#
+		<isNotEmpty property="nroLanzamiento">
+			AND bl.NUM_LANZ = #nroLanzamiento#
+		</isNotEmpty>
+	</select>  
+	
+ 	      <insert id="insertBonoLanzamientoProducto" parameterClass="bonoLanzamientoProductoLEC">
+ 	       insert into lec_progr_bono_lanza_produ(
+ 	          pais_cod_pais,
+ 	          lpro_cod_prog,
+ 	          lpbc_cam_lanz,
+ 	          lpbl_num_lanz,
+ 	          NUM_SECU_PROD,
+ 	          cod_sap,
+ 	          usu_crea,
+ 	          fec_crea,
+ 	          ind_acti)
+ 	       	VALUES(
+ 	       	  #codigoPais#, 
+ 	       	  #codigoPrograma#, 
+ 	       	  #campanaLanzamiento#, 
+ 	       	  #nroLanzamiento#, 
+ 	       	  #nroSecuenciaProducto#,
+ 	       	  #codSap#,
+ 	       	  #auditInfo.updatedBy#,
+ 	       	  SYSDATE,
+ 	       	  '1')
+ 	     </insert>
+ 	  <delete id="deleteBonoLanzamientoProducto" parameterClass="bonoLanzamientoProductoLEC">
+ 	      delete from lec_progr_bono_lanza_produ
+ 	      where PAIS_COD_PAIS = #codigoPais# 
+		   AND LPRO_COD_PROG = #codigoPrograma#
+ 	       AND lpbl_num_lanz=#nroLanzamiento#
+ 	       AND lpbc_cam_lanz=#campanaLanzamiento#
+ 	       <isNotEmpty property="nroSecuenciaProducto">
+ 	       		AND num_secu_prod=#nroSecuenciaProducto#
+ 	       </isNotEmpty>
+ 	       <isNotEmpty property="codSap">
+ 	       		AND COD_SAP=#codSap#
+ 	       </isNotEmpty>
+ 	   </delete> 
+ 	   <update id="updateBonoLanzamientoProducto" parameterClass="bonoLanzamientoProductoLEC">
+ 	       update lec_progr_bono_lanza_produ set cod_sap=#codSap#,usu_modi=#auditInfo.updatedBy#, FEC_MODI = SYSDATE
+ 	      where PAIS_COD_PAIS = #codigoPais# 
+		   AND LPRO_COD_PROG = #codigoPrograma#
+ 	       AND num_secu_prod=#nroSecuenciaProducto#
+ 	       AND lpbl_num_lanz=#nroLanzamiento#
+ 	       AND lpbc_cam_lanz=#campanaLanzamiento#
+ 	   </update>   
+ 	   
+ 	  <resultMap id="getBonoLanzamientoProductoListResult"    class="java.util.HashMap">
+	    <result property="codigoPais" 				      	     column="PAIS_COD_PAIS" />
+        <result property="codigoPrograma" 			             column="LPRO_COD_PROG" />
+    	<result property="campanaLanzamiento" 			  		 column="lpbc_cam_lanz" />
+    	<result property="nroLanzamiento"	 	  		  		 column="lpbl_num_lanz" />  
+    	 <result property="nroSecuenciaProducto" 			     column="num_secu_prod" />
+        <result property="codSap" 			  					 column="cod_sap" />
+    	<result property="descripcionProducto" 			  	     column="descripcion" />
+        <result property="estado" 			                     column="ind_acti" />
+      </resultMap>
+    
+	<select id="getBonoLanzamientoProductoList" parameterClass="java.util.Map" resultMap="getBonoLanzamientoProductoListResult" >
+		 select a.pais_cod_pais,
+		        a.lpro_cod_prog,
+		        a.lpbc_cam_lanz,
+		        a.lpbl_num_lanz,
+		        a.num_secu_prod,
+		        a.cod_sap,
+		        a.ind_acti,
+		        pq_apl_aux.Valor_Gen_I18n_Sicc(1,B.OID_PROD,'MAE_PRODU') descripcion
+		 from lec_progr_bono_lanza_produ a,
+		      MAE_PRODU B
+		 WHERE B.COD_SAP =TRIM(a.cod_sap)
+           and a.PAIS_COD_PAIS = #codigoPais#
+		<isNotEmpty property="codigoPrograma">
+		   AND a.LPRO_COD_PROG = #codigoPrograma#
+		</isNotEmpty>	
+		<isNotEmpty property="nroSecuenciaProducto">
+		   AND num_secu_prod=#nroSecuenciaProducto#
+		</isNotEmpty>
+		<isNotEmpty property="codSap">
+		   AND B.cod_sap=#codSap#
+		</isNotEmpty>
+		<isNotEmpty property="nroLanzamiento">
+ 	       AND lpbl_num_lanz=#nroLanzamiento#
+ 	    </isNotEmpty>
+ 	    <isNotEmpty property="campanaLanzamiento">
+ 	       AND lpbc_cam_lanz=#campanaLanzamiento#
+ 	     </isNotEmpty>	
+		   AND a.IND_ACTI = 1
+		ORDER BY 2
+	</select>  
+	
+	<insert id="insertBonoLEC" parameterClass="bonoNivelLEC">
+	   insert into lec_progr_bono(
+	       pais_cod_pais, 
+			lpro_cod_prog, 
+			ltbo_cod_tipo_bono, 
+			usu_crea, 
+			fec_crea, 
+			ind_acti
+		)
+		values (
+		#codigoPais#, 
+		#codigoPrograma#, 
+		#codTipoBono#, 
+		#auditInfo.updatedBy#,
+		SYSDATE,
+		'1')
+	</insert>
+	
+	<delete id="deleteBonoLEC" parameterClass="bonoNivelLEC">
+ 	      delete from lec_progr_bono
+ 	      where PAIS_COD_PAIS = #codigoPais#
+			   AND LPRO_COD_PROG = #codigoPrograma#
+			   AND LTBO_COD_TIPO_BONO = #codTipoBono#
+	</delete> 
+	
+    <insert id="insertBonoNivel" parameterClass="bonoNivelLEC">
+         insert into lec_progr_bono_nivel(
+         pais_cod_pais,
+         lpro_cod_prog,
+         ltbo_cod_tipo_bono,
+         lniv_cod_nive,
+         sec_bono_nive,
+         lpbc_cam_lanz,
+         lpbl_num_lanz,
+         val_porc_obje,
+		<isNotNull property="valorPorSobreCum">
+		val_porc_sobr_obje,
+		</isNotNull>
+		<isNotNull property="nroMinIng">
+		num_mini_ingr,
+		</isNotNull>
+		<isNotNull property="nroMaxIng">
+		num_maxi_ingr,
+		</isNotNull>
+		<isNotNull property="porRetExig">
+		val_porc_rete,
+		</isNotNull>
+		<isNotNull property="nroCampMax">
+		num_camp_maxi_camb,
+		</isNotNull>
+		<isNotNull property="nroMinIncPed">
+		num_mini_incr_pedi,
+		</isNotNull>
+		<isNotNull property="monPrem">
+		mon_prem,
+		</isNotNull>
+		<isNotNull property="nroMinRete">
+		num_mini_rete,
+		</isNotNull>
+		<isNotNull property="nroMaxRete">
+		num_maxi_rete,
+		</isNotNull>
+		ltpr_cod_tipo_prem,
+		usu_crea,
+		fec_crea,
+		ind_acti
+		)
+		VALUES(
+		#codigoPais#, 
+		#codigoPrograma#, 
+		#codTipoBono#, 
+		#codNivel#, 
+		#secuenciaBonoNivel#,
+		#campanaLanzamiento#,
+		#nroLanzamiento#,
+		#valorPorcObj#,
+		<isNotNull property="valorPorSobreCum">
+		#valorPorSobreCum#,
+		</isNotNull>
+		<isNotNull property="nroMinIng">
+		#nroMinIng#,
+		</isNotNull>
+		<isNotNull property="nroMaxIng">
+		#nroMaxIng#,
+		</isNotNull>
+		<isNotNull property="porRetExig">
+			TO_NUMBER(#porRetExig#,'99.99'),
+		</isNotNull>
+		<isNotNull property="nroCampMax">
+		#nroCampMax#,
+		</isNotNull>
+		<isNotNull property="nroMinIncPed">
+		#nroMinIncPed#,
+		</isNotNull>
+		<isNotNull property="monPrem">
+		  TO_NUMBER(#monPrem#,'999999999.99'),
+		</isNotNull>
+		<isNotNull property="nroMinRete">
+		#nroMinRete#,
+		</isNotNull>
+		<isNotNull property="nroMaxRete">
+		#nroMaxRete#,
+		</isNotNull>
+		
+			#codTipoPrem#,
+ 	       	#auditInfo.updatedBy#,SYSDATE,'1')
+ 	   </insert> 
+ 	     
+ 	   <delete id="deleteBonoNivel" parameterClass="bonoNivelLEC">
+ 	      delete from lec_progr_bono_nivel 
+ 	      where PAIS_COD_PAIS = #codigoPais#
+			   AND LPRO_COD_PROG = #codigoPrograma#
+			   AND LTBO_COD_TIPO_BONO = #codTipoBono#
+			   AND LNIV_COD_NIVE = #codNivel#
+			   <isNotNull property="campanaLanzamiento">
+			   		AND LPBC_CAM_LANZ = #campanaLanzamiento#
+			   </isNotNull>
+			   <isNotNull property="nroLanzamiento">
+			   		AND LPBL_NUM_LANZ = #nroLanzamiento#
+			   </isNotNull>
+			   <isNotNull property="secuenciaBonoNivel">
+			   		AND SEC_BONO_NIVE = #secuenciaBonoNivel#
+			   </isNotNull>
+		</delete> 
+		
+ 	   <update id="updateBonoNivel" parameterClass="bonoNivelLEC">
+ 	        update lec_progr_bono_nivel 
+ 	        set val_porc_obje=#valorPorcObj#, 
+ 	            FEC_MODI = SYSDATE,
+	 	        val_porc_sobr_obje=#valorPorSobreCum#,
+			    num_mini_ingr=#nroMinIng#,
+			    num_maxi_ingr=#nroMaxIng#,
+			    num_mini_rete=#nroMinRete#,
+			    num_maxi_rete=#nroMaxRete#,
+				val_porc_rete=TO_NUMBER(#porRetExig#,'99.99'),
+			    num_camp_maxi_camb=#nroCampMax#,
+			    num_mini_incr_pedi=#nroMinIncPed#,
+			    <isNotNull property="monPrem">
+			    	mon_prem=TO_NUMBER(#monPrem#,'999999999.99'),
+			    </isNotNull>
+			    ltpr_cod_tipo_prem=#codTipoPrem#, 	       
+	 	        usu_modi=#auditInfo.updatedBy#
+	 	    where PAIS_COD_PAIS = #codigoPais#
+			   AND LPRO_COD_PROG = #codigoPrograma#
+			   AND LTBO_COD_TIPO_BONO = #codTipoBono#
+			   AND LNIV_COD_NIVE = #codNivel#
+			<isNotNull property="secuenciaBonoNivel">
+			   		AND SEC_BONO_NIVE = #secuenciaBonoNivel#
+			</isNotNull>   
+ 	   </update>  
+ 	  <resultMap id="getBonoNivelListResult"    class="java.util.HashMap">
+	    <result property="codigoPais" 				      column="PAIS_COD_PAIS" />
+        <result property="codigoPrograma" 			      column="LPRO_COD_PROG" />
+    	<result property="codTipoBono" 			  		  column="ltbo_cod_tipo_bono" />
+    	<result property="codNivel"	 	  		  		  column="lniv_cod_nive" />  
+    	<result property="secuenciaBonoNivel" 			  column="sec_bono_nive" />
+        <result property="campanaLanzamiento" 			  column="lpbc_cam_lanz" />
+    	<result property="nroLanzamiento" 			  	  column="lpbl_num_lanz" />  
+    	<result property="valorPorcObj" 			  	  column="val_porc_obje" />
+        <result property="valorPorSobreCum" 			  column="val_porc_sobr_obje" />
+    	<result property="nroMinIngr" 			  		  column="num_mini_ingr" />
+    	<result property="nroMaxIngr" 			  		  column="num_maxi_ingr" />
+    	<result property="porReten"	 	  		  	      column="val_porc_rete" />  
+    	<result property="nroCampMax" 			          column="num_camp_maxi_camb" />
+        <result property="nroMinIncPed" 			      column="num_mini_incr_pedi" />
+    	<result property="monPrem" 			              column="mon_prem" />
+    	<result property="codTipoPrem" 	  				  column="ltpr_cod_tipo_prem" />
+        <result property="indActi" 			              column="ind_acti" />
+    	<result property="nivel" 			              column="nivel" />	
+    	<result property="nroMinRete" 			  		  column="num_mini_rete" />
+    	<result property="nroMaxRete" 			  		  column="num_maxi_rete" />
+    	<result property="tipoBono" 			  		  column="des_tipo_bono" />
+    	<result property="tipoPrem" 			  		  column="des_tipo_premi" />
+      </resultMap>
+    
+	<select id="getBonoNivelList" parameterClass="java.util.Map" resultMap="getBonoNivelListResult" >
+		select  bn.pais_cod_pais,
+		        bn.lpro_cod_prog,
+		        bn.ltbo_cod_tipo_bono,
+		        bn.lniv_cod_nive,
+		        bn.sec_bono_nive,
+                bn.lpbc_cam_lanz,
+                bn.lpbl_num_lanz,
+                bn.val_porc_obje,
+                bn.val_porc_sobr_obje,
+                bn.num_mini_ingr,
+                bn.num_maxi_ingr,
+                bn.val_porc_rete,
+                bn.num_camp_maxi_camb,
+		        bn.num_mini_incr_pedi,
+		        bn.mon_prem,
+		        bn.ltpr_cod_tipo_prem,
+		        bn.ind_acti,
+		        bn.lniv_cod_nive || ' - ' || n.des_nive nivel,
+		        bn.num_mini_rete,
+                bn.num_maxi_rete,
+                tb.des_tipo_bono,
+                (select ltp.des_tipo_premi from lec_tipo_premi ltp where ltp.cod_tipo_prem = bn.ltpr_cod_tipo_prem) des_tipo_premi
+        from lec_progr_bono_nivel bn, lec_tipo_bono tb,
+             lec_nivel n
+        where bn.lniv_cod_nive=n.cod_nive
+        and bn.ltbo_cod_tipo_bono = tb.cod_tipo_bono
+        and   bn.PAIS_COD_PAIS = #codigoPais#
+		<isNotEmpty property="codigoPrograma">
+		   AND bn.LPRO_COD_PROG = #codigoPrograma#
+		</isNotEmpty>
+		<isNotEmpty property="codTipoBono">
+		   AND bn.LTBO_COD_TIPO_BONO = #codTipoBono#
+		</isNotEmpty>
+		<isNotEmpty property="codNivel">
+		   AND bn.LNIV_COD_NIVE = #codNivel#
+		</isNotEmpty>
+		<isNotEmpty property="campanaLanzamiento">
+		   AND bn.LPBC_CAM_LANZ = #campanaLanzamiento#
+		</isNotEmpty>
+		<isNotEmpty property="nroLanzamiento">
+		   AND bn.LPBL_NUM_LANZ = #nroLanzamiento#
+		</isNotEmpty>
+		<isNotEmpty property="secuenciaBonoNivel">
+		   AND bn.SEC_BONO_NIVE = #secuenciaBonoNivel#
+		</isNotEmpty>
+		   AND bn.IND_ACTI = 1
+		ORDER BY bn.lpro_cod_prog, bn.ltbo_cod_tipo_bono, n.val_peso_nive, bn.num_mini_ingr, bn.num_maxi_ingr, bn.num_mini_rete, bn.num_maxi_rete
+	</select>  
+	
+	
+	<resultMap id="getBonoLECListResult"    class="java.util.HashMap">
+	    <result property="codigoPais" 		column="PAIS_COD_PAIS" />
+        <result property="codigoPrograma" 	column="LPRO_COD_PROG" />
+    	<result property="codTipoBono" 		column="ltbo_cod_tipo_bono" />
+    </resultMap>
+    
+	<select id="getBonoLECList" parameterClass="java.util.Map" resultMap="getBonoLECListResult" >
+		select  bn.pais_cod_pais,
+		        bn.lpro_cod_prog,
+		        bn.ltbo_cod_tipo_bono
+        from lec_progr_bono bn
+        where bn.PAIS_COD_PAIS = #codigoPais#
+		<isNotEmpty property="codigoPrograma">
+		   AND bn.LPRO_COD_PROG = #codigoPrograma#
+		</isNotEmpty>
+		<isNotEmpty property="codTipoBono">
+		   AND bn.LTBO_COD_TIPO_BONO = #codTipoBono#
+		</isNotEmpty>
+	</select>  
+ 	     
+ 	 <select id="getSecBonoLanzaProdu" resultClass="string">
+		SELECT CAST(LEC_LPBP_SEQ.NEXTVAL AS VARCHAR2(10)) as incremento from dual
+    </select> 
+     <select id="getSecBonoNivel" resultClass="string">
+		SELECT CAST(LEC_LPBN_SEQ.NEXTVAL AS VARCHAR2(10)) as incremento from dual
+    </select>  
+    
+    <select id="getTipoPago" parameterClass="java.util.Map" resultMap="baseResult">
+		select cod_tipo_pago as codigo ,  des_tipo_pago descripcion from lec_tipo_pago
+		where ind_acti=1
+		<isNotNull property="indPago">
+		 and ind_pago_prin=#indPago#
+		</isNotNull>
+	</select>
+	
+	<select id="getTipoPago02" parameterClass="java.util.Map" resultMap="baseResult">
+		select cod_tipo_pago as codigo ,  cod_tipo_pago || ' - ' || des_tipo_pago descripcion from lec_tipo_pago
+		where ind_acti=1
+		<isNotNull property="indPago">
+		 and ind_pago_prin=#indPago#
+		</isNotNull>	
+		 order by cod_tipo_pago	
+	</select>
+	
+	<select id="getTipoMotivoBloqueo" parameterClass="java.util.Map" resultMap="baseResult">
+		select COD_MOTI_BLOQ as codigo ,  DES_MOTI_BLOQ descripcion 
+		from LEC_MOTIV_BLOQU_PAGO
+		where ind_acti=1
+		 order by COD_MOTI_BLOQ	
+	</select>
+	
+	 <select id="getTipoGanancia" parameterClass="java.util.Map" resultMap="baseResult">
+		select cod_tipo_gana codigo,des_tipo_gana descripcion from lec_tipo_ganan
+		where ltpa_cod_tipo_pago=#codigo#
+	</select>
+	
+	<resultMap id="getEncontrarProgramaLecCorporativoResult"  class="java.util.HashMap">
+        <result property="codigoPrograma" 				column="COD_PROG" />
+    	<result property="indInscPort" 					column="IND_INSC_PORT" />
+    	<result property="indInscCome" 					column="IND_INSC_COME" />
+    	<result property="indPosiLide" 					column="IND_POSI_LIDE" />
+    	<result property="descPrograma" 					column="NOM_PROG" />
+    </resultMap>	
+    
+	<select id="getEncontrarProgramaLecCorporativo" parameterClass="java.lang.String" resultMap="getEncontrarProgramaLecCorporativoResult">
+		<![CDATA[
+		SELECT cod_prog, ind_insc_port, ind_insc_come, ind_posi_lide,nom_prog
+		  FROM LEC_PROGR
+		  WHERE  #value# BETWEEN cam_inic AND NVL(cam_fin, #value#)
+		 
+		 ]]>  
+	</select>
+	
+	<select id="getIndicadorPosibleLider" parameterClass="java.util.Map" resultClass="java.lang.Integer">
+		SELECT COUNT(*)
+		FROM LEC_PROGR_POSIB_LIDER_TEMP
+		WHERE PAIS_COD_PAIS = #codigoPais#
+		<isEmpty prepend="AND" property="codigoCliente">
+		   COD_LIDE IS NULL
+		</isEmpty>
+		<isNotEmpty prepend="AND" property="codigoCliente">
+			TRIM(COD_LIDE) = #codigoCliente#
+		</isNotEmpty>
+		AND IND_ACTI = '1'
+	</select>
+	
+	<select id="getIndicadorPosibleLiderHisto" parameterClass="java.util.Map" resultClass="java.lang.Integer">
+		SELECT COUNT(*) FROM ZON_HISTO_GEREN
+		WHERE 1=1
+		<isEmpty prepend="AND" property="codigoCliente">
+		   GERE IS NULL
+		</isEmpty>
+		<isNotEmpty prepend="AND" property="codigoCliente">
+			GERE = #codigoCliente#
+		</isNotEmpty>
+		AND COD_SECC IS NOT NULL 
+		AND PERD_OID_PERI_HAST = #oidPeriodoAnterior#
+	</select>
+	
+	<select id="validarAsignacionLiderSeccion" parameterClass="java.util.Map" resultClass="string">
+		SELECT    zon_pkg_unida_admin.ZON_FN_VALID_ASIGN_LIDER_SECCI(
+		            #codigoPais#, 
+		            #codigoMarca#,
+		            #codigoCanal#, 
+		            #codigoCliente#, 
+		            #indicadorReingreso#,
+		            #indicadorNoValidaUnicoLider#,
+		            #numeroActivasFinalesZona#, 
+		            #promedioActFinalesSeccion#,
+		            #codigoPeriodoActual#,
+		            #periodoAsignarLider#,
+		            #oidSeccion#,
+		            #unidadAdministrativa#,
+		            #oidPeriodoAnterior#,
+		            #periodoAsignarLiderSgte#,
+		            #codigoSubgerencia#,
+		            #codigoRegion#,
+		            #codigoZona#,
+		            #codigoSeccion#,
+		            #indRealizarValidaciones#,
+		            #indicadorWEB#
+		          )
+		FROM      DUAL
+	</select>
+	 <select id="getTipoComision" parameterClass="java.util.Map" resultMap="baseResult">
+		select cod_tipo_comi as codigo,des_tipo_comi as descripcion from lec_tipo_comi  
+	</select>
+	 <select id="getProgCanasta" parameterClass="java.util.Map" resultMap="baseResult">
+		select sec_cana as codigo,num_prod ||'-'|| val_cana ||'-'||nom_cana as descripcion 
+		from lec_progr_canas
+		where IND_ACTI = '1'
+	</select>
+	 <insert id="insertProgramaCanastaPremi" parameterClass="programaCanastaPremiLEC">
+ 	       insert into lec_progr_canas_premi(
+ 	          pais_cod_pais,
+ 	          lpro_cod_prog,
+ 	          lpcn_sec_cana,
+ 	          ltcn_cod_tipo_cana,
+ 	          sec_cana_prem,
+ 	          lniv_cod_nive,
+ 	          usu_crea,
+ 	          fec_crea,
+ 	          ind_acti) 	       
+ 	       	VALUES(
+ 	       	  #codigoPais#, 
+ 	       	  #codigoPrograma#, 
+ 	       	  #secCanasta#, 
+ 	       	  #codigoTipoCanasta#, 
+ 	       	  #secuencia#,
+ 	       	  #codigoNivel#, 
+ 	       	  #auditInfo.updatedBy#,
+ 	       	  SYSDATE,
+ 	       	  '1')
+ 	 </insert>
+ 	      
+ 	 <resultMap id="getProgramaCanastaPremiListResult"  class="java.util.HashMap">
+	    <result property="codigoPais" 				     column="PAIS_COD_PAIS" />
+        <result property="codigoPrograma" 			     column="LPRO_COD_PROG" />
+    	<result property="secCanasta" 			         column="lpcn_sec_cana" />
+    	<result property="codigoTipoCanasta"	 		 column="ltcn_cod_tipo_cana" />
+    	<result property="secuencia"	 		   		 column="sec_cana_prem" />    	
+    	<result property="codigoNivel" 				     column="lniv_cod_nive" />
+        <result property="codTipoBono" 			     	 column="ltbo_cod_tipo_bono" />
+    	<result property="secBonoNivel" 			     column="lpbn_sec_bono_nive" />
+    	<result property="codRegion" 	      		     column="lpag_sec_ambi_geog" />
+    	<result property="secAmbGeogra"	 		   		 column="ltmc_cod_tipo_medi_cobr" />
+    	<result property="codTramo"	 		   		     column="lpct_cod_tram" />
+    	<result property="nivel"	 		   		     column="nivel" />
+    	<result property="codTramo" 			         column="COD_TRAM" />
+    	<result property="tramo" 			         	 column="tramo" />
+    	<result property="nomCanasta" 			         column="NOM_CANA" />
+    	<result property="costoCanasta" 			     column="VAL_CANA" />
+    	<result property="nombreTipoCanasta"	 		 column="DES_TIPO_CANA" />
+    	<result property="codigoPeriodo"	 		 	 column="CAM_ACTI" />    	
+      </resultMap>
+    
+	<select id="getProgramaCanastaPremiList" parameterClass="java.util.Map" resultMap="getProgramaCanastaPremiListResult" >
+		  select 
+		     cp.pais_cod_pais,
+		     cp.lpro_cod_prog,
+		     cp.lpcn_sec_cana,
+		     cp.ltcn_cod_tipo_cana,
+		     cp.sec_cana_prem,
+		     cp.lniv_cod_nive,
+		     cp.ltbo_cod_tipo_bono,
+		     cp.lpbn_sec_bono_nive,
+		     cp.lpag_sec_ambi_geog,
+		     cp.ltmc_cod_tipo_medi_cobr,
+		     cp.lpct_cod_tram,
+		     cp.ind_acti,
+		     n.des_nive nivel, 
+		     ct.COD_TRAM,'TRAMO ' ||ct.COD_TRAM TRAMO,
+		     c.NOM_CANA,
+		     c.VAL_CANA,
+		     LTC.DES_TIPO_CANA,
+		     C.CAM_ACTI
+	      from lec_nivel n,
+	           lec_progr_canas c,
+	           lec_progr_canas_premi cp
+	      left join LEC_PROGR_COBRA_OBJET_TRAMO obt on cp.pais_cod_pais= obt.PAIS_COD_PAIS and cp.lpro_cod_prog=obt.LPRO_COD_PROG and 
+	          cp.lpag_sec_ambi_geog=obt.LPAG_SEC_AMBI_GEOG and cp.ltug_cod_tipo_uso_geog=obt.LTUG_COD_TIPO_USO_GEOG
+	          and cp.ltmc_cod_tipo_medi_cobr=obt.LTMC_COD_TIPO_MEDI_COBR and cp.lpct_cod_tram=obt.lpct_cod_tram
+	      left join lec_progr_cobra_tramo ct on ct.pais_cod_pais=obt.pais_cod_pais and ct.lpro_cod_prog=obt.lpro_cod_prog
+	          and ct.cod_tram=obt.lpct_cod_tram
+	      left join LEC_TIPO_CANAS ltc on CP.LTCN_COD_TIPO_CANA = ltc.COD_TIPO_CANA    
+	      where cp.lniv_cod_nive=n.cod_nive
+			and cp.PAIS_COD_PAIS = #codigoPais#
+			and c.PAIS_COD_PAIS = cp.PAIS_COD_PAIS
+			and c.LPRO_COD_PROG = cp.LPRO_COD_PROG
+			and c.SEC_CANA = cp.lpcn_sec_cana
+		 <isNotEmpty property="codigoPrograma">
+		   AND cp.LPRO_COD_PROG = #codigoPrograma#
+		 </isNotEmpty>
+		 <isNotEmpty property="secCanasta">
+		   AND cp.lpcn_sec_cana = to_number(#secCanasta#)
+		 </isNotEmpty>
+		 <isNotEmpty property="codigoTipoCanasta">
+		   AND cp.ltcn_cod_tipo_cana = #codigoTipoCanasta#
+		 </isNotEmpty>
+		 <isNotEmpty property="secuencia">
+		   AND cp.sec_cana_prem = to_number(#secuencia#)
+		 </isNotEmpty>
+		 <isNotEmpty property="codigoNivel">
+		   AND  cp.lniv_cod_nive= #codigoNivel#
+		 </isNotEmpty>
+		 <isNotEmpty property="campanyaActivacionCanasta">
+		   AND c.cam_acti = #campanyaActivacionCanasta#
+		 </isNotEmpty>
+		
+		   AND cp.IND_ACTI = '1'
+		 ORDER BY cp.lpro_cod_prog, cp.lniv_cod_nive, cp.lpcn_sec_cana
+	</select>
+	
+ 	  <select id="getProgramaCanastaPremi" resultClass="string">
+		SELECT CAST(LEC_LCNP_SEQ.NEXTVAL AS VARCHAR2(10)) as incremento from dual
+    </select> 
+    
+     <insert id="insertProgramaDesempenio" parameterClass="programaDesempenioLEC"> 	
+      insert into lec_progr_desem(pais_cod_pais,lpro_cod_prog,ltde_cod_tipo_dese,ran_inic,ran_fin
+     ,usu_crea,fec_crea,ind_acti)
+  	 VALUES(#codigoPais#, #codigoPrograma#, #codigoTipoDesemp#, #ranInicio#, #ranFin#
+ 	 ,#auditInfo.updatedBy#,SYSDATE,'1')
+ 	 </insert> 	
+ 	 
+ 	 <delete id="deleteProgramaDesempenio" parameterClass="programaDesempenioLEC"> 	
+      delete from lec_progr_desem
+      where pais_cod_pais = #codigoPais#
+        and lpro_cod_prog = #codigoPrograma#
+        and ltde_cod_tipo_dese =#codigoTipoDesemp#
+ 	 </delete> 	
+ 	 
+ 	 <update id="updateProgramaDesempenio" parameterClass="programaDesempenioLEC"> 	
+      update lec_progr_desem
+      set ran_inic = #ranInicio#,
+          ran_fin =  #ranFin#,
+          usu_modi = #auditInfo.updatedBy#,
+          fec_modi = SYSDATE,
+          ind_acti = '1'
+      where pais_cod_pais = #codigoPais#
+        and lpro_cod_prog = #codigoPrograma#
+        and ltde_cod_tipo_dese =#codigoTipoDesemp#
+ 	 </update> 	
+ 	 
+ 	    <resultMap id="getProgramaDesempenioListResult"  class="java.util.HashMap">
+	    <result property="codigoPais" 				      column="PAIS_COD_PAIS" />
+        <result property="codigoPrograma" 			      column="LPRO_COD_PROG" />
+    	<result property="codigoTipoDesemp" 			  column="ltde_cod_tipo_dese" />
+    	<result property="descripcionTipoDesemp"	 	  column="des_tipo_dese" />
+    	<result property="ranInicio"	 		   		  column="ran_inic" />    	
+    	<result property="ranFin" 				          column="ran_fin" />
+        <result property="indActi" 			     	      column="ind_acti" />
+      </resultMap>
+    
+	<select id="getProgramaDesempenioList" parameterClass="java.util.Map" resultMap="getProgramaDesempenioListResult" >
+		  select 
+		     d.pais_cod_pais,
+		     d.lpro_cod_prog,
+		     d.ltde_cod_tipo_dese,
+		     td.des_tipo_dese,
+		     d.ran_inic,d.ran_fin,
+             d.ind_acti 
+        from lec_progr_desem d,lec_tipo_desem td
+        where d.ltde_cod_tipo_dese =td.cod_tipo_dese
+			and   d.PAIS_COD_PAIS = #codigoPais#
+		 <isNotEmpty property="codigoPrograma">
+		   AND d.LPRO_COD_PROG = #codigoPrograma#
+		 </isNotEmpty>
+		 <isNotEmpty property="codigoTipoDesemp">
+		   AND d.ltde_cod_tipo_dese = #codigoTipoDesemp#
+		 </isNotEmpty>
+		   AND d.IND_ACTI = 1
+		 ORDER BY 2, 3
+	</select>
+	
+	
+	  <insert id="insertProgramaEtapaCampana" parameterClass="programaEtapaCampanaLEC">
+	    insert into lec_progr_etapa_campa(pais_cod_pais,lpro_cod_prog,cam_eval
+	    ,usu_crea,fec_crea,ind_acti)
+	    VALUES(#codigoPais#, #codigoPrograma#, #camEval#
+	 	,#auditInfo.updatedBy#,SYSDATE,'1')
+	  </insert>  
+	  
+	  <delete id="deleteProgramaEtapaCampana" parameterClass="programaEtapaCampanaLEC">
+	    delete from lec_progr_etapa_campa
+	    where pais_cod_pais = #codigoPais#
+	      and lpro_cod_prog = #codigoPrograma#
+	      and cam_eval = #camEval#
+	  </delete>  
+	  
+	   <resultMap id="getProgramaEtapaCampanaListResult"  class="java.util.HashMap">
+	    <result property="codigoPais" 				      column="PAIS_COD_PAIS" />
+        <result property="codigoPrograma" 			      column="LPRO_COD_PROG" />
+    	<result property="camEval" 			  			  column="cam_eval" />
+    	<result property="indActi"	 	  				  column="ind_acti" />    	
+      </resultMap>
+    
+	<select id="getProgramaEtapaCampanaList" parameterClass="java.util.Map" resultMap="getProgramaEtapaCampanaListResult" >
+		select pais_cod_pais,
+		       lpro_cod_prog,
+		       cam_eval,
+		       ind_acti
+	      from lec_progr_etapa_campa
+     	 where  PAIS_COD_PAIS = #codigoPais#
+		 <isNotEmpty property="codigoPrograma">
+		   AND LPRO_COD_PROG = #codigoPrograma#
+		 </isNotEmpty>
+		 <isNotEmpty property="camEval">
+		   AND cam_eval = #camEval#
+		 </isNotEmpty>
+		  AND IND_ACTI = 1
+		 ORDER BY 2,3
+	</select> 
+	
+    <select id="getEtapCampEval" parameterClass="java.util.Map" resultMap="baseResult">	
+		select perd.oid_peri codigo,peri.cod_peri descripcion        
+		  from cra_perio perd,
+		       seg_perio_corpo peri
+		 where perd.peri_oid_peri = peri.oid_peri
+		   and peri.cod_peri <![CDATA[>=]]> ( select min(cam_inic)
+		                            from lec_progr
+		                           where cam_inic is not null )
+		 order by peri.cod_peri desc
+    </select> 
+	
+	<select id="getTipoGrupoRegion" parameterClass="java.util.Map" resultMap="baseResult">
+		select COD_GRUP_REGI as codigo, COD_GRUP_REGI||' '||DES_GRUP_REGI as descripcion
+        from LEC_GRUPO_PROCE_RECAU    
+        WHERE IND_ACTI = 1
+        AND PAIS_COD_PAIS = #codigoPais#
+	</select>
+
+	<select id="getGruposPago" parameterClass="java.util.Map" resultMap="baseResult">
+		select COD_GRUP_REGI as codigo, COD_GRUP_REGI||' '||DES_GRUP_REGI as descripcion
+        from LEC_GRUPO_PROCE_RECAU    
+        WHERE IND_ACTI = 1
+        AND PAIS_COD_PAIS = #codigoPais#
+        
+        <isNotEmpty property="indTipoGrupoPago">
+        	AND COD_TIPO_GRUP = #indTipoGrupoPago#
+        </isNotEmpty>
+	</select>
+
+	<select id="getRegionesByTipoGrupo" parameterClass="java.util.Map" resultMap="baseResult">
+		SELECT ZR.COD_REGI CODIGO, ZR.COD_REGI || ' - ' || ZR.DES_REGI AS DESCRIPCION 
+		FROM ZON_REGIO ZR
+		WHERE ZR.COD_REGI IN(
+		    SELECT SUBSTR(DGR.COD_REGI, 1, 2)
+		    FROM LEC_GRUPO_PROCE_RECAU CGR, LEC_GRUPO_PROCE_RECAU_REGIO DGR
+		    WHERE CGR.PAIS_COD_PAIS = DGR.PAIS_COD_PAIS 
+		    AND CGR.COD_GRUP_REGI = DGR.LGPR_COD_GRUP_REGI
+		    AND CGR.PAIS_COD_PAIS = #codigoPais#
+		    AND CGR.COD_GRUP_REGI = #codigoGrupoPago#
+		    AND CGR.IND_ACTI = '1'
+		    AND DGR.IND_ACTI = '1')
+		ORDER BY ZR.COD_REGI
+    </select>
+
+    <select id="getRegionesByTiposGrupo" parameterClass="java.util.Map" resultMap="baseResult">
+		SELECT ZR.COD_REGI CODIGO, ZR.COD_REGI || ' - ' || ZR.DES_REGI AS DESCRIPCION 
+		FROM ZON_REGIO ZR
+		WHERE ZR.COD_REGI IN(
+		    SELECT SUBSTR(DGR.COD_REGI, 1, 2)
+		    FROM LEC_GRUPO_PROCE_RECAU CGR, LEC_GRUPO_PROCE_RECAU_REGIO DGR
+		    WHERE CGR.PAIS_COD_PAIS = DGR.PAIS_COD_PAIS 
+		    AND CGR.COD_GRUP_REGI = DGR.LGPR_COD_GRUP_REGI
+		    AND CGR.PAIS_COD_PAIS = #codigoPais#
+   
+		    <isNotEmpty property="codigoGrupoPago">    
+            <iterate prepend="AND" property="codigoGrupoPago" open=" CGR.COD_GRUP_REGI IN (" close=")" conjunction=",">
+                 #codigoGrupoPago[]#
+            </iterate>    
+          	</isNotEmpty>
+		    
+		    AND CGR.IND_ACTI = '1'
+		    AND DGR.IND_ACTI = '1')  
+		ORDER BY ZR.COD_REGI
+    </select>
+
+	<select id="getZonasByTipoGrupo" parameterClass="java.util.Map" resultMap="baseResult">
+		SELECT
+		ZZ.COD_ZONA CODIGO, ZZ.COD_ZONA || ' - ' || ZZ.DES_ZONA AS DESCRIPCION 
+		FROM ZON_ZONA ZZ 
+		WHERE ZZ.COD_ZONA IN(
+		    SELECT DGR.COD_REGI
+		    FROM LEC_GRUPO_PROCE_RECAU CGR, LEC_GRUPO_PROCE_RECAU_REGIO DGR
+		    WHERE CGR.PAIS_COD_PAIS = DGR.PAIS_COD_PAIS 
+		    AND CGR.COD_GRUP_REGI = DGR.LGPR_COD_GRUP_REGI
+		    AND CGR.PAIS_COD_PAIS = #codigoPais# 
+		    AND CGR.COD_GRUP_REGI = #codigoGrupoPago#
+		    AND CGR.IND_ACTI = '1'
+		    AND DGR.IND_ACTI = '1') 
+		ORDER BY ZZ.COD_ZONA		    
+    </select>
+    
+    <select id="getZonasByTiposGrupo" parameterClass="java.util.Map" resultMap="baseResult">
+		SELECT
+		ZZ.COD_ZONA CODIGO, ZZ.COD_ZONA || ' - ' || ZZ.DES_ZONA AS DESCRIPCION 
+		FROM ZON_ZONA ZZ 
+		WHERE ZZ.COD_ZONA IN(
+		    SELECT DGR.COD_REGI
+		    FROM LEC_GRUPO_PROCE_RECAU CGR, LEC_GRUPO_PROCE_RECAU_REGIO DGR
+		    WHERE CGR.PAIS_COD_PAIS = DGR.PAIS_COD_PAIS 
+		    AND CGR.COD_GRUP_REGI = DGR.LGPR_COD_GRUP_REGI
+		    AND CGR.PAIS_COD_PAIS = #codigoPais# 
+
+		    <isNotEmpty property="codigoGrupoPago">    
+            <iterate prepend="AND" property="codigoGrupoPago" open=" CGR.COD_GRUP_REGI IN (" close=")" conjunction=",">
+                 #codigoGrupoPago[]#
+            </iterate>    
+        	</isNotEmpty>
+		    
+		    AND CGR.IND_ACTI = '1'
+		    AND DGR.IND_ACTI = '1')
+		ORDER BY ZZ.COD_ZONA		    
+    </select>
+    
+    <select id="getTipoGrupo" parameterClass="java.util.Map" resultClass="string">
+        SELECT COD_TIPO_GRUP
+        FROM LEC_GRUPO_PROCE_RECAU    
+        WHERE IND_ACTI = 1
+        AND PAIS_COD_PAIS = #codigoPais#
+        AND COD_GRUP_REGI = #codigoGrupoPago#
+    </select>
+	
+    <select id="getTiposGrupo" parameterClass="java.util.Map" resultClass="string">
+        SELECT DISTINCT COD_TIPO_GRUP
+        FROM LEC_GRUPO_PROCE_RECAU    
+        WHERE IND_ACTI = 1
+        AND PAIS_COD_PAIS = #codigoPais#
+        
+         <isNotEmpty property="codigoGrupoPago">    
+            <iterate prepend="AND" property="codigoGrupoPago" open=" COD_GRUP_REGI IN (" close=")" conjunction=",">
+                 #codigoGrupoPago[]#
+            </iterate>    
+        </isNotEmpty>
+
+    </select>
+	
+	<select id="getRegionByTipoGrupoRegion" parameterClass="java.util.Map" resultMap="baseResult">
+         select lgrr.cod_regi || ' - ' || zorg.des_regi as descripcion,
+                lgrr.cod_regi as codigo
+  		 from lec_grupo_proce_recau_regio lgrr,
+         zon_regio zorg
+		 where lgrr.cod_regi = zorg.cod_regi
+		 and lgrr.lgpr_cod_grup_regi = #codigoTipoGroup#
+		 and lgrr.pais_cod_pais = #codigoPais#
+    	 and lgrr.ind_acti = 1
+		 and zorg.ind_acti = 1
+      </select>
+	
+	<parameterMap id="executeProcesoLECProcesarClasificacionLideresParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"	 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"	 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="tipoEvaluacion" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCliente" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN" />
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeProcesoLECProcesarClasificacionLideres" parameterMap="executeProcesoLECProcesarClasificacionLideresParams">
+		{call LEC_PKG_PROCE.LEC_PR_ACTUA_CLASI_LIDER(?,?,?,?,?,?, '0', ?)}
+	</procedure>
+       
+	<select id="getTipoOfertaList" resultMap="baseResult">
+	    SELECT 
+	            OFE.OID_TIPO_OFER CODIGO, 
+	            PQ_APL_AUX.VALOR_GEN_I18N_SICC(1, OID_TIPO_OFER, 'PRE_TIPO_OFERT') DESCRIPCION 
+	    FROM PRE_TIPO_OFERT OFE
+	    ORDER BY 2
+	</select>
+      <insert id="insertCanasta" parameterClass="canastaLEC">
+          insert into  lec_progr_canas(
+            pais_cod_pais,
+            lpro_cod_prog,
+            sec_cana,
+            val_cana,
+            nom_cana,
+            cam_regi,
+            num_prod,
+            usu_crea,
+            fec_crea,
+            ind_acti,
+            cam_acti)  
+          values(
+            #codigoPais#,
+            #codigoPrograma#,
+            #secuencia#,
+            TO_NUMBER(#valor#,'999999999.99'),
+            #nombre#,
+            #campanyaRegistro#,
+            #numeroProductos#,
+            #auditInfo.updatedBy#,
+            sysdate,
+            '1',
+            #campanyaActivacionCanasta#)    
+    </insert>
+     <insert id="insertCanastaDetalle" parameterClass="canastaDetalleLEC">
+          insert into lec_progr_canas_detal(
+            pais_cod_pais,
+            lpro_cod_prog,
+            lpcn_sec_cana,
+            cod_sap,
+            tofe_oid_tipo_ofer,
+            cod_form_pago,
+            val_prec_prod,
+            usu_crea,
+            fec_crea,
+            ind_acti) 
+          values(
+            #codigoPais#,
+            #codigoPrograma#,
+            #secuenciaCanasta#,
+            #codigoSap#,
+            #codigoTipoOferta#,
+            #formaPago#,
+            TO_NUMBER(#precio#,'999999999.99'),
+            #auditInfo.updatedBy#,
+            sysdate,
+            '1')    
+    </insert>    
+    <select id="getNumeroSecuenciaCanasta" resultClass="string">
+		SELECT CAST(LEC_LPCN_SEQ.NEXTVAL AS VARCHAR2(10)) as incremento from dual
+    </select>  
+     	<resultMap id="getCanastaLecListResult"  class="java.util.HashMap">
+	   <result property="codigoPais" 				      column="PAIS_COD_PAIS" />
+       <result property="codigoPrograma" 			      column="LPRO_COD_PROG" />
+       <result property="secuencia" 			  		  column="sec_cana" />
+       <result property="valor" 				      	  column="val_cana" />
+       <result property="nombre" 			      		  column="nom_cana" />
+       <result property="campanyaRegistro" 			  	  column="cam_regi" />
+       <result property="numeroProductos" 			      column="num_prod" />
+       <result property="usuarioRegistro" 			      column="usu_crea" />
+       <result property="estado"	 	  				  column="ind_acti" />    	
+       <result property="campanyaActivacionCanasta"		  column="cam_acti" />    	
+       <result property="descripcion"		  			  column="des_cana" />    	
+      </resultMap>
+    
+	<select id="getCanastaLecList" parameterClass="java.util.Map" resultMap="getCanastaLecListResult" >
+		   select 
+		     pais_cod_pais,
+		     lpro_cod_prog,
+		     TO_CHAR(sec_cana) sec_cana,
+		     val_cana,
+		     nom_cana,
+		     cam_regi,
+		     num_prod,
+		     usu_crea,
+		     ind_acti,
+		     cam_acti,
+		     trim(nom_cana)||'-' ||trim(to_char(val_cana, '9999999999.99')) des_cana 
+		 from lec_progr_canas    
+     	 where   PAIS_COD_PAIS = #codigoPais#
+		 <isNotEmpty property="codigoPrograma">
+		   AND LPRO_COD_PROG = #codigoPrograma#
+		 </isNotEmpty>
+		 <isNotEmpty property="campanyaActivacionCanasta">
+		   AND CAM_ACTI = #campanyaActivacionCanasta#
+		 </isNotEmpty>		 		 
+		 
+		   AND IND_ACTI = '1'
+		 ORDER BY 
+		     lpro_cod_prog,
+		     sec_cana
+	</select> 
+	   <resultMap id="getCanastaListDetalleResult"  class="java.util.HashMap">
+	   <result property="codigoPais" 				      column="PAIS_COD_PAIS" />
+       <result property="codigoPrograma" 			      column="LPRO_COD_PROG" />
+       <result property="nombreCanasta" 			  	  column="NOM_CANA" />
+       <result property="secuenciaCanasta" 			  	  column="lpcn_sec_cana" />
+       <result property="nombreTipoOferta" 		      	  column="nombre_tipo_oferta" />
+       <result property="codigoTipoOferta" 		      	  column="tofe_oid_tipo_ofer" />
+       <result property="formaPago" 			      	  column="cod_form_pago" />
+       <result property="precio" 			  	 		  column="val_prec_prod" />
+       <result property="nombreProducto" 			     	  column="nombre_producto" />
+       <result property="codigoSap" 			    	  column="cod_sap" />
+       <result property="estado"	 	  				  column="ind_acti" />    	
+      </resultMap>
+    
+	<select id="getCanastaDetalleList" parameterClass="java.util.Map" resultMap="getCanastaListDetalleResult" >
+		     select 
+		       pcd.pais_cod_pais,
+		       pcd.lpro_cod_prog,
+		       cab.NOM_CANA,
+		       TO_CHAR(pcd.lpcn_sec_cana) lpcn_sec_cana,
+		       pcd.cod_sap,
+		       PQ_APL_AUX.VALOR_GEN_I18N_SICC(1, pcd.tofe_oid_tipo_ofer, 'PRE_TIPO_OFERT') nombre_tipo_oferta,
+		       TO_CHAR(pcd.tofe_oid_tipo_ofer) tofe_oid_tipo_ofer, 
+		       pcd.cod_form_pago,
+		       pcd.val_prec_prod,
+		       pcd.cod_sap || ' - ' || pq_apl_aux.Valor_Gen_I18n_Sicc(1,B.OID_PROD,'MAE_PRODU') nombre_producto ,
+		       pcd.cod_sap,
+		       pcd.ind_acti		     
+		     from lec_progr_canas_detal pcd,
+		          MAE_PRODU B,
+		          lec_progr_canas cab
+		     WHERE B.COD_SAP = pcd.cod_sap
+		     and cab.pais_cod_pais = pcd.pais_cod_pais
+		     and cab.LPRO_COD_PROG = pcd.lpro_cod_prog
+		     and cab.SEC_CANA = pcd.lpcn_sec_cana
+     		 and pcd.PAIS_COD_PAIS = #codigoPais#
+		 <isNotEmpty property="codigoPrograma">
+		   AND pcd.LPRO_COD_PROG = #codigoPrograma#
+		 </isNotEmpty>
+		 <isNotEmpty property="secuenciaCanasta">
+		   AND pcd.lpcn_sec_cana = #secuenciaCanasta#
+		 </isNotEmpty>
+		 <isNotEmpty property="codigoSap">
+		   AND pcd.cod_sap = #codigoSap#
+		 </isNotEmpty>
+		 <isNotEmpty property="campanyaActivacionCanasta">
+		   AND cab.CAM_ACTI = #campanyaActivacionCanasta#
+		 </isNotEmpty>		 		 		 
+		   AND pcd.IND_ACTI = '1'
+		 ORDER BY 2, 3, 4
+	</select>  
+	<select id="verificarProgramaCruce" parameterClass="java.util.Map" resultClass="int">
+	  select count(1)
+ 		from lec_progr
+		where 1=1
+  		and ( 
+        #campanaInicio# between cam_inic and nvl(cam_fin,#campanaInicio#) or
+        #campanaFin# between cam_inic and nvl(cam_fin,#campanaFin#)
+      		)
+   </select>
+    <insert id="insertCampanaExigencia" parameterClass="campanaExigenciaLEC">
+          insert into lec_progr_campa_exige(
+            pais_cod_pais,
+            lpro_cod_prog,
+            ind_tipo_exig,
+            cam_inic,
+            cam_fin,
+            usu_crea,
+            fec_crea,ind_acti) 
+          values(
+            #codigoPais#,
+            #codigoPrograma#,
+            #tipoExigencia#,
+            #campanaInicio#,
+            #campanaFin#,
+            #auditInfo.updatedBy#,
+            sysdate,
+            '1')    
+    </insert>  
+     <resultMap id="getCampanaExigenciaResult"  class="java.util.HashMap">
+	   <result property="codigoPais" 				      column="PAIS_COD_PAIS" />
+       <result property="codigoPrograma" 			      column="LPRO_COD_PROG" />
+       <result property="tipoExigencia" 			  	  column="ind_tipo_exig" />
+       <result property="campanaInicio" 		      	  column="cam_inic" />
+       <result property="campanaFin" 		      	  column="cam_fin" />
+        <result property="indActi"	 	  				  column="ind_acti" />    	
+      </resultMap>
+    
+	<select id="getCampanaExigenciaList" parameterClass="java.util.Map" resultMap="getCampanaExigenciaResult" >
+		 select  
+		      pais_cod_pais,
+		      lpro_cod_prog,
+		      ind_tipo_exig,
+		      cam_inic,
+              cam_fin,
+              usu_crea,
+              fec_crea,
+              ind_acti 
+         from lec_progr_campa_exige
+   		 where  PAIS_COD_PAIS = #codigoPais#
+		 <isNotEmpty property="codigoPrograma">
+		    AND LPRO_COD_PROG = #codigoPrograma#
+		 </isNotEmpty>
+		 <isNotEmpty property="tipoExigencia">
+		   AND ind_tipo_exig = #tipoExigencia#
+	     </isNotEmpty>
+		   AND IND_ACTI = 1
+		 ORDER BY 2, 3
+	</select>
+	
+	<update id="updateCampanaExigencia"  parameterClass="campanaExigenciaLEC">
+	 update lec_progr_campa_exige  
+	 set
+		  cam_inic  =  #campanaInicio#,
+	 	  cam_fin   =  #campanaFin#, 
+		  USU_MODI  =  #auditInfo.updatedBy#, 
+	      FEC_MODI  =  SYSDATE ,
+	      IND_ACTI  =  1
+      WHERE PAIS_COD_PAIS  =  #codigoPais# 
+      and   LPRO_COD_PROG  =    #codigoPrograma# 
+      AND ind_tipo_exig = #tipoExigencia#
+	</update>  
+	
+	<delete id="deleteCampanaExigencia"  parameterClass="campanaExigenciaLEC">
+	 delete from lec_progr_campa_exige 
+	 WHERE PAIS_COD_PAIS  =  #codigoPais# 
+      and  LPRO_COD_PROG  = #codigoPrograma# 
+      AND ind_tipo_exig = #tipoExigencia#
+	</delete>  
+		
+	<update id="updateProgramaCorporativo"  parameterClass="prgrCorporativo">
+	 update lec_progr  set
+		  PAIS_COD_PAIS  =  #codigoPais#,
+	 	  COD_PROG     =    #codigoPrograma#, 
+		  CAM_INIC    = #periodoInicio#,     
+	  	  NOM_PROG    =     #descripcionPrograma#,
+	  	  CAM_FIN    =   #periodoFin#, 
+	  	  IND_PROG_RECO  =   #programaRecono#, 
+	  	  NUM_ACTI_SECC_APTA =TO_NUMBER(#nroMinActSec#),
+	  	  IND_POSI_LIDE = #insPosiLider#,     
+	      IND_ACTI_OBJE_COBR =#actCobranza#, 
+	      IND_TIPO_ORIG_PEDI = #pedidoWeb#,
+	      NUM_CAMP_MANT_NIVE =TO_NUMBER(#nivNroCampMante#),
+	      NUM_CAMP_TOLE_NIVE =TO_NUMBER(#nivNroCampTole#),
+	      NUM_CAMP_MEDI_DESE =#numCampMediDese#, 
+	      NUM_BAJA_AUTO   = #numBajaAuto#, 
+	      NUM_CAMP_EVAL   =#numCampEval#, 
+	      IND_INSC_PORT	= #insPortalFFVV#	,
+	      IND_INSC_COME	=#insSistCome#,
+	      IND_EXIG_CURS   =#exigCursoCamb#,
+	      IND_EXIG_PEDI_LIDE =#exigPedPersona#,
+	      LTCO_COD_TIPO_COMI=#codTipoComi#,
+	      NUM_CAMP_GRAC = #codCamPerGrac#,
+	      USU_MODI   =#auditInfo.updatedBy#, 
+	      FEC_MODI   =SYSDATE       ,
+	      IND_ACTI=1,
+	      IND_FERI = #indicadorFeriado#,
+	      IND_CANA = #indicadorDespachoCanasta#,
+	      IND_DESE_NUEV = #indicadorConsiderarNuevas#,
+	      IND_GANA_PEDI = #indicadorGanaciaDePedido#,
+	      IND_DESE_META_INGR = #indicadorConsiderarMetasIngresos#,
+	      IND_DESE_INGR_CAPI = #indicadorconsiderarCapitalizacion#,
+	      IND_NUEV_EXIT = #indicadorExitoNuevas#
+      WHERE 
+         PAIS_COD_PAIS  =  #codigoPais# 
+        and   COD_PROG     =    #codigoPrograma# 
+	</update>  
+	
+	<resultMap id="getRegionesResult" class="java.util.HashMap">
+	   	<result property="oidRegion" column="OID_REGI"/>
+	   	<result property="codigoRegion" column="COD_REGI"/>
+	   	<result property="descripcionRegion" column="DES_REGI"/>
+	   </resultMap>
+	
+	<select id="getRegionByZona" parameterClass="java.util.Map" resultMap="getRegionesResult">   	
+		select R.OID_REGI,
+		       R.COD_REGI,
+		       R.DES_REGI
+		from ZON_REGIO R, ZON_ZONA Z
+		WHERE R.OID_REGI = Z.ZORG_OID_REGI
+		 AND Z.COD_ZONA = #codigoZona#
+    </select>
+	
+	 <update id="updateCanasta" parameterClass="canastaLEC">
+          update lec_progr_canas
+          set 
+             nom_cana = #nombre#,
+             val_cana = TO_NUMBER(#valor#,'999999999.99'),
+             cam_regi = #campanyaRegistro#,
+             num_prod = null,
+             usu_modi = #usuarioRegistro#,
+             fec_modi = sysdate,
+             ind_acti = '1',
+             cam_acti = #campanyaActivacionCanasta#
+          where pais_cod_pais = #codigoPais#
+            and lpro_cod_prog = #codigoPrograma#
+            and sec_cana = #secuencia# 
+    </update>
+    
+    <update id="updateCanastaNumProductos" parameterClass="canastaLEC">
+          update lec_progr_canas
+          set 
+             num_prod = #numeroProductos#
+          where pais_cod_pais = #codigoPais#
+            and lpro_cod_prog = #codigoPrograma#
+            and sec_cana = #secuencia# 
+    </update>
+    
+    <delete id="deleteCanasta" parameterClass="canastaLEC">
+          delete from lec_progr_canas
+          where pais_cod_pais = #codigoPais#
+            and lpro_cod_prog = #codigoPrograma#
+            and sec_cana = #secuencia# 
+    </delete>
+    
+    
+    <update id="updateCanastaDetalle" parameterClass="canastaDetalleLEC">
+          update lec_progr_canas_detal
+          set 
+             VAL_PREC_PROD = TO_NUMBER(#precio#,'999999999.99'),
+             usu_modi = #auditInfo.updatedBy#, 
+             fec_modi = sysdate,
+             ind_acti = '1'
+          where pais_cod_pais = #codigoPais#
+            and lpro_cod_prog = #codigoPrograma#
+            and LPCN_SEC_CANA = #secuenciaCanasta# 
+            and cod_sap = #codigoSap#
+    </update>
+    
+     <delete id="deleteCanastaDetalle" parameterClass="canastaDetalleLEC">
+          delete from lec_progr_canas_detal
+          where pais_cod_pais = #codigoPais#
+            and lpro_cod_prog = #codigoPrograma#
+            and LPCN_SEC_CANA = #secuenciaCanasta# 
+            and cod_sap = #codigoSap#
+    </delete>
+    
+    <select id="getMenorPesoNivel" parameterClass="java.util.Map" resultClass="int">   	
+		select min(VAL_PESO_NIVE)
+		from LEC_NIVEL Z
+		<![CDATA[
+		where VAL_PESO_NIVE <> 0
+		 ]]>
+    </select>
+    
+    <select id="getPesoNivel" parameterClass="java.util.Map" resultClass="int">   	
+		select VAL_PESO_NIVE
+		from LEC_NIVEL Z
+		where z.cod_nive = #codigoNivel#
+    </select>
+
+    <delete id="removeProgramaCanastaPremi" parameterClass="programaCanastaPremiLEC">
+          delete from lec_progr_canas_premi
+          where pais_cod_pais = #codigoPais#
+            and lpro_cod_prog = #codigoPrograma#
+            and sec_cana_prem = #secuencia# 
+            and ltcn_cod_tipo_cana = #codigoTipoCanasta#
+    </delete>
+    
+    <update id="deleteProgramaCanastaPremi" parameterClass="programaCanastaPremiLEC">
+          update lec_progr_canas_premi
+          set ind_acti = '0'
+          where pais_cod_pais = #codigoPais#
+            and lpro_cod_prog = #codigoPrograma#
+            and sec_cana_prem = #secuencia# 
+            and ltcn_cod_tipo_cana = #codigoTipoCanasta#
+    </update>
+    	
+	<select id="getTipoRanking" resultMap="baseResult">
+	    SELECT
+		COD_TIPO_RANK CODIGO,
+		DES_TIPO_RANK DESCRIPCION
+		FROM LEC_TIPO_RANKI
+		WHERE IND_aCTI = '1'
+		ORDER BY COD_TIPO_RANK 
+	</select>
+	
+    <resultMap id="getNivelesRankingResult"  class="java.util.HashMap">
+		<result property="codigoTipoRanking"	      	column="COD_TIPO_RANK"/>
+		<result property="descripcionTipoRanking"	  	column="DES_TIPO_RANK"/>
+		<result property="codigoNivel"       			column="COD_NIVE"/>
+		<result property="descripcionNivel"  			column="DES_NIVE"/>
+		<result property="nivelSeleccionado"  			column="NIV_SELE"/>
+    </resultMap>	
+	
+	<select id="getNivelesRanking" parameterClass="java.util.Map"  resultMap="getNivelesRankingResult">
+		SELECT 
+		#codigoTipoRanking# COD_TIPO_RANK,
+		#descripcionTipoRanking# DES_TIPO_RANK,
+		NI.COD_NIVE,
+		NI.DES_NIVE,
+		(SELECT 1 FROM LEC_PROGR_RANKI_NIVEL RN 
+		WHERE   NI.COD_NIVE = RN.LNIV_COD_NIVE 
+		AND RN.PAIS_COD_PAIS = #codigoPais# 
+		AND RN.LPRO_COD_PROG = #codigoPrograma# 
+		AND RN.LTRK_COD_TIPO_RANK = #codigoTipoRanking#) NIV_SELE
+		FROM LEC_NIVEL NI
+		WHERE NI.VAL_PESO_NIVE > 0
+		ORDER BY NI.COD_NIVE 	
+	</select>
+	
+    <select id="getNumeroSecuenciaRanking" resultClass="string">
+		SELECT CAST(NVL(MAX(NUM_SECU), 0) + 1 AS VARCHAR2(10))  FROM LEC_PROGR_RANKI
+    </select>  
+    
+    <resultMap id="getRankingListResult"  class="rankingLEC">
+		<result property="codigoPais"	      				column="PAIS_COD_PAIS"/>
+		<result property="codigoPrograma"	      			column="LPRO_COD_PROG"/>
+		<result property="codigoTipoRanking"	      		column="LTRK_COD_TIPO_RANK"/>
+		<result property="numeroSecuencia"	      			column="NUM_SECU"/>
+		<result property="campanyaInicio"	      			column="CAM_INIC"/>
+		<result property="campanyaFin"	      				column="CAM_FINA"/>
+		<result property="numeroCampanyasCumplimentoPedido"	column="NUM_CAMP_INCU"/>
+		<result property="codigoTipoMedicion"	      		column="COD_TIPO_MEDI"/>
+		<result property="indicadorActivo"	      			column="IND_ACTI"/>
+        <result property="auditInfo.createdBy" 				column="USU_CREA"/>
+        <result property="auditInfo.created" 				column="FEC_CREA"/>
+        <result property="auditInfo.updatedBy" 				column="USU_MODI"/>
+        <result property="auditInfo.lastUpdated" 			column="FEC_MODI"/>
+        <result property="descripcionTipoRanking" 			column="DES_TIPO_RANK"/>
+    </resultMap>	    
+    
+    <select id="getRankingList" parameterClass="java.util.Map"  resultMap="getRankingListResult">
+        SELECT 
+        RA.PAIS_COD_PAIS,
+        RA.LPRO_COD_PROG,
+        RA.LTRK_COD_TIPO_RANK,
+        RA.NUM_SECU,
+        RA.CAM_INIC,
+        RA.CAM_FINA,
+        RA.NUM_CAMP_INCU,
+        RA.COD_TIPO_MEDI,
+        RA.IND_ACTI,
+        RA.USU_CREA,
+        RA.FEC_CREA,
+        RA.USU_MODI,
+        RA.FEC_MODI,
+        TR.DES_TIPO_RANK
+        FROM LEC_PROGR_RANKI RA, LEC_TIPO_RANKI TR 
+        WHERE RA.LTRK_COD_TIPO_RANK = TR.COD_TIPO_RANK
+        AND RA.PAIS_COD_PAIS = #codigoPais#
+        AND RA.LPRO_COD_PROG = #codigoPrograma#
+        AND RA.IND_ACTI = '1'
+        ORDER BY RA.LTRK_COD_TIPO_RANK 
+    </select>
+
+	<insert id="insertRanking" parameterClass="rankingLEC">
+		INSERT INTO LEC_PROGR_RANKI(
+			PAIS_COD_PAIS,
+			LPRO_COD_PROG,
+			LTRK_COD_TIPO_RANK,
+			NUM_SECU,
+			CAM_INIC,
+			CAM_FINA,
+			NUM_CAMP_INCU,
+			COD_TIPO_MEDI,
+			IND_ACTI,
+			USU_CREA,
+			FEC_CREA)
+		VALUES(
+			#codigoPais#,
+			#codigoPrograma#,
+			#codigoTipoRanking#,
+			#numeroSecuencia#,
+			#campanyaInicio#,
+			#campanyaFin#,
+			#numeroCampanyasCumplimentoPedido#,
+			#codigoTipoMedicion#,	
+			#indicadorActivo#,
+	        #auditInfo.createdBy#, 
+	        #auditInfo.created#)
+	</insert>
+	
+	<update id="updateRanking" parameterClass="rankingLEC">
+		UPDATE LEC_PROGR_RANKI SET
+			CAM_INIC = #campanyaInicio#,
+			CAM_FINA = #campanyaFin#,
+			NUM_CAMP_INCU = #numeroCampanyasCumplimentoPedido#,
+			COD_TIPO_MEDI = #codigoTipoMedicion#,
+			IND_ACTI = #indicadorActivo#,
+			USU_MODI = #auditInfo.updatedBy#,
+			FEC_MODI = #auditInfo.lastUpdated#
+		WHERE PAIS_COD_PAIS = #codigoPais#
+		AND LPRO_COD_PROG = #codigoPrograma#
+		AND LTRK_COD_TIPO_RANK = #codigoTipoRanking#
+		AND NUM_SECU = #numeroSecuencia#		
+	</update>
+	
+	<insert id="insertNivelRanking" parameterClass="rankingNivelLEC">
+		INSERT INTO LEC_PROGR_RANKI_NIVEL(
+			PAIS_COD_PAIS,
+			LPRO_COD_PROG,
+			LTRK_COD_TIPO_RANK,
+			LPRK_NUM_SECU,
+			LNIV_COD_NIVE,
+			IND_ACTI,
+			USU_CREA,
+			FEC_CREA)
+		VALUES(
+			#codigoPais#,
+			#codigoPrograma#,
+			#codigoTipoRanking#,
+			#numeroSecuencia#,
+			#codigoNivel#,
+			#indicadorActivo#,
+	        #auditInfo.createdBy#, 
+	        #auditInfo.created#)
+	</insert>
+	
+	<update id="updateNivelRanking" parameterClass="rankingNivelLEC">
+		UPDATE LEC_PROGR_RANKI_NIVEL SET
+			IND_ACTI = #indicadorActivo#,
+			USU_MODI = #auditInfo.updatedBy#,
+			FEC_MODI = #auditInfo.lastUpdated#
+		WHERE PAIS_COD_PAIS = #codigoPais#
+		AND LPRO_COD_PROG = #codigoPrograma#
+		AND LTRK_COD_TIPO_RANK = #codigoTipoRanking#
+		AND LPRK_NUM_SECU = #numeroSecuencia#
+		AND LNIV_COD_NIVE = #codigoNivel#		
+	</update>
+	
+    <resultMap id="getNivelRankingResult"  class="rankingNivelLEC">
+		<result property="codigoPais"	      				column="PAIS_COD_PAIS"/>
+		<result property="codigoPrograma"	      			column="LPRO_COD_PROG"/>
+		<result property="codigoTipoRanking"	      		column="LTRK_COD_TIPO_RANK"/>
+		<result property="numeroSecuencia"	      			column="LPRK_NUM_SECU"/>
+		<result property="codigoNivel"	      				column="LNIV_COD_NIVE"/>
+		<result property="indicadorActivo"	      			column="IND_ACTI"/>
+        <result property="auditInfo.createdBy" 				column="USU_CREA"/>
+        <result property="auditInfo.created" 				column="FEC_CREA"/>
+        <result property="auditInfo.updatedBy" 				column="USU_MODI"/>
+        <result property="auditInfo.lastUpdated" 			column="FEC_MODI"/>
+    </resultMap>	    
+	
+	<select id="getNivelRanking" parameterClass="rankingNivelLEC"  resultMap="getNivelRankingResult">
+		SELECT
+		PAIS_COD_PAIS,
+		LPRO_COD_PROG,
+		LTRK_COD_TIPO_RANK,
+		LPRK_NUM_SECU,
+		LNIV_COD_NIVE,
+		IND_ACTI,
+		USU_CREA,
+		FEC_CREA,
+		USU_MODI,
+		FEC_MODI
+		FROM LEC_PROGR_RANKI_NIVEL
+		WHERE PAIS_COD_PAIS = #codigoPais#
+		AND LPRO_COD_PROG = #codigoPrograma#
+		AND LTRK_COD_TIPO_RANK = #codigoTipoRanking#
+		AND LPRK_NUM_SECU = #numeroSecuencia#
+		AND LNIV_COD_NIVE = #codigoNivel#
+		AND IND_ACTI = '1'
+	</select>
+	
+	<delete id="deleteNivelRanking" parameterClass="rankingNivelLEC">
+		DELETE FROM LEC_PROGR_RANKI_NIVEL
+		WHERE PAIS_COD_PAIS = #codigoPais#
+		AND LPRO_COD_PROG = #codigoPrograma#
+		AND LTRK_COD_TIPO_RANK = #codigoTipoRanking#
+		AND LPRK_NUM_SECU = #numeroSecuencia#
+		AND LNIV_COD_NIVE = #codigoNivel#		
+	</delete>
+	
+	<delete id="deleteRanking" parameterClass="rankingLEC">
+		DELETE FROM LEC_PROGR_RANKI
+		WHERE PAIS_COD_PAIS = #codigoPais#
+		AND LPRO_COD_PROG = #codigoPrograma#
+		AND LTRK_COD_TIPO_RANK = #codigoTipoRanking#
+		AND NUM_SECU = #numeroSecuencia#		
+	</delete>
+	
+	<select id="getListaProgramasActivosCampanna" parameterClass="java.util.Map" resultClass="int" >
+		select count(1)
+	      from lec_progr a
+        where PAIS_COD_PAIS = #codigoPais# 
+         <isNotEmpty property="codigoPrograma">
+           <![CDATA[
+           AND COD_PROG <> #codigoPrograma#
+            ]]>
+         </isNotEmpty>
+         <isNotEmpty property="codigoPeriodo">
+           <![CDATA[
+           AND (CAM_FIN >= #codigoPeriodo# OR CAM_FIN IS NULL)
+            ]]>
+         </isNotEmpty>
+		 <isEmpty property="codigoPeriodo">
+           <![CDATA[
+           AND CAM_FIN IS NULL
+            ]]>
+         </isEmpty>  
+         <isNotEmpty property="codigoPeriodoFin">
+           <![CDATA[
+           AND CAM_INIC <= #codigoPeriodoFin#
+            ]]>
+         </isNotEmpty>
+		   AND IND_ACTI = '1'
+	</select>  
+	
+	<select id="getVerificarEliminarPrograma" parameterClass="java.util.Map" resultClass="int" >
+		select count(1)
+	      from lec_progr a
+        where PAIS_COD_PAIS = #codigoPais# 
+          AND COD_PROG = #codigoPrograma#
+            <![CDATA[
+            AND CAM_INIC <= #codigoPeriodo#
+            ]]>
+	</select>  
+	
+	<parameterMap id="executeEliminarProgramaParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPrograma"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	
+	<procedure id="executeEliminarPrograma" parameterMap="executeEliminarProgramaParams">
+		{call LEC_PKG_PROCE.LEC_PR_DELET_PROGR(?,?)}
+	</procedure>
+	
+	<select id="getLECPosibleLider" parameterClass="java.util.Map" resultClass="java.lang.Integer">
+		SELECT COUNT(1)
+		FROM LEC_PROGR_POSIB_LIDER_TEMP
+		WHERE PAIS_COD_PAIS = #codigoPais#
+		 AND COD_LIDE = #codigoLider#
+		 AND IND_ACTI = '1'
+	</select>
+	
+	<!-- Mantenimiento LEC Tarjeta Pago inicio -->
+	
+	<typeAlias alias="tarjetaPago"     type="biz.belcorp.ssicc.dao.spusicc.lec.model.TarjetaPago"/>
+	
+	<resultMap id="tarjetaPagoListResultMap" class="java.util.HashMap">
+		<result property="codigoTarjeta" 			column="COD_TARJ"/>
+		<result property="numeroTarjeta" 			column="NUM_TARJ"/>
+    	<result property="estado" 					column="DES_ESTA"/>
+    	<result property="usuarioCreacion" 			column="USU_CREA"/>
+    	<result property="fechaCreacion" 			column="FEC_CREA"/>
+    	<result property="campanaCreacion" 			column="CAM_CREA"/>
+    	<result property="estatus" 					column="ESTATUS"/>
+    </resultMap>
+    
+    <resultMap id="tarjetaPagoResultMap" class="tarjetaPago">
+		<result property="codigoTarjeta" 			column="COD_TARJ"/>
+		<result property="numeroTarjeta" 			column="NUM_TARJ"/>
+		<result property="codigoEstado" 			column="LEST_COD_ESTA"/>
+		<result property="campanaCreacion" 			column="CAM_CREA"/>
+
+    </resultMap>
+	
+	<select id="getTarjetaPagoByCriteria" parameterClass="java.util.Map" resultMap="tarjetaPagoListResultMap">
+		SELECT 
+			A.COD_TARJ,
+			A.NUM_TARJ,
+			B.DES_ESTA,
+			A.USU_CREA,
+			A.FEC_CREA,
+			A.CAM_CREA,
+			CASE 
+				WHEN A.IND_ACTI = 1 THEN 'Activo'
+			ELSE 
+				'Eliminado'
+			END ESTATUS
+		FROM LEC_TARJE_PAGOS A 
+		INNER JOIN LEC_ESTAD_TARJE B
+		ON A.LEST_COD_ESTA=B.COD_ESTA
+		WHERE 1=1
+		
+		<isNotEmpty prepend="AND" property="numeroTarjeta">
+		    A.NUM_TARJ=LPAD(#numeroTarjeta#,16,'0')
+		</isNotEmpty>
+		
+		order by A.NUM_TARJ desc
+
+   	</select>
+   	
+   	<select id="getTarjetaPago" parameterClass="string" resultMap="tarjetaPagoResultMap">   	       
+        SELECT 
+        	A.COD_TARJ,
+        	A.NUM_TARJ,
+        	A.LEST_COD_ESTA,
+        	A.CAM_CREA
+		FROM LEC_TARJE_PAGOS A 
+		WHERE A.COD_TARJ=#value#         
+   	</select>
+   	
+   	<select id="getTarjetaPagoByNumeroTarjeta" parameterClass="string" resultMap="tarjetaPagoResultMap">   	       
+        SELECT 
+        	A.COD_TARJ,
+        	A.NUM_TARJ,
+        	A.LEST_COD_ESTA,
+        	A.CAM_CREA
+		FROM LEC_TARJE_PAGOS A 
+		WHERE A.NUM_TARJ=#value#         
+   	</select>
+   	
+   	<insert id="insertTarjetaPago" parameterClass="tarjetaPago">
+   		INSERT INTO LEC_TARJE_PAGOS(
+   			COD_TARJ,
+			NUM_TARJ,
+		    LEST_COD_ESTA,
+		    CAM_CREA,
+
+		    USU_CREA,
+		    FEC_CREA,
+		    IND_ACTI)
+   		VALUES(
+   			LEC_SEC_TARJ_PAGO.NEXTVAL,
+   			LPAD(#numeroTarjeta#,16,'0'),
+			'01',
+			(SELECT cod_peri FROM BAS_CTRL_FACT WHERE STA_CAMP='0' AND IND_CAMP_ACT = 1),
+			#auditInfo.createdBy#,
+			sysdate,
+			1)
+   	</insert>
+   	
+   	<update id="updateTarjetaPago" parameterClass="tarjetaPago">
+   		UPDATE LEC_TARJE_PAGOS
+   		SET
+		NUM_TARJ = LPAD(#numeroTarjeta#,16,'0'),
+		USU_MODI = #auditInfo.updatedBy#,
+		FEC_MODI = sysdate
+   		WHERE COD_TARJ = #codigoTarjeta#       
+   	</update>
+   	
+   	<delete id="deleteTarjetaPago" parameterClass="tarjetaPago">
+		DELETE FROM LEC_TARJE_PAGOS
+		WHERE COD_TARJ = #codigoTarjeta#	
+	</delete>
+   	
+	<!-- Mantenimiento LEC Tarjeta Pago fin -->
+	
+	<!-- Asocion LEC Tarje Pago inicio -->
+	
+	<resultMap id="LecAsociacionTarjetaPagoPorTarjetaPagoListResultMap" class="java.util.HashMap">
+		<result property="codigo" 							column="CODIGO"/>
+		<result property="numeroTarjeta" 				column="NUM_TARJ"/>
+		<result property="codigoLider" 					column="COD_LIDE"/>
+		<result property="nombreLider" 					column="NOMBRES"/>
+		<result property="estado" 						column="DES_ESTA"/>
+		<result property="fechaCreacion" 				column="FEC_CREA"/>
+		<result property="usuarioCreacion" 				column="USU_CREA"/>
+		<result property="fechaAsignacion" 				column="FECHA_ASIGNACION"/>
+		<result property="usuarioAsignacion" 			column="USUARIO_ASIGNACION"/>
+		<result property="fechaEnvio" 					column="FEC_ENVI"/>
+		<result property="usuarioEnvio" 				column="USU_ENVI"/>
+		<result property="fechaBloqueo" 				column="FEC_BLOQ"/>
+		<result property="usuarioBloqueo" 				column="USU_BLOQ"/>
+    </resultMap>
+	
+	<select id="getEstadoTarjetaPago"  resultMap="baseResult">
+		SELECT 
+			A.COD_ESTA AS CODIGO,
+			A.DES_ESTA AS DESCRIPCION 
+		FROM LEC_ESTAD_TARJE A
+   	</select>
+   	
+   	<select id="getLecAsociacionTarjetaPagoPorTarjetaPagoByCriteria" parameterClass="java.util.Map" resultMap="LecAsociacionTarjetaPagoPorTarjetaPagoListResultMap">
+		SELECT 
+			B.COD_LIDE||'-'||A.COD_TARJ AS CODIGO,
+		    A.NUM_TARJ,
+		    B.COD_LIDE,
+		    C.VAL_NOM1||' '||C.VAL_APE1||' '||C.VAL_APE2 AS NOMBRES,
+		    D.DES_ESTA,
+		    A.FEC_CREA,
+		    A.USU_CREA,
+		    B.FEC_CREA AS FECHA_ASIGNACION,
+		    B.USU_CREA AS USUARIO_ASIGNACION,
+		    B.FEC_ENVI,
+		    B.USU_ENVI,
+		    B.FEC_BLOQ,
+		    B.USU_BLOQ
+		FROM LEC_TARJE_PAGOS A
+		LEFT JOIN (SELECT Y.* 
+                        FROM LEC_TARJE_LIDER Y
+                        INNER JOIN LEC_TARJE_PAGOS X       
+                        ON Y.LTPG_COD_TARJ=X.COD_TARJ        
+                        INNER JOIN LEC_ESTAD_TARJE T        
+                        ON X.LEST_COD_ESTA=T.COD_ESTA
+                        WHERE Y.IND_ACTI = 1 and T.COD_ESTA in ('02','03')) B
+		ON A.COD_TARJ=B.LTPG_COD_TARJ
+		LEFT JOIN MAE_CLIEN C
+		ON B.COD_LIDE=C.COD_CLIE
+		LEFT JOIN LEC_ESTAD_TARJE D
+		ON D.COD_ESTA=A.LEST_COD_ESTA
+		WHERE 1=1
+	
+	
+		<isNotEmpty prepend="AND" property="numeroTarjeta">
+		    A.NUM_TARJ=#numeroTarjeta#
+		</isNotEmpty>
+		
+		<isNotEmpty prepend="AND" property="estadoTarjeta">
+		    A.LEST_COD_ESTA=#estadoTarjeta#
+		</isNotEmpty>
+		
+		order by A.NUM_TARJ desc
+
+   	</select>
+   	
+   	<resultMap id="LecAsociacionTarjetaPagoPorLiderListResultMap" class="java.util.HashMap">
+		<result property="codigo" 						column="CODIGO"/>
+		<result property="codigoLider" 					column="GERE"/>
+		<result property="nombreLider" 					column="NOMBRES"/>
+		<result property="region" 						column="REGION"/>
+		<result property="codigoZona" 					column="COD_ZONA"/>
+		<result property="codigoSeccion" 				column="COD_SECC"/>
+		<result property="campanaVinculacion" 			column="CAMPANA_VINCULACION"/>
+		<result property="tarjetaVigente" 				column="TARJETA_VIGENTE"/>
+		<result property="estado" 						column="DES_ESTA"/>
+		<result property="fechaAsignacion" 				column="FEC_CREA"/>
+		<result property="usuarioAsignacion" 			column="USU_CREA"/>
+		<result property="fechaEnvio" 					column="FEC_ENVI"/>
+		<result property="usuarioEnvio" 				column="USU_ENVI"/>
+    </resultMap>
+   	
+   	<select id="getLecAsociacionTarjetaPagoPorLiderByCriteria" parameterClass="java.util.Map" resultMap="LecAsociacionTarjetaPagoPorLiderListResultMap">
+				
+		SELECT 
+            C.GERE||'-'||A.LTPG_COD_TARJ AS CODIGO,
+            C.GERE,
+            D.VAL_NOM1||' '||D.VAL_APE1||' '||D.VAL_APE2 AS NOMBRES,
+            C.COD_REGI||' - '||(SELECT R.DES_REGI FROM ZON_REGIO R WHERE R.COD_REGI = C.COD_REGI ) AS REGION,
+            C.COD_ZONA,
+            C.COD_SECC,
+            (select cod_peri from seg_perio_corpo where oid_peri in 
+                (( SELECT MIN (X.PERD_OID_PERI_DESD) FROM ZON_HISTO_GEREN X WHERE X.COD_SECC IS NOT NULL AND X.GERE = D.COD_CLIE )))
+             AS CAMPANA_VINCULACION,
+            (SELECT R.NUM_TARJ 
+             FROM LEC_TARJE_LIDER Y 
+             INNER JOIN LEC_TARJE_PAGOS R
+             ON Y.LTPG_COD_TARJ=R.COD_TARJ
+             WHERE Y.COD_LIDE=C.GERE 
+             AND Y.USU_BLOQ IS NULL 
+             AND R.LEST_COD_ESTA IN ('02','03') ) AS TARJETA_VIGENTE,
+             E.DES_ESTA,
+             A.FEC_CREA,
+             A.USU_CREA,
+             A.FEC_ENVI,
+             A.USU_ENVI
+     
+        FROM ZON_HISTO_GEREN C
+        LEFT JOIN MAE_CLIEN D
+        ON C.GERE=D.COD_CLIE
+        LEFT JOIN (SELECT Y.*
+                        FROM LEC_TARJE_LIDER Y
+                        INNER JOIN LEC_TARJE_PAGOS X       
+                        ON Y.LTPG_COD_TARJ=X.COD_TARJ        
+                        INNER JOIN LEC_ESTAD_TARJE T        
+                        ON X.LEST_COD_ESTA=T.COD_ESTA
+                        WHERE Y.IND_ACTI = 1 and T.COD_ESTA in ('02','03') ) A
+        ON A.COD_LIDE=C.GERE
+        
+        LEFT JOIN LEC_TARJE_PAGOS B
+        
+        ON A.LTPG_COD_TARJ=B.COD_TARJ
+        
+        LEFT JOIN LEC_ESTAD_TARJE E
+        
+        ON B.LEST_COD_ESTA=E.COD_ESTA
+        
+        WHERE C.COD_SECC IS NOT NULL
+	   
+        <![CDATA[
+        AND GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO2(#codigoPeriodo#) >= C.PERD_OID_PERI_DESD        
+        AND (GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO2(#codigoPeriodo#) <= C.PERD_OID_PERI_DESD OR C.PERD_OID_PERI_HAST IS NULL)
+        ]]>
+		
+		<isNotEmpty prepend="AND" property="codigoZona">
+		   C.COD_ZONA = #codigoZona#
+		</isNotEmpty>
+		
+		<isNotEmpty prepend="AND" property="codigoRegion">
+		   C.COD_REGI = #codigoRegion#	
+		</isNotEmpty>
+		
+		<isNotEmpty prepend="AND" property="codigoLider">
+		   C.GERE= TRIM(#codigoLider#)
+		</isNotEmpty>
+		
+		ORDER BY  C.COD_REGI,C.COD_ZONA, C.COD_SECC ASC
+		
+   	</select>
+   	
+   	<select id="getNombreLider"  parameterClass="string" resultClass="string">
+			SELECT distinct (D.VAL_NOM1||' '||D.VAL_APE1||' '||D.VAL_APE2) AS NOMBRES
+            FROM ZON_HISTO_GEREN C
+            LEFT JOIN MAE_CLIEN D
+            ON C.GERE=D.COD_CLIE
+            WHERE C.COD_SECC IS NOT NULL 
+            AND C.GERE =TRIM(#value#)
+ 	</select>
+ 	
+ 	<select id="validaCodigoLider"  parameterClass="string" resultClass="string">
+			SELECT 
+			     DISTINCT( C.GERE) 
+			FROM ZON_HISTO_GEREN C 
+			WHERE C.COD_SECC IS NOT NULL 
+			AND C.GERE=TRIM(#value#)
+ 	</select>
+ 	
+ 	<select id="validaLiderTarjetaAsociada"  parameterClass="string" resultClass="string">
+			SELECT 
+				B.LEST_COD_ESTA||';'||B.NUM_TARJ
+			FROM LEC_TARJE_LIDER C
+			INNER JOIN LEC_TARJE_PAGOS B
+			ON B.COD_TARJ=C.LTPG_COD_TARJ
+			INNER JOIN LEC_ESTAD_TARJE E
+			ON B.LEST_COD_ESTA=E.COD_ESTA
+			WHERE C.COD_LIDE=TRIM(#value#)
+			AND B.LEST_COD_ESTA IN ('02','03')
+			AND C.IND_ACTI=1 
+ 	</select>
+ 	
+ 	<select id="validaTarjetaPagoAsociada"  parameterClass="string" resultClass="string">
+			SELECT 
+				B.LEST_COD_ESTA||';'||C.COD_LIDE
+			FROM LEC_TARJE_LIDER C
+			INNER JOIN LEC_TARJE_PAGOS B
+			ON B.COD_TARJ=C.LTPG_COD_TARJ
+			INNER JOIN LEC_ESTAD_TARJE E
+			ON B.LEST_COD_ESTA=E.COD_ESTA
+			WHERE B.NUM_TARJ =TRIM(#value#)
+			AND B.LEST_COD_ESTA IN ('02','03','04')
+			AND C.IND_ACTI=1 
+ 	</select>
+ 	
+    <typeAlias alias="tarjetaLider"     type="biz.belcorp.ssicc.dao.spusicc.lec.model.TarjetaLider"/>
+    
+ 	<insert id="insertTarjetaLider" parameterClass="tarjetaLider">
+   		INSERT INTO LEC_TARJE_LIDER(
+   			COD_LIDE,
+			LTPG_COD_TARJ,
+			CAM_CREA,
+			USU_CREA, 
+			FEC_CREA,
+			IND_ACTI			
+		)
+   		VALUES(
+   			#codigoLider#,
+   			#codigoTarjeta#,
+   			(SELECT cod_peri FROM BAS_CTRL_FACT WHERE STA_CAMP='0' AND IND_CAMP_ACT = 1),
+   			#auditInfo.createdBy#,
+			sysdate,
+			1)
+   	</insert>
+   	
+   	<update id="updateEstadoTarjetaPago" parameterClass="tarjetaPago">
+   		UPDATE LEC_TARJE_PAGOS
+   		SET
+		LEST_COD_ESTA = #codigoEstado#,
+		CAM_CREA = #campanaCreacion#,
+		USU_MODI = #auditInfo.updatedBy#,
+		FEC_MODI = #auditInfo.lastUpdated#
+   		WHERE COD_TARJ = #codigoTarjeta#       
+   	</update>
+   	
+   	<resultMap id="tarjetaLiderResultMap" class="tarjetaLider">
+		<result property="codigoLider" 			column="COD_LIDE"/>
+		<result property="codigoTarjeta" 			column="LTPG_COD_TARJ"/>	
+		<result property="codigoEstado" 			column="LEST_COD_ESTA"/>			
+		<result property="campanaCreacion" 			column="CAM_CREA"/>
+		<result property="campanaEnvio" 			column="CAM_ENVI"/>
+		<result property="campanaBloqueo" 			column="CAM_BLOQ"/>
+		<result property="usuarioEnvio" 			column="USU_ENVI"/>
+		<result property="fechaEnvio" 				column="FEC_ENVI"/>
+		<result property="usuarioBloqueo" 			column="USU_BLOQ"/>
+		<result property="fechaBloqueo" 			column="FEC_BLOQ"/>		
+		<result property="usuarioCreacion" 			column="USU_CREA"/>
+		<result property="fechaCreacion" 			column="FEC_CREA"/>
+		<result property="usuarioModificacion" 		column="USU_MODI"/>
+		<result property="fechaModificacion" 		column="FEC_MODI"/>
+		<result property="indicarActivo" 			column="IND_ACTI"/>
+		
+    </resultMap>
+ 	
+ 	<select id="getTarjetaLider" parameterClass="java.util.Map" resultMap="tarjetaLiderResultMap">   	       
+        SELECT 
+        	A.COD_LIDE,
+        	A.LTPG_COD_TARJ,
+        	B.LEST_COD_ESTA,
+        	A.CAM_CREA, 
+			A.CAM_ENVI, 
+			A.CAM_BLOQ, 
+			A.USU_ENVI, 
+			A.FEC_ENVI, 
+			A.USU_BLOQ, 
+			A.FEC_BLOQ, 
+			A.USU_CREA, 
+			A.FEC_CREA, 
+			A.USU_MODI, 
+			A.FEC_MODI, 
+			A.IND_ACTI
+        	
+		FROM LEC_TARJE_LIDER A 
+		INNER JOIN LEC_TARJE_PAGOS B
+		ON A.LTPG_COD_TARJ = B.COD_TARJ
+		WHERE 1=1
+   
+		
+		<isNotEmpty prepend="AND" property="codigoLider">
+		   A.COD_LIDE = #codigoLider#	
+		</isNotEmpty>
+		
+		<isNotEmpty prepend="AND" property="codigoTarjeta">
+		   A.LTPG_COD_TARJ = #codigoTarjeta#	
+		</isNotEmpty>
+		
+		<isNotEmpty prepend="AND" property="estado">
+		   B.LEST_COD_ESTA = #estado#	
+		</isNotEmpty>
+		
+   	</select>
+   	
+   	<update id="updateTarjetaLider" parameterClass="java.util.Map">
+   		UPDATE LEC_TARJE_LIDER
+   		SET
+   			COD_LIDE = #codigoLider#, 
+   			LTPG_COD_TARJ = #codigoTarjeta#,
+   			CAM_CREA = #campanaCreacion#, 
+			CAM_ENVI = #campanaEnvio#,
+			CAM_BLOQ = #campanaBloqueo#, 
+			USU_ENVI = #usuarioEnvio#, 			
+			FEC_ENVI = to_date(#fechaEnvio#,'DD/MM/YYYY HH24:MI:SS'),
+			USU_BLOQ = #usuarioBloqueo#, 
+			FEC_BLOQ = to_date(#fechaBloqueo#,'DD/MM/YYYY HH24:MI:SS'),
+			USU_CREA = #usuarioCreacion#, 
+			FEC_CREA = to_date(#fechaCreacion#,'DD/MM/YYYY HH24:MI:SS'),
+			USU_MODI = #usuarioModificacion#, 
+			FEC_MODI = to_date(#fechaModificacion#,'DD/MM/YYYY HH24:MI:SS'),
+			IND_ACTI = #indicarActivo#
+
+   		WHERE COD_LIDE=#codigoLiderAntiguo#
+		AND LTPG_COD_TARJ=#codigoTarjetaAntiguo#     
+   	</update>
+ 	
+	<select id="validaNumeroTarjeta"  parameterClass="string" resultClass="string">
+			SELECT 
+			    C.NUM_TARJ
+			FROM LEC_TARJE_PAGOS C 
+			WHERE C.NUM_TARJ=TRIM(#value#)
+ 	</select>
+ 	
+ 	
+ 	<update id="updateClienteLider" parameterClass="java.util.Map">
+   		 update MAE_CLIEN_LIDER
+         set NUM_LIAH = #numLiah#
+         where cod_clid = #codigoManteClieLider#
+   	</update>
+ 	
+ 	<delete id="deleteTarjetaLider" parameterClass="java.util.Map">
+		DELETE FROM lec_tarje_lider
+		WHERE
+		COD_LIDE = #codigoLider# and
+		LTPG_COD_TARJ = #codigoTarjeta#	
+	</delete>
+ 	
+	<!-- Asocion LEC Tarje Pago fin -->
+	
+	<!-- Consulta Tarjetas de pago -->
+	<resultMap id="lecConsultaTarjetasPagoResultMap" class="java.util.HashMap">
+		<result property="numeroTarjeta" 						column="NUM_TARJ"/>
+		<result property="codigoLider" 					column="COD_LIDE"/>
+		<result property="nombreLider" 					column="NOMBRE"/>
+		<result property="estado" 						column="DES_ESTA"/>
+		<result property="campanaCreacion" 					column="CAM_CREA"/>
+		<result property="fechaCreacion" 				column="FEC_CREA_TARJE"/>
+		<result property="usuarioCreacion" 			column="USU_CREA_TARJE"/>
+		<result property="fechaAsignacion" 				column="FEC_CREA_ASIG"/>
+		<result property="usuarioAsignacion" 						column="USU_CREA_ASIG"/>
+		<result property="fechaEnvio" 				column="FEC_ENVI"/>
+		<result property="usuarioEnvio" 			column="USU_ENVI"/>
+		<result property="fechaBloqueo" 					column="FEC_BLOQ"/>
+		<result property="usuarioBloqueo" 				column="USU_BLOQ"/>
+    </resultMap>
+	
+	
+	<select id="getLecConsultaTarjetasPago" parameterClass="java.util.Map" resultMap="lecConsultaTarjetasPagoResultMap">
+				
+	SELECT 
+    	L.NUM_TARJ,
+	    M.COD_LIDE, 
+	    (X.VAL_NOM1||' '||X.VAL_APE1||' '||X.VAL_APE2) AS NOMBRE,
+	    E.DES_ESTA,
+	    M.CAM_CREA,
+	    TO_CHAR(L.FEC_CREA , 'DD/MM/YYYY') AS FEC_CREA_TARJE,
+	    L.USU_CREA AS USU_CREA_TARJE,
+	    TO_CHAR(M.FEC_CREA , 'DD/MM/YYYY') AS FEC_CREA_ASIG,
+	    M.USU_CREA AS USU_CREA_ASIG,
+	    TO_CHAR(M.FEC_ENVI , 'DD/MM/YYYY') AS FEC_ENVI,
+	    M.USU_ENVI,
+	    TO_CHAR(M.FEC_BLOQ , 'DD/MM/YYYY') AS FEC_BLOQ,
+	    M.USU_BLOQ
+	 FROM LEC_TARJE_PAGOS L
+	 LEFT JOIN LEC_TARJE_LIDER M
+	 ON M.LTPG_COD_TARJ=L.COD_TARJ
+	 LEFT JOIN LEC_ESTAD_TARJE E
+	 ON E.COD_ESTA=L.LEST_COD_ESTA
+	 LEFT JOIN MAE_CLIEN X
+	 ON X.COD_CLIE=M.COD_LIDE
+	 WHERE 1=1
+
+	 
+		
+		<isNotEmpty  property="codigoLider">
+		   $codigoLider$
+		</isNotEmpty>
+		
+		<isNotEmpty  property="numeroTarjeta">
+		   $numeroTarjeta$
+		</isNotEmpty>
+		
+		<isNotEmpty  property="estadoTarjeta">
+		   $estadoTarjeta$
+		</isNotEmpty>
+		
+	ORDER BY L.NUM_TARJ ASC	
+		
+   	</select>
+	<!-- Consulta Tarjetas de pago -->
+
+	<delete id="removeBonoNivelRango" parameterClass="bonoNivelLEC">
+	     DELETE FROM LEC_PROGR_BONO_NIVEL
+	      WHERE PAIS_COD_PAIS = #codigoPais#
+			AND LPRO_COD_PROG = #codigoPrograma#
+			AND SEC_BONO_NIVE = #secuenciaBonoNivel#
+	</delete>
+	
+	<update id="deleteBonoNivelRango" parameterClass="bonoNivelLEC">
+	     UPDATE LEC_PROGR_BONO_NIVEL
+	        SET IND_ACTI = 0 
+	      WHERE PAIS_COD_PAIS = #codigoPais#
+			AND LPRO_COD_PROG = #codigoPrograma#
+			AND SEC_BONO_NIVE = #secuenciaBonoNivel#
+	</update>
+	
+	<delete id="deleteCobranzaObjetivoIndicador" parameterClass="java.util.Map">
+		UPDATE LEC_PROGR_COBRA_OBJET
+		   SET IND_ACTI = 0
+		 WHERE PAIS_COD_PAIS = #codigoPais#
+		   AND LPRO_COD_PROG = #codigoPrograma#
+		   AND LTMC_COD_TIPO_MEDI_COBR = #codTipoMedi#
+		   AND LPAG_SEC_AMBI_GEOG = #secuencia#
+	</delete>
+	
+	<delete id="deleteCobranzaObjetivoTramoIndicador" parameterClass="java.util.Map">
+		UPDATE LEC_PROGR_COBRA_OBJET_TRAMO
+		   SET IND_ACTI = 0
+		 WHERE PAIS_COD_PAIS = #codigoPais#
+		   AND LPRO_COD_PROG = #codigoPrograma#
+		   AND LTMC_COD_TIPO_MEDI_COBR = #codTipoMedi#
+		   AND LPAG_SEC_AMBI_GEOG = #secuencia#
+		   AND LPCT_COD_TRAM = #codigoTramo#
+	</delete>
+	
+	<delete id="deleteAmbitoGeograficoIndicador" parameterClass="java.util.Map">
+		UPDATE LEC_PROGR_AMBIT_GEOGR
+		   SET IND_ACTI = 0
+		 WHERE PAIS_COD_PAIS = #codigoPais#
+		   AND LPRO_COD_PROG = #codigoPrograma#
+		   AND LTUG_COD_TIPO_USO_GEOG = '01'
+		   AND SEC_AMBI_GEOG = #secuencia#
+	</delete>
+	
+	<select id="getTiposBono" parameterClass="map" resultMap="baseResult">
+		SELECT 
+		COD_TIPO_BONO CODIGO, 
+		DES_TIPO_BONO DESCRIPCION 
+		FROM LEC_TIPO_BONO 
+		WHERE IND_ACTI = '1' 
+		AND IND_TIPO_BONO = #indicadorTipo# 
+		ORDER BY COD_TIPO_BONO	
+	</select>
+	
+	<select id="getTiposPremiacion" resultMap="baseResult">
+		SELECT
+		COD_TIPO_PREM CODIGO,
+		DES_TIPO_PREMI DESCRIPCION 
+		FROM LEC_TIPO_PREMI
+		WHERE IND_ACTI = '1'
+		ORDER BY COD_TIPO_PREM 
+	</select>
+	
+	<select id="getTiposCanasta" resultMap="baseResult">
+		SELECT 
+		COD_TIPO_CANA CODIGO,
+		DES_TIPO_CANA DESCRIPCION 
+		FROM LEC_TIPO_CANAS
+		WHERE IND_ACTI = '1'
+		ORDER BY COD_TIPO_CANA	
+	</select>
+	
+	
+	<select id="getLECEstadoPagosList" resultMap="baseResult">
+		SELECT 
+		COD_ESTA_PAGO CODIGO,
+		DES_ESTA_PAGO DESCRIPCION 
+		FROM ssicc_comun.lec_estad_pagos
+		WHERE IND_ACTI = '1'
+		ORDER BY COD_ESTA_PAGO	
+	</select>
+	
+	<select id="getNivelRangoIncentivos" parameterClass="java.util.Map" resultMap="baseResult">
+		select cod_rang as CODIGO,
+       		   cod_rang || ' - ' || des_rang || ' - ' || val_mont_mini || ' - ' || val_mont_maxi || ' - ' ||
+       		   decode(COD_NIVE_RANG,'A','Alto','Bajo') as DESCRIPCION
+  		from lec_progr_nivel_rango 
+ 		where lpro_cod_prog = #codigoPrograma#
+   		and ind_acti = '1'
+	</select>
+	
+	<select id="obtieneNivelCodigoRango"  parameterClass="string" resultClass="string">			
+			select cod_nive_rang
+		      from lec_progr_nivel_rango
+		     where cod_rang = #value# and ind_acti = '1'
+ 	</select>
+	
+</sqlMap>

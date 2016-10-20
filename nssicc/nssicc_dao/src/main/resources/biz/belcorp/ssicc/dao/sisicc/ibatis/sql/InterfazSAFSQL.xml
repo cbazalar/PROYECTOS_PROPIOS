@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="UTF-8"?>                                                      
+<!DOCTYPE sqlMap                                                        
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"                                                     
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">                                                      
+
+<sqlMap namespace="sisicc.InterfazSAFSQL">
+	
+	<resultMap id="baseResult"          class="baseGenerico">
+    	<result property="codigo" 		column="CODIGO" 	/>
+    	<result property="descripcion" 	column="DESCRIPCION"/>
+    </resultMap>
+
+
+	<parameterMap id="executeInterfazSAFEnviarFacturacionParams" class="map">
+        <parameter property="codigoPais"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoSistema"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoInterfaz"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="nombreArchivo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>     
+        <parameter property="numeroLote"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="fecha"        		   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+                                                        
+    <procedure id="executeInterfazSAFEnviarFacturacion" parameterMap="executeInterfazSAFEnviarFacturacionParams">                                                     
+        {call INT_PKG_SAPFI.INT_PR_SAF_SAPFI_FACTU(?, ?, ?, ?, ?, ?)}
+    </procedure>
+                                                   
+    <select id="getCantidadRegistros" parameterClass="java.util.Map" resultMap="baseResult">
+		SELECT sum(decode(a.NUM_LOTE_CONT,null,1,0)) CODIGO,  
+		       sum(decode(a.NUM_LOTE_CONT,null,0,1)) DESCRIPCION 		                 
+	    FROM fac_docum_conta_cabec a, 
+	   		 fac_regis_unico_venta b	
+	   WHERE a.OID_CABE = b.DCCA_OID_CABE
+	   and b.PAIS_OID_PAIS = #oidPais#
+	   <![CDATA[
+	   and trunc(b.fec_emis) >= TO_DATE(#fechaInicio#,'DD/MM/YYYY')
+	   ]]>
+	   <![CDATA[
+	   and trunc(b.fec_emis) <= TO_DATE(#fechaFinal#,'DD/MM/YYYY')
+	    ]]>
+	   and b.SBAC_OID_SBAC = 888
+	   <![CDATA[
+	   and b.TIDO_OID_TIPO_DOCU <> 8 
+ 	   ]]>
+	   
+	   <isNotEmpty property="tipoCambio">
+	   AND (  (b.TIDO_OID_TIPO_DOCU in (31,32,33) AND #tipoCambio# = 'A') 
+	       OR (b.TIDO_OID_TIPO_DOCU not in (31,32,33) AND #tipoCambio# = 'V') )
+	   </isNotEmpty>
+	  
+	</select>	                        
+	
+	<update id="executeUpdateRegistros" parameterClass="java.util.Map">
+        UPDATE fac_docum_conta_cabec a
+			   SET a.NUM_LOTE_CONT = null,
+				   a.FEC_CONT =  null
+			 WHERE a.PAIS_OID_PAIS = #oidPais#
+			    <![CDATA[
+	   				AND ( TRUNC(a.fec_fact) >=TO_DATE(#fechaInicio#,'DD/MM/YYYY'))
+	   			]]>
+	   			 <![CDATA[
+	   				AND ( TRUNC(a.fec_fact) <=TO_DATE(#fechaFinal#,'DD/MM/YYYY'))
+	   			]]>
+				<![CDATA[
+					and a.TIDO_OID_TIPO_DOCU <> 8 
+  				]]>
+				 <isNotEmpty property="tipoCambio">
+	   				AND (  (a.TIDO_OID_TIPO_DOCU in (31,32,33) AND #tipoCambio# = 'A') 
+	       					OR (a.TIDO_OID_TIPO_DOCU not in (31,32,33) AND #tipoCambio# = 'V') )
+	   </isNotEmpty>
+	  
+	</update>                       
+	
+	<parameterMap id="executeInterfazSAFEnviarCabeceraColombiaParams" class="map">
+        <parameter property="codigoPais"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoSistema"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoInterfaz"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="nombreArchivo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>     
+        <parameter property="codigoPeriodo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="fechaProceso"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <procedure id="executeInterfazSAFEnviarCabeceraColombia" parameterMap="executeInterfazSAFEnviarCabeceraColombiaParams">                                                     
+        {call INT_PKG_SAPFI.INT_PR_SAF_CABEC_COLOM(?, ?, ?, ?, ?, ?)}
+    </procedure>
+
+	<parameterMap id="executeInterfazSAFEnviarDetalleColombiaParams" class="map">
+        <parameter property="codigoPais"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoSistema"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoInterfaz"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="nombreArchivo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>     
+        <parameter property="codigoPeriodo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="fechaProceso"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+                                                        
+    <procedure id="executeInterfazSAFEnviarDetalleColombia" parameterMap="executeInterfazSAFEnviarDetalleColombiaParams">                                                     
+        {call INT_PKG_SAPFI.INT_PR_SAF_DETAL_COLOM(?, ?, ?, ?, ?, ?)}
+    </procedure>
+    
+    <parameterMap id="executeInterfazSAFEnviarComisionEjecutivaParams" class="map">
+        <parameter property="codigoPais"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoSistema"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoInterfaz"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="nombreArchivo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>     
+        <parameter property="codigoPeriodo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+                                                        
+    <procedure id="executeInterfazSAFEnviarComisionEjecutiva" parameterMap="executeInterfazSAFEnviarComisionEjecutivaParams">                                                     
+        {call INT_PKG_SAPFI.INT_PR_SAF_ENVIO_COMIS_EJECU(?, ?, ?, ?, ?)}
+    </procedure>
+    
+    <parameterMap id="executeInterfazSAFEnviarCargaSAPFICorporativoParams" class="map">
+        <parameter property="codigoPais"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoPeriodo"    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="numeroLote"     jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <procedure id="executeInterfazSAFEnviarCargaSAPFICorporativo" parameterMap="executeInterfazSAFEnviarCargaSAPFICorporativoParams">                                                     
+        {call INT_PKG_SAPFI.int_pr_carga_saf_corpo(?, ?, ?, ?)}
+    </procedure>
+    
+    <parameterMap id="executeInterfazSAFProcesoSAPCargaFinancieroCorporativoParams" class="map">
+        <parameter property="codigoPais"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoPeriodo"    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="numeroLote"     jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <procedure id="executeInterfazSAFProcesoSAPCargaFinancieroCorporativo" parameterMap="executeInterfazSAFProcesoSAPCargaFinancieroCorporativoParams">                                                     
+        {call INT_PKG_SAPFI.int_pr_carga_saf_corpo2(?, ?, ?, ?)}
+    </procedure>
+    
+    <parameterMap id="executeInterfazSAFEnviarSAPFICorporativoParams" class="map">
+        <parameter property="codigoPais"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoSistema"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoInterfaz"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="nombreArchivo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>    
+        <parameter property="codigoCentro"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>      
+        <parameter property="codigoPeriodo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="fechaFacturacion"     jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <procedure id="executeInterfazSAFEnviarSAPFICorporativo" parameterMap="executeInterfazSAFEnviarSAPFICorporativoParams">                                                     
+        {call INT_PKG_SAPFI.int_pr_saf_corpo(?, ?, ?, ?, ?, ?, ?)}
+    </procedure>
+    
+    <parameterMap id="executeInterfazSAFProcesoSAPFinancieroCorporativoParams" class="map">
+        <parameter property="codigoPais"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoSistema"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoInterfaz"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="nombreArchivo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>    
+        <parameter property="codigoCentro"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>      
+        <parameter property="codigoPeriodo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="fechaFacturacion"     jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <procedure id="executeInterfazSAFProcesoSAPFinancieroCorporativo" parameterMap="executeInterfazSAFProcesoSAPFinancieroCorporativoParams">                                                     
+        {call INT_PKG_SAPFI.int_pr_saf_corpo2(?, ?, ?, ?, ?, ?, ?)}
+    </procedure>
+    
+    <parameterMap id="executeInterfazSAFReprocesoEnviarSAPFICorporativoParams" class="map">
+        <parameter property="codigoPais"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoPeriodo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="fechaProceso"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="numeroLote"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <procedure id="executeInterfazSAFReprocesoEnviarSAPFICorporativo" parameterMap="executeInterfazSAFReprocesoEnviarSAPFICorporativoParams">                                                     
+        {call int_pkg_sapfi.int_pr_carga_saf_corpo(?, ?, ?, ?)}
+    </procedure>
+    
+    <delete id="deleteSAFReprocesoEnviarSAPFICorporativo" parameterClass="java.util.Map">
+		Delete from INT_SAF_RESUL where
+		<iterate property="asientoList" open=" cod_asie NOT IN (" close=")" conjunction=",">
+         	#asientoList[]#
+		</iterate>
+	</delete>
+	
+	<parameterMap id="executeInterfazSAFReporteCabeceraDetalleParams" class="map">
+        <parameter property="codigoPais"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="fechaProceso"       	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoSistema"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoInterfaz"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="nombreArchivo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>       
+    </parameterMap>
+    
+    <procedure id="executeInterfazSAFReporteCabecera" parameterMap="executeInterfazSAFReporteCabeceraDetalleParams">                                                     
+        {call int_pkg_sapfi.INT_PR_SAF_REPOR_SAPF_CABE(?, ?, ?, ?, ?)}
+    </procedure>
+    
+    <procedure id="executeInterfazSAFReporteDetalle" parameterMap="executeInterfazSAFReporteCabeceraDetalleParams">                                                     
+        {call int_pkg_sapfi.INT_PR_SAF_REPOR_SAPF_DETA(?, ?, ?, ?, ?)}
+    </procedure>
+    
+    <parameterMap id="executeInterfazSAFReporteCabeceraResumenParams" class="map">
+        <parameter property="codigoPais"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoSistema"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoInterfaz"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="nombreArchivo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <procedure id="executeInterfazSAFReporteResumen" parameterMap="executeInterfazSAFReporteCabeceraResumenParams">                                                     
+        {call int_pkg_sapfi.INT_PR_SAF_REPOR_SAPF_RESU(?, ?, ?, ?)}
+    </procedure>
+    
+  <parameterMap id="executeInterfazSAFPagosLetParams" class="map">
+        <parameter property="codigoPais"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoPeriodo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoPrograma"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="fechaProceso"     	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+ 	    <parameter property="codigoTipoPago"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>    
+        <parameter property="codigoSistema"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoInterfaz"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="nombreArchivo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="tipoEnvio"        	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>  
+ </parameterMap>
+    
+    <procedure id="executeInterfazSAFPagosLet" parameterMap="executeInterfazSAFPagosLetParams">                                                     
+        {call int_pkg_sapfi.INT_PR_SAF_PAGOS_LIDER(?, ?, ?, ?, ?, ?, ?,?,?)}
+    </procedure>	
+    
+    <parameterMap id="executeInterfazSAPFIEnviarInformacionSociasEmpresariasParams" class="map">
+        <parameter property="codigoPais"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoPeriodo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>	   
+        <parameter property="fechaProceso"     	   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 	    
+        <parameter property="codigoSistema"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoInterfaz"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="nombreArchivo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 
+        <parameter property="codigoUsuario"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 
+    </parameterMap>
+    
+    <procedure id="executeInterfazSAPFIEnviarInformacionSociasEmpresarias" parameterMap="executeInterfazSAPFIEnviarInformacionSociasEmpresariasParams">                                                     
+        {call int_pkg_sapfi.int_pr_saf_envio_socia_empre(?, ?, ?, ?, ?, ?, ?)}
+    </procedure>
+    
+     <parameterMap id="executeInterfazSAPEnviarCobranzaxEtapasParams" class="map">
+        <parameter property="codigoPais"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoSistema"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoInterfaz"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="nombreArchivo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>               
+    </parameterMap>
+    
+    <procedure id="executeInterfazSAPEnviarCobranzaxEtapas" parameterMap="executeInterfazSAPEnviarCobranzaxEtapasParams">                                                     
+        {call INT_PKG_COB.INT_PR_COB_ENVIA_ETAPA_COSAP(?, ?, ?, ?)}
+    </procedure>
+    
+     <parameterMap id="executeInterfazSAPEnviarFechaCierreFacturacionParams" class="map">
+        <parameter property="codigoPais"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoSistema"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoInterfaz"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="nombreArchivo"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>          
+    </parameterMap>
+    
+    <procedure id="executeInterfazSAPEnviarFechaCierreFacturacion" parameterMap="executeInterfazSAPEnviarFechaCierreFacturacionParams">                                                     
+        {call INT_PKG_COB.INT_PR_COB_CIERR_FACTU_CAMPA(?, ?, ?, ?)}
+    </procedure>
+    
+     <select id="getCampoPeriodoActualSAP" parameterClass="java.util.Map" resultClass="string">
+        SELECT substr(fin_pkg_gener.FIN_FN_OBTIE_CODIG_PERIO_ACTUA,1,4) || 
+       '0' ||
+       substr(fin_pkg_gener.FIN_FN_OBTIE_CODIG_PERIO_ACTUA,5,6) as CODIGO
+		FROM dual
+    </select>
+    
+    <parameterMap id="executeInterfazSAPFIEnviarInformacionPagosConcursoVentasParams" class="map">
+        <parameter property="codigoPais"          	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoPeriodo"     	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="fechaFacturacion"     	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="tipoEnvio"     	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoSistema"    	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoInterfaz"   	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="nombreArchivo"  	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>     
+        <parameter property="codigoUsuario"    	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <procedure id="executeInterfazSAPFIEnviarInformacionPagosConcursoVentas" parameterMap="executeInterfazSAPFIEnviarInformacionPagosConcursoVentasParams">                                                     
+        {call INT_PKG_SAPFI.INT_PR_SAF_PAGOS_TOP(?, ?, ?, ?, ?, ?, ?, ?)}
+    </procedure>
+    
+</sqlMap>

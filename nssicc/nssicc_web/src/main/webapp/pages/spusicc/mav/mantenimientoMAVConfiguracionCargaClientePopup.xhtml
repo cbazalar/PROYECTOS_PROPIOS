@@ -1,0 +1,143 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:ssicc="http://java.sun.com/jsf/composite/componentes/ssicc">
+
+<body>
+
+	<h:panelGrid id="panelArchivoListaClientes">
+	
+	<!-- PAIS -->	
+	<h:panelGrid columns="2">
+		<ssicc:label key="#{i18n['mantenimientoMAVConfiguracionForm.codigoPais']}" required="true" />
+		<ssicc:label value="#{mPantallaPrincipalBean.currentUser.pais.descripcion}" header="true" />
+	</h:panelGrid>	
+		
+	<!-- CARGA DE ARCHIVO -->
+	<h:panelGrid columns="2">
+					
+		<ssicc:label key="#{i18n['mantenimientoMAVConfiguracionCargaClientesForm.fichero']}"  rendered="#{mAlias.tipoArchivo=='XLS'}" required="xtrue"/>
+		<ssicc:label key="#{i18n['mantenimientoMAVConfiguracionCargaClientesForm.ficheroCsv']}"  rendered="#{mAlias.tipoArchivo=='CSV'}" required="xtrue"/>
+		
+		<h:panelGroup>
+		<h:form prependId="true" id="formCargaArchivo"
+			enctype="multipart/form-data">
+			<p:fileUpload widgetVar="upload"
+				fileUploadListener="#{mAlias.cargarArchivoListaClientes}" mode="advanced"
+				update=":principalFormPopUp:mensajesGrowl 
+				        :principalFormPopUp:messagesPrincipalForm 
+				        :principalFormPopUp:grupoValidar
+				        :principalFormPopUp:primeraGrilla "
+				multiple="false" allowTypes="/(\.|\/)(xls|XLS)$/"
+				invalidFileMessage="Debe ingresar un archivo con extension .xls"
+				dragDropSupport="false" label="Buscar archivo"
+				uploadLabel="Cargar" cancelLabel="Cancelar"
+				rendered="#{mAlias.tipoArchivo=='XLS'}"
+				auto="false" process="@this" required="true">
+			</p:fileUpload>
+			<p:fileUpload widgetVar="upload"
+				fileUploadListener="#{mAlias.cargarArchivoListaClientes}" mode="advanced"
+				update=":principalFormPopUp:mensajesGrowl 
+				        :principalFormPopUp:grupoValidar
+				        :principalFormPopUp:messagesPrincipalForm
+				        :principalFormPopUp:primeraGrilla "
+				multiple="false" allowTypes="/(\.|\/)(csv|CSV)$/"
+				dragDropSupport="false" label="Buscar archivo"
+				uploadLabel="Cargar" cancelLabel="Cancelar"
+				invalidFileMessage="Debe ingresar un archivo con extension .csv"
+				rendered="#{mAlias.tipoArchivo=='CSV'}"
+				auto="false" process="@this" required="true">
+			</p:fileUpload>
+
+		</h:form>
+		<ssicc:labelBlank />
+		<ssicc:label id="idAtachment" value="#{mAlias.attachment}" />
+		</h:panelGroup>
+	</h:panelGrid>		
+	
+	<!-- GRILLA CON VALORES DE EXCEL -->	
+	<br/>			
+	<h:panelGroup id="grupoValidar">
+		<ssicc:linkAjax icon="/resources#{i18n['button.upload.img.over']}"
+			title="Validar"
+			idForm =":principalFormPopUp"
+			process=":principalFormPopUp:panelListaClientes @this"
+			accion="#{mantenimientoMAVConfiguracionSearchAction.validarArchivoListaClientes}"
+			rendered="#{mAlias.mostrarBotonValidar}"
+			update=":principalFormPopUp:panelListaClientes :principalFormPopUp:grupoValidar
+						:principalFormPopUp:primeraGrilla :principalFormPopUp:dataGrilla :principalFormPopUp:panelBotonesGuardar" />	
+	</h:panelGroup>	
+				
+	<h:panelGrid id="primeraGrilla" columns="2">
+		
+		<ssicc:label key="#{i18n['mantenimientoMAVConfiguracionCargaClientesForm.formatoArchivo']}" rendered="#{mAlias.mostrarPrimeraGrilla}"/>
+		<ssicc:label key="#{i18n['mantenimientoMAVConfiguracionCargaClientesForm.formatoValido']}" 
+			rendered="#{mAlias.mostrarPrimeraGrilla and mAlias.indicadorValido == 1}"/>
+		<ssicc:label key="#{i18n['mantenimientoMAVConfiguracionCargaClientesForm.formatoInValido']}" 
+			rendered="#{mAlias.mostrarPrimeraGrilla and mAlias.indicadorValido == 0}"/>
+
+		<ssicc:label key="#{i18n['mantenimientoMAVConfiguracionCargaClientesForm.numRegistros']}" rendered="#{mAlias.mostrarPrimeraGrilla}"/>
+		<ssicc:label value="#{mAlias.numRegistros}" rendered="#{mAlias.mostrarPrimeraGrilla}"/>
+
+		<ssicc:label key="#{i18n['mantenimientoMAVConfiguracionCargaClientesForm.numRegistrosError']}" rendered="#{mAlias.mostrarPrimeraGrilla}"/>
+		<ssicc:label value="#{mAlias.numRegistrosError}" rendered="#{mAlias.mostrarPrimeraGrilla}"/>
+
+		<ssicc:label key="#{i18n['mantenimientoMAVConfiguracionCargaClientesForm.numRegistros.valido']}" rendered="#{mAlias.mostrarPrimeraGrilla}"/>
+		<ssicc:label value="#{mAlias.numRegistrosValido}" rendered="#{mAlias.mostrarPrimeraGrilla}"/>
+
+	</h:panelGrid>
+				
+	<!-- SEGUNDA GRILLA QUE MUESTRA LA VALIDACION DEL EXCEL -->
+	<br/>
+	<h:panelGrid id="dataGrilla">
+		<p:dataTable var="grilla" value="#{mAlias.mavArchivolist}" rendered="#{mAlias.mostrarSegundaGrilla}"
+			width="98%"
+		    scrollable="true"
+		    scrollHeight="120"
+		    emptyMessage="#{msg['dataTable.noExistenRegistrosFiltro']}">
+			
+			<p:column headerText="#{i18n['mavArchivolist.numeroFila']}" width="50">
+				<h:outputText value="#{grilla.numeroFila}" />
+			</p:column>
+			<p:column headerText="#{i18n['mavArchivolist.codigoCliente']}" width="100">
+				<h:outputText value="#{grilla.codigoCliente}" />
+			</p:column>
+			<p:column headerText="#{i18n['mavArchivolist.mensajeError']}" width="240">
+				<h:outputText value="#{grilla.mensajeError}" />
+			</p:column>				
+
+		</p:dataTable>
+
+	</h:panelGrid>
+	
+	<h:panelGrid id="panelBotonesGuardar" columns="2">			
+		<ssicc:linkAjax 
+		    icon="#{resource['images:saveForm.png']}"
+            width="34"
+            height="34"
+		    title="Guardar"
+		    partialSubmit="true"
+	        actualizarForm="true"
+			process="@this"
+			accion="#{mantenimientoMAVConfiguracionSearchAction.saveArchivoListaClientes}"
+			oncomplete="PF('viewArchivoListaClientes').hide()"
+			idForm =":principalFormPopUp"
+			update=":principalFormPopUp:panelTotalesListaClientes :principalFormPopUp:panelListaClientes  :principalFormPopUp:dialogPopup" 
+			rendered="#{mAlias.mostrarBotonExecute}" />
+			
+		<ssicc:linkAjax title="Cancelar"
+			icon="#{resource['images:back24_s.gif']}"
+			process="@this"
+			idForm =":principalFormPopUp"
+			accion="#{mantenimientoMAVConfiguracionSearchAction.cancelarArchivoListaClientes}"
+			oncomplete="PF('viewArchivoListaClientes').hide()"
+			update=":principalFormPopUp:dialogPopup" />
+	</h:panelGrid>
+	
+	</h:panelGrid>				
+</body>
+</html>

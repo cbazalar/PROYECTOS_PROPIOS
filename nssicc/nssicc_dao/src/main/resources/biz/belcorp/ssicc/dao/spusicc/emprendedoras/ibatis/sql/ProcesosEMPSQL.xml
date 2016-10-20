@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.emprendedoras.procesosEMPSQL">
+
+	<typeAlias alias="baseGenericoEMP"                          		        type="biz.belcorp.ssicc.dao.sisicc.model.Base"/>
+	<typeAlias alias="estructuraEMPPreEmprendedora"  						    type="biz.belcorp.ssicc.dao.spusicc.emprendedoras.model.EstructuraEMPPreEmprendedora" />
+	<typeAlias alias="estructuraEMPReasignacionMasiva"  						type="biz.belcorp.ssicc.dao.spusicc.emprendedoras.model.EstructuraEMPReasignacionMasiva" />	
+
+	<resultMap id="resultGenericoEMP"          class="baseGenericoEMP">
+    	<result property="codigo" 		   column="CODIGO" 	/>
+    	<result property="descripcion" 	   column="DESCRIPCION"/>
+    </resultMap>    
+    
+	<resultMap id="ErrorCargaPreEmprendedoras" class="java.util.HashMap">      
+		<result property="fila" 							 column="VAL_FILA" />              
+		<result property="codigoError" 						 column="COD_ERRO" />       
+		<result property="descripcionError" 				 column="DES_ERRO" />  
+   </resultMap>
+   
+   <resultMap id="baseDatosCliente"    class="java.util.HashMap">
+   		<result property="codigoCliente" 			column="COD_CLIE"/>
+   		<result property="oidCliente" 			    column="OID_CLIE"/>
+    	<result property="nombreCliente" 			column="NOM_CLIE"/>
+    	<result property="fechaNacimiento" 			column="FEC_NACI"/>
+    	<result property="email"        			column="VAL_EMAI"/>
+    	<result property="tipoDocumento" 			column="VAL_SIGL"/>
+    	<result property="numeroDocumento" 			column="NUM_DOCU_IDEN"/>
+    	<result property="region"       			column="DES_REGI"/>
+    	<result property="zona"         			column="DES_ZONA"/>
+    	<result property="codigoZona"         			column="COD_ZONA"/>
+    	<result property="telefonoCasa"      	    column="TELEFONO"/>
+    	<result property="telefonoCelular"          column="CELULAR"/>
+    	<result property="direccion"                column="DIRECCION"/>       	    	
+    	<result property="existeEmpresaria"         column="COD_CLIE_EMPRE"/>       	    	
+	</resultMap>
+   
+    <!-- OBTIENE PRGRAMAS ACTIVOS -->
+	<select id="getProgramas" resultMap="resultGenericoEMP">
+ 		SELECT PRG.COD_PROG AS CODIGO,
+ 			   PRG.COD_PROG AS DESCRIPCION
+        FROM EMP_PROGR PRG
+        WHERE IND_ACTI = '1'       
+ 	</select>
+ 											
+	<!-- OBTIENE EL DIRECTORIO DEL SERVIDOR -->
+	<select id="getPathUpload" parameterClass="java.util.Map" resultClass="string">
+	   SELECT VAL_PARA
+       FROM EMP_PARAM_GENER
+       WHERE COD_PARA= #codigoParam#
+	</select>
+	
+	<!-- BORRA TABLAS TEMPORALES DE LA CARGA DE PRE EMPRENDEDORAS -->
+	<procedure id="deleteTablasCargaPreEmprendedoras">
+		{call EMP_PKG_PROCE.EMP_PR_ELIMI_CARGA_PRE_EMPRE() }
+	</procedure>	 
+	
+	<parameterMap id="paramExecuteValidarPreEmprendedoras" class="java.util.Map">	
+	   <parameter property="codigoPrograma"      		     jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="cantidadRegistrosCargados"      jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT" />	
+		<parameter property="error"      		     		 jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT" />
+	</parameterMap>
+	
+	<!-- VALIDA EXCEL DE CARGA DE PRE EMPRENDEDORAS -->
+	<procedure id="executeValidarPreEmprendedoras" parameterMap="paramExecuteValidarPreEmprendedoras">
+		{call EMP_PKG_PROCE.EMP_PR_VALID_CARGA_PRE_EMPRE(?,?,?) }
+	</procedure>			
+	
+	<!-- OBTIENE EL LISTADO DE ERRORES -->
+	<select id="getErroresCargaPreEmprendedoras" resultMap="ErrorCargaPreEmprendedoras">		   
+	SELECT VAL_FILA as "VAL_FILA",
+          COD_ERRO as "COD_ERRO",
+          DES_ERRO as "DES_ERRO"
+     FROM EMP_ERROR_PRE_EMPRE
+     ORDER BY VAL_FILA ASC , COD_ERRO ASC
+	</select> 
+	
+	<parameterMap id="paramExecuteProcesarPreEmprendedoras" class="java.util.Map" >
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoPrograma"    	    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 
+        <parameter property="codigoUsuario"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <!-- PROCESA LA CARGA DE PRE EMPRENDEDORA A LA TABLA FINAL -->
+	<procedure id="executeProcesarPreEmprendedoras" parameterMap="paramExecuteProcesarPreEmprendedoras">
+		{call EMP_PKG_PROCE.EMP_PR_PROCE_PRE_EMPRE(?,?,?)}
+	</procedure>
+	
+	<!-- INSERTA EN TABLA TEMPORAL -->
+	<insert id="insertEstructuraEMPPreEmprendedora" parameterClass="estructuraEMPPreEmprendedora">
+		<![CDATA[
+			INSERT INTO EMP_CARGA_PRE_EMPRE (
+	      	    VAL_FILA,                   
+				COD_PERI,             
+				COD_CLIE,             
+				COD_ZONA,             
+				COD_SECCI,            
+				NUM_PEDI_BASE,        
+				NUM_PEDI_BASE_VALI,  
+				VAL_VENT_BASE,
+				VAL_VENT_BASE_VALI, 
+				NUM_ACTI_BASE,        
+				NUM_ACTI_BASE_VALI, 
+				VAL_NIVE_EJEC,        
+				VAL_PORC_COMI_NIVE,   
+				VAL_PORC_COMI_NIVE_VALI,
+				VAL_PSP,              
+				VAL_PSP_VALI,         
+				VAL_VENT_BASE_INCE,   
+				VAL_VENT_BASE_INCE_VALI,
+				COD_USUA,             
+				FEC_PROC )            						
+	        VALUES ( 
+				#fila#,
+				#periodoInicio#,
+				#codigoConsultora#,
+				#codigoZona#,
+				#codigoSeccion#,
+				#pedidosBaseGD#,
+				#pedidosBaseGDValidacion#,
+				#ventaBaseGD#,
+				#ventaBaseGDValidacion#,
+				#activasBaseGD#,
+				#activasBaseGDValidacion#,
+				#nivelEjecutiva#,
+				#porcentajeComision#,
+				#porcentajeComisionValidacion#,
+				#psp#,
+				#pspValidacion#,
+				#ventaBaseIncentivos#,
+				#ventaBaseIncentivosValidacion#,
+				#codigoUsuario#,			
+			    SYSDATE)				
+	    ]]>
+	</insert>
+
+	<!-- OBTIENE LOS REGIMENES PARA EL PAIS -->
+	<select id="getRegimenes"  parameterClass="java.util.Map" resultMap="resultGenericoEMP">
+		SELECT COD_TIPO_REGI CODIGO, DES_TIPO_REGI DESCRIPCION
+		FROM EMP_REGIM WHERE COD_PAIS=#codigoPais#             
+ 	</select>
+ 	
+ 	<!-- OBTIENE LOS TIPOS DE EMPRENDEDORAS-->
+ 	<select id="getTipoEmprededoras" resultMap="resultGenericoEMP">		
+		SELECT COD_TIPO_EMPRE CODIGO, NOM_TIPO_EMPRE DESCRIPCION 
+		FROM EMP_TIPO_EMPRE    
+ 	</select> 	
+	
+	<!-- OBTIENE LA INFORMACION DEL CLIENTE -->
+    <select id="getDatosConsultora" parameterClass="java.util.Map" resultMap="baseDatosCliente">		
+       <![CDATA[	
+		  SELECT MC.OID_CLIE,
+		  		 MC.COD_CLIE,
+		         MC.VAL_NOM1 || ' ' || MC.VAL_NOM2 || ' ' || MC.VAL_APE1 || ' ' || MC.VAL_APE2 NOM_CLIE,
+		         TO_CHAR(MDA.FEC_NACI, 'dd/mm/yyyy') FEC_NACI,
+		         (SELECT CC.VAL_TEXT_COMU FROM MAE_CLIEN_COMUN CC, MAE_TIPO_COMUN TC WHERE TC.OID_TIPO_COMU = CC.TICM_OID_TIPO_COMU 
+		         	AND TC.COD_TIPO_COMU = 'ML' AND CC.CLIE_OID_CLIE = MC.OID_CLIE) VAL_EMAI, 
+		         MTD.VAL_SIGL,
+		         MI.NUM_DOCU_IDEN,
+		         GEN_PKG_GENER.GEN_FN_CLIEN_DATOS(MC.COD_CLIE, 'DES_REGI') DES_REGI,
+		         GEN_PKG_GENER.GEN_FN_CLIEN_DATOS(MC.COD_CLIE, 'DES_ZONA') DES_ZONA,
+		         GEN_PKG_GENER.GEN_FN_CLIEN_DATOS(MC.COD_CLIE,'COD_ZONA') COD_ZONA,
+		         (SELECT CC.VAL_TEXT_COMU from MAE_CLIEN_COMUN CC, MAE_TIPO_COMUN TC WHERE TC.OID_TIPO_COMU = CC.TICM_OID_TIPO_COMU 
+		         	AND TC.COD_TIPO_COMU = 'TF' AND CC.CLIE_OID_CLIE = MC.OID_CLIE) TELEFONO,
+		         (SELECT CC.VAL_TEXT_COMU from MAE_CLIEN_COMUN CC, MAE_TIPO_COMUN TC WHERE TC.OID_TIPO_COMU = CC.TICM_OID_TIPO_COMU 
+		         	AND TC.COD_TIPO_COMU = 'TM' AND CC.CLIE_OID_CLIE = MC.OID_CLIE) CELULAR,
+		         GEN_PKG_GENER.GEN_FN_DIREC_MAE_CLIENT(MC.OID_CLIE) DIRECCION,
+		         (SELECT EE.COD_CLIE FROM EMP_EMPRE EE WHERE EE.COD_CLIE = MC.COD_CLIE AND EE.IND_EMPR <> 0 ) COD_CLIE_EMPRE
+		    FROM MAE_TIPO_DOCUM        MTD,
+		         MAE_CLIEN_IDENT       MI,
+		         MAE_CLIEN             MC,
+		         MAE_CLIEN_DATOS_ADICI MDA
+		   WHERE MTD.OID_TIPO_DOCU = MI.TDOC_OID_TIPO_DOCU
+		     AND MI.VAL_IDEN_DOCU_PRIN = '1'
+		     AND MI.CLIE_OID_CLIE = MC.OID_CLIE
+		     AND MDA.CLIE_OID_CLIE = MC.OID_CLIE
+			 AND MC.COD_CLIE = #codigoCliente#
+	     ]]>
+    </select> 
+    
+    <parameterMap id="paramExecuteValidarEmprendedoraRegular" class="java.util.Map" >
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoPrograma"    	    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 
+        <parameter property="codigoUsuario"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoCliente"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="error"                     jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+        <parameter property="oidRecomendadas"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+    
+    <!-- EJECUTA REQUISITOS PARA LA CREACION DE EMPRENDEDORA REGULAR -->
+	<procedure id="executeValidarEmprendedoraRegular" parameterMap="paramExecuteValidarEmprendedoraRegular">
+		{call EMP_PKG_PROCE.EMP_PR_PROCE_VALID_EMPRE_REGUL(?,?,?,?,?,?)}
+	</procedure> 			
+    
+	<parameterMap id="paramExecuteValidarEmprendedoraFastTrack" class="java.util.Map" >
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoPrograma"    	    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 
+        <parameter property="codigoUsuario"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoCliente"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="error"                     jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+        <parameter property="nivel"                     jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+        <parameter property="oidRecomendadas"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+    
+    <!-- EJECUTA REQUISITOS PARA LA CREACION DE EMPRENDEDORA FASTRUCK -->
+	<procedure id="executeValidarEmprendedoraFastTrack" parameterMap="paramExecuteValidarEmprendedoraFastTrack">
+		{call EMP_PKG_PROCE.EMP_PR_PROCE_VALID_EMPRE_FAST(?,?,?,?,?,?,?)}
+	</procedure> 		
+    
+    <!-- OBTIENE LOS REQUISITOS QUE NO CUMPLE -->
+    <select id="getRequisitosNoCumple" parameterClass="java.util.Map" resultMap="resultGenericoEMP">		
+		  SELECT COD_ERRO CODIGO, DES_ERRO DESCRIPCION 
+		  FROM gtt_emp_error_requi_empre
+    </select>   
+    
+   <resultMap id="resultGetRecomendadas" class="java.util.HashMap">      
+		<result property="codigoRecomendada"    			 column="COD_CLIE_RCDA" />              
+		<result property="nombreRecomendada" 				 column="NOM_CLIE" />       
+		<result property="recomendacionEfectiva"			 column="IND_RECO_EFEC" />
+		<result property="estado"      						 column="IND_ESTA" />  
+   </resultMap>
+   
+    <select id="getRecomendadas" parameterClass="java.util.Map" resultMap="resultGetRecomendadas">		
+		  SELECT RC.COD_CLIE_RCDA, 
+				MC.VAL_NOM1 || ' ' || MC.VAL_NOM2 || ' ' || MC.VAL_APE1 || ' ' || MC.VAL_APE2 NOM_CLIE,
+				RC.IND_RECO_EFEC,
+				RC.IND_ESTA
+		 FROM EMP_RECOM RC,
+				MAE_CLIEN MC
+		  WHERE
+				  MC.COD_CLIE = RC.COD_CLIE_RCDA 
+				  AND RC.OID_RECO = #oidRecomendadas#
+				  AND RC.COD_PROG = #codigoPrograma#
+				  AND RC.COD_PERI = #codigoPeriodo#
+				  AND RC.COD_CLIE_RCTE = #codigoCliente#
+				  AND RC.TIP_EMPRE= #tipoEmprendedora#
+		     <isEqual property="tipoEmprendedora" compareValue="F"> 
+                 AND RC.IND_ESTA = 'R'
+             </isEqual>
+    </select> 
+    
+    <!-- INSERTA DATOS EMPRENDEDORA -->
+    <insert id="insertDatosEmprendedora" parameterClass="java.util.Map">
+		<![CDATA[
+			INSERT INTO EMP_EMPRE (
+				  COD_CLIE,               
+				  COD_PROG,                             
+				  IND_EMPR,                
+				  CAM_INIC_EMPR,          
+				  VAL_NUME_DOCU_LEGA,     
+				  COD_NIVE,               
+				  VAL_CUEN_BANC,                   
+				  VAL_CODI_CCI,           
+				  COD_TIPO_REGI,          
+				  COD_TIPO_EMPRE,                   
+				  USU_REGI,               
+				  FEC_REGI  )            						
+	        VALUES ( 
+				#codigoCliente#,
+				#codigoPrograma#,
+				#indicadorEmprendedora#,
+				#codigoPeriodo#,
+				#documentoLegal#,
+				#nivel#,
+				#cuentaBancaria#,
+				#codigoCci#,
+				#regimen#,
+				#tipoEmprendedora#,
+				#codigoUsuario#,
+				SYSDATE	)				
+	    ]]>
+	</insert>
+     
+     <parameterMap id="paramExecuteUpdateDatosCliente" class="java.util.Map" >
+		<parameter property="oidCliente"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="dato"                      jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="campo"                     jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoUsuario"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="origen"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <!-- ACTUALIZA DATOS TELEFONO MAIL DEL CLIENTE -->
+    <procedure id="updateDatosCliente" parameterMap="paramExecuteUpdateDatosCliente">
+		{call EMP_PKG_PROCE.EMP_PR_PROCE_UPDAT_DATOS_CLIEN(?,?,?,?,?)}
+	</procedure> 
+
+<!-- INSERTA EN TABLA TEMPORAL -->
+	<insert id="insertEstructuraEMPReasignacionMasiva" parameterClass="estructuraEMPReasignacionMasiva">
+		<![CDATA[
+			INSERT INTO EMP_TEMP_REAS_MASI (
+	      	    VAL_FILA,                                
+				COD_CLIE,
+				COD_NUEV_EMPR)            						
+	        VALUES ( 
+			#fila#,
+		#codigoConsultora#,
+		#codigoNuevaEmprendedora#)				
+	    ]]>
+	</insert>	
+	
+	<delete id="deleteEstructuraEMPReasignacionMasiva">
+		DELETE FROM EMP_TEMP_REAS_MASI 		 
+	</delete>	
+
+	<parameterMap id="paramExecuteValidarReasignacionMasiva" class="java.util.Map">	
+	   <parameter property="codigoUsuario"         jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	    <parameter property="cantidadRegistrosCargados"      jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT" />			
+	</parameterMap>
+
+	<procedure id="executeValidarReasignacionMasiva" parameterMap="paramExecuteValidarReasignacionMasiva">
+		{call EMP_PKG_PROCE.EMP_PR_VALID_REASI_MASIV(?,?) }
+	</procedure>
+
+	<resultMap id="ErrorCargaReasignacionMasiva" class="java.util.HashMap">      
+		<result property="fila" 							 column="VAL_FILA" />              		  
+		<result property="descripcionError" 				 column="DES_ERRO" />  
+   </resultMap>
+
+	<!-- OBTIENE EL LISTADO DE ERRORES -->
+	<select id="getErroresReasignacionMasiva" resultMap="ErrorCargaReasignacionMasiva">		   
+		SELECT VAL_FILA ,          
+	          DES_ERRO
+	     FROM EMP_TEMP_REAS_MASI
+	     ORDER BY VAL_FILA
+	</select> 
+		
+	<parameterMap id="paramExecuteVinculacionNuevasReactivadas" class="java.util.HashMap">      
+		<parameter property="codigoPrograma"    	    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 
+        <parameter property="codigoUsuario"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    	
+	<procedure id="executeVinculacionNuevasReactivadas" parameterMap="paramExecuteVinculacionNuevasReactivadas">
+		{call EMP_PKG_PROCE.EMP_PR_PROCE_VINCU_NUEVA_REACT(?,?) }
+	</procedure>
+			
+	<!-- OBTIENE EL TEXTO DE COMUNICACION -->
+	<select id="getTextoComunicacion" parameterClass="java.util.Map" resultClass="string">
+	   select COUNT(*) from MAE_CLIEN_COMUN CC
+	     WHERE CC.TICM_OID_TIPO_COMU =
+	           (SELECT TC.OID_TIPO_COMU
+	              FROM MAE_TIPO_COMUN TC
+	             WHERE TC.COD_TIPO_COMU = #campo#)
+	       AND CC.CLIE_OID_CLIE = #oidCliente#
+	</select>		
+</sqlMap>  

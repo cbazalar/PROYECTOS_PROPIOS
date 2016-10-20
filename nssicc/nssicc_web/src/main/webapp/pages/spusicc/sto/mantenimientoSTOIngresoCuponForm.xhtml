@@ -1,0 +1,178 @@
+ <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:ssicc="http://java.sun.com/jsf/composite/componentes/ssicc">
+
+<body>
+	<ui:composition template="/templates/templateMantenimientoForm.xhtml">
+		<ui:param name="mAlias" value="#{mantenimientoSTOIngresoCuponAction}" />
+
+		<ui:define name="titulo_Pantalla">
+			<h:outputText value="#{i18n['mantenimientoSTOIngresoCuponForm.title']}"	styleClass="clsEncabezadoPantalla" />
+		</ui:define>
+		
+		<ui:define name="body_toolbar_adicionales">
+ 
+			 <ssicc:confirmDialogConfirmarSalir id="mensajeValor"
+					manage="#{mAlias}"
+					mensaje="#{mAlias.mensaje}"
+					parametroVentana="mensajeValor2"
+					accion="#{mantenimientoSTOIngresoCuponAction.guardarCondicional}"
+					accionSalir="#{mantenimientoSTOIngresoCuponAction.limpiar2}"
+					update=":principalForm:panelCriterioMantenimiento @this" />
+					
+			<ssicc:confirmDialogConfirmar id="mensajeValor2"
+					manage="#{mAlias}"
+					mensaje="#{i18n['confirm.execute.process']}"
+					accion="#{mantenimientoSTOIngresoCuponAction.save}"
+					update=":principalForm:panelCriterioMantenimiento @this" />		
+	 
+	 		 <ssicc:linkAjax icon="/resources/images/saveForm.png"
+	                   title="#{msg['botonSave.tooltip']}"
+	                   parametroAccion="GRABAR"
+	                   width="34"
+	                   height="34"
+	                   parametroVentana="confirmDialogCerrar"
+	                   accion="#{mantenimientoSTOIngresoCuponAction.valorOnEnter}"
+	                   process=":principalForm:panelCriterioMantenimiento @this"
+	                   update=":principalForm:panelToolBar :principalForm:panelCriterioMantenimiento @this" />
+	                   
+	      
+        </ui:define>
+
+		<ui:define name="body_criterio_mantenimiento">
+			<h:panelGrid columns="4" >
+
+				<ssicc:label
+					key="#{i18n['mantenimientoSTOIngresoCuponForm.codigoPais']}" />
+				<ssicc:label
+					value="#{mPantallaPrincipalBean.currentUser.pais.descripcion}" />
+				<p:remoteCommand name="valorPagadoMax"
+					actionListener="#{mantenimientoSTOIngresoCuponAction.valorOnEnter}"
+					update=":principalForm:mensajesGrowl :principalForm:panelToolBar @this"
+					process="@this :principalForm:panelCriterioMantenimiento" /> 
+				<p:remoteCommand name="numDoc"
+					actionListener="#{mantenimientoSTOIngresoCuponAction.codigoClienteOnEnter}"
+					update=":principalForm:mensajesGrowl :principalForm:panelGroupMantenimiento"
+					process="@this :principalForm:numeroDocumentoIdentidad" />
+					
+				
+
+
+				<ssicc:label
+					key="#{i18n['mantenimientoSTOIngresoCuponForm.codCliente']}"
+					required="true" />
+				<h:inputText id="codCliente"
+					value="#{mAlias.formMantenimiento.codCliente}" size="20"
+					maxlength="#{mAlias.longitudCampoClientes}"
+					onkeypress="if (event.keyCode == 13) completarCeros();return soloNumero(event);"
+				    onkeyup="focusValorPagado();valorPagadoMax();"
+					required="false" />
+				
+
+				<ssicc:label
+					key="#{i18n['mantenimientoSTOIngresoCuponForm.numeroDocumentoIdentidad']}"
+					required="false" />
+				<h:inputText id="numeroDocumentoIdentidad"
+					value="#{mAlias.formMantenimiento.numeroDocumentoIdentidad}"
+					size="20" maxlength="15" required="false"
+					onkeypress="if (event.keyCode == 13) numDoc();return soloNumero(event);" />
+
+				<ssicc:label key="#{i18n['mantenimientoSTOIngresoCuponForm.valorPagado']}" required="true" />					
+				
+				<h:inputText id="valorPagado" value="#{mAlias.formMantenimiento.valorPagado}"
+								 size="10"	maxlength="15" required="false" 
+								onkeypress="if (event.keyCode == 13) valorPagadoText(event,this); return jsEsNumeroDecimal(event);"								
+								onchange="formatearNumeroWithTope(this,2,1000000000);"/> 
+				<ssicc:labelBlank />
+				<ssicc:labelBlank />
+				
+				<ssicc:label key="#{i18n['mantenimientoSTOIngresoCuponForm.fechaRegistro']}" required="true" />
+				<ssicc:calendar id="fechaRegistroD" required="true"	value="#{mAlias.formMantenimiento.fechaRegistroD}" />
+				<ssicc:labelBlank />
+				<ssicc:labelBlank />
+				
+				<ssicc:label
+					key="#{i18n['mantenimientoSTOIngresoCuponForm.indicadorRechazo']}"
+					required="false" />
+				<ssicc:selectBooleanCheckbox id="indicadorRechazo"
+					value="#{mAlias.indicadorRechazo}" />					
+			
+			</h:panelGrid>
+
+			<h:outputScript>
+			function completarCeros(){
+				var codCliente = document.getElementById("codCliente");				
+				var tamCliente ='<h:outputText value="#{mAlias.longitudCampoClientes}" />';				
+				codCliente.value = completarCaracteres(codCliente.value, tamCliente, '0');
+				document.getElementById("valorPagado").focus();
+
+			}
+			
+			function focusValorPagado(){	
+				var codCliente = document.getElementById("codCliente");		
+				var tamCliente ='<h:outputText value="#{mAlias.longitudCampoClientes}" />';		
+				if(codCliente.value.length == tamCliente){
+					document.getElementById("valorPagado").focus();
+				}
+			}
+			
+			function completarCaracteres(valor, longitud, caracter){
+				var valorAux = new String("");
+		
+				if (valor.length != 0) {
+					var faltante = parseInt(longitud) - valor.length;
+					var valorAux = new String("");
+			
+				if (faltante &gt;= 0) {
+					for (var i = 0; i &lt; faltante; i++) {
+					valorAux = valorAux + caracter;
+					}
+					valorAux = valorAux + valor;
+				}
+				else {
+			
+					var faltante = valor.length - longitud;
+					valorAux = valor.substr(faltante, longitud);
+				}
+		}
+		
+		return valorAux;
+	}
+	
+	function valorPagadoText(e,valor){	
+		   jsEsNumeroDecimal(e);
+		   formatearNumeroWithTope(valor,2,1000000000);		 		
+		   document.getElementById("fechaRegistroD:calendar_input").focus();
+		   valorPagadoMax();
+	}
+	
+
+	
+	
+			</h:outputScript>
+		</ui:define>
+		
+<ui:define name="body_adicional_mantenimiento">
+        <p:remoteCommand name="savePadInsert" 
+					actionListener="#{mantenimientoSTOIngresoCuponAction.savePadInsert}"
+					update=":principalForm:mensajesGrowl :principalForm:panelToolBar :principalForm:panelCriterioMantenimiento @this"
+					process="@this :principalForm:panelCriterioMantenimiento" />   
+					
+		<h:outputScript>
+			window.addEventListener("keydown", function(event){
+		    if(event.keyCode==45){
+		    	savePadInsert();
+		    }
+			});
+		</h:outputScript>   
+</ui:define>
+		
+		
+	</ui:composition>
+</body>
+</html>

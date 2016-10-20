@@ -1,0 +1,355 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="UltimasNoticiasSQL">
+
+    <resultMap id="consultoraMapResult" class="java.util.HashMap">
+        <result property="CODIGO_PAIS" column="PAIS_COD_PAIS"/>
+        <result property="CODIGO_CONSULTORA" column="COD_CONS"/>
+        <result property="NOMBRE_CONSULTORA" column="NOM_CONS"/>
+        <result property="CODIGO_TERRITORIO" column="COD_TERR"/>
+        <result property="NUMERO_FACTURA" column="NUM_FACT"/>
+        <result property="FECHA_FACTURACION" column="FEC_FACT"/>
+        <result property="PERIODO_PEDIDO" column="CAM_PEDI"/>
+    </resultMap>
+    
+	<select id="getConsultoras" parameterClass="map" resultMap="consultoraMapResult">
+        SELECT DISTINCT
+        PE.PAIS_COD_PAIS,
+        PE.COD_CONS,
+        PE.NOM_CONS,
+        PE.COD_TERR,
+        NVL(PE.NUM_FACT, ' ') NUM_FACT,
+        PE.FEC_FACT,
+        PE.CAM_PEDI
+        FROM PRI_PEDID PE
+        WHERE PE.PAIS_COD_PAIS = #codigoPais#
+        AND PE.STA_PEDI = 'P'
+		    AND EXISTS (
+		     SELECT P.COD_CONS FROM PRI_CLIEN P WHERE P.PAIS_COD_PAIS = #codigoPais#
+			   AND P.COD_CONS= PE.COD_CONS
+         AND P.PAIS_COD_PAIS = PE.PAIS_COD_PAIS)
+	    UNION
+        SELECT DISTINCT
+        PE.PAIS_COD_PAIS,
+        PE.COD_CONS,
+        PE.NOM_CONS,
+        PE.COD_TERR,
+        PE.NUM_FACT,
+        PE.FEC_FACT,
+        PE.CAM_PEDI
+        FROM PRI_PEDID PE
+        WHERE PE.PAIS_COD_PAIS = #codigoPais#
+        AND PE.STA_PEDI = 'P'
+		    AND EXISTS (
+			   SELECT PC.COD_CONS FROM PRI_CONSU_INSCR PC WHERE PC.PAIS_COD_PAIS = #codigoPais#
+          AND PC.COD_CONS= PE.COD_CONS
+          AND PC.PAIS_COD_PAIS =PE.PAIS_COD_PAIS
+			   )
+        ORDER BY 2
+    </select>
+    
+    <resultMap id="fichaInscripcionMapResult" class="java.util.HashMap">
+        <result property="CODIGO_PAIS" column="PAIS_COD_PAIS"/>
+        <result property="CODIGO_CONSULTORA" column="COD_CONS"/>
+        <result property="NUMERO_FICHA" column="NUM_FINS"/>
+        <result property="NOMBRE_CLIENTE" column="NOM_CLIE"/>
+        <result property="NUMERO_DOCUMENTO" column="NUM_DOCU"/>
+        <result property="CODIGO_CLIENTE" column="COD_CLIE"/>
+        <result property="PUNTAJE_ABONADO" column="PUN_ABON"/>
+    </resultMap>
+
+	<select id="getFichasInscripcion" parameterClass="map" resultMap="fichaInscripcionMapResult">
+        SELECT
+        PAIS_COD_PAIS,
+        COD_CONS,
+        NUM_FINS,
+        SUBSTR(NOM_CLIE, 1, 25) AS NOM_CLIE,
+        NUM_DOCU,
+        COD_CLIE,
+        PUN_ABON
+        FROM PRI_CLIEN
+        WHERE PAIS_COD_PAIS = #codigoPais#
+        AND COD_CONS = #codigoConsultora#
+        AND IND_FICH = 'F'
+        ORDER BY NUM_FINS
+    </select>
+    
+    <resultMap id="movimientoClientesMapResult" class="java.util.HashMap">
+        <result property="CODIGO_PAIS" column="PAIS_COD_PAIS"/>
+        <result property="CODIGO_CONSULTORA" column="COD_CONS"/>
+        <result property="CODIGO_CLIENTE" column="CLIE_COD_CLIE"/>
+        <result property="NOMBRE_CLIENTE" column="NOM_CLIE"/>
+        <result property="PERIODO_INGRESO" column="CAM_REGI"/>
+        <result property="SALDO_PUNTOS" column="SAL_PUNT"/>
+        <result property="PUNTOS_INSCRIPCION" column="PUN_INSC"/>
+    </resultMap>
+
+    <select id="getMovimientoClientes" parameterClass="map" resultMap="movimientoClientesMapResult">
+        SELECT
+        A.PAIS_COD_PAIS,
+        A.COD_CONS,
+        A.CLIE_COD_CLIE,
+        SUBSTR(A.NOM_CLIE, 1, 35) AS NOM_CLIE,
+        NVL(DECODE(A.CAM_REGI, NULL, B.CAM_PROC, A.CAM_REGI), ' ') CAM_REGI,
+        NVL(A.SAL_PUNT, 0) SAL_PUNT,
+        NVL(A.PUN_INSC, 0) PUN_INSC
+        FROM PRI_MOVIM_CLIEN A, PRI_CAMPA_PROCE B
+        WHERE A.PAIS_COD_PAIS = B.PAIS_COD_PAIS 
+        AND A.PAIS_COD_PAIS = #codigoPais#
+        AND A.COD_CONS = #codigoConsultora#
+        <![CDATA[
+        AND DECODE(A.CAM_REGI, NULL, B.CAM_PROC, A.CAM_REGI) >= GEN_FN_CALCU_PERIO (B.CAM_PROC, -5)
+        ]]>
+        ORDER BY A.CLIE_COD_CLIE
+    </select>
+    
+    <resultMap id="clienteRechazadoMapResult" class="java.util.HashMap">
+        <result property="CODIGO_PAIS" column="PAIS_COD_PAIS"/>
+        <result property="CODIGO_CONSULTORA" column="COD_CONS"/>
+        <result property="NOMBRE_CLIENTE" column="NOM_CLIE"/>
+        <result property="NUMERO_DOCUMENTO" column="NUM_DOCU_IDEN"/>
+        <result property="NUMERO_TELEFONO" column="NUM_TELE"/>
+    </resultMap>
+
+    <select id="getClientesRechazados" parameterClass="map" resultMap="clienteRechazadoMapResult">
+        SELECT
+        PAIS_COD_PAIS,
+        COD_CONS,
+        SUBSTR(NOM_CLIE, 1, 35) AS NOM_CLIE,
+        NVL(NUM_DOCU_IDEN, ' ') NUM_DOCU_IDEN,
+        NVL(NUM_TELE, ' ') NUM_TELE
+        FROM PRI_CLIEN_RECHA
+        WHERE PAIS_COD_PAIS = #codigoPais#
+        AND COD_CONS = #codigoConsultora#
+        ORDER BY NOM_CLIE
+    </select>
+    
+    <resultMap id="tarjetaPuntosMapResult" class="java.util.HashMap">
+        <result property="CODIGO_PAIS" column="PAIS_COD_PAIS"/>
+        <result property="CODIGO_CONSULTORA" column="COD_CONS"/>
+        <result property="NUMERO_TARJETA" column="NUM_TARJ"/>
+        <result property="NOMBRE_CLIENTE" column="NOM_CLIE"/>
+        <result property="CODIGO_CLIENTE" column="COD_CLIE"/>
+        <result property="PUNTAJE_TOTAL" column="PUN_TOTA"/>
+        <result property="PUNTAJE_ACUMULADO" column="PUN_ACUM"/>
+        <result property="PUNTAJE_ABONADO" column="PUN_ABON"/>
+        <result property="PUNTAJE_UTILIZADO" column="PUN_UTIL"/>
+        <result property="PUNTAJE_COMPROMETIDO" column="PUN_COMP"/>
+        <result property="SALDO_PUNTOS" column="SAL_PUNT"/>
+    </resultMap>
+
+    <select id="getTarjetasPuntos" parameterClass="map" resultMap="tarjetaPuntosMapResult">
+        SELECT 
+        T.PAIS_COD_PAIS,
+        T.COD_CONS,
+        T.NUM_TARJ,
+        SUBSTR(F.NOM_CLIE, 1, 25) AS NOM_CLIE,
+        F.COD_CLIE,
+        T.PUN_TOTA,
+        C.PUN_ACUM,
+        C.PUN_ABON,
+        C.PUN_UTIL,
+        C.PUN_COMP,
+        C.SAL_PUNT
+        FROM PRI_TARJE T, PRI_CLIEN F, PRI_CUENT_CLIEN C
+        WHERE T.PAIS_COD_PAIS = F.PAIS_COD_PAIS
+        AND F.COD_CLIE = T.CLIE_COD_CLIE
+        AND F.PAIS_COD_PAIS = C.PAIS_COD_PAIS
+        AND F.COD_CLIE = C.CLIE_COD_CLIE
+        AND T.PAIS_COD_PAIS = #codigoPais#
+        AND T.COD_CONS = #codigoConsultora#
+        ORDER BY T.NUM_TARJ    
+    </select>
+
+    <resultMap id="premiosAcumuladosMapResult" class="java.util.HashMap">
+        <result property="CODIGO_PAIS" column="PAIS_COD_PAIS"/>
+        <result property="CODIGO_CONSULTORA" column="COD_CONS"/>
+        <result property="NOMBRE_CLIENTE" column="NOM_CLIE"/>
+        <result property="CODIGO_CLIENTE" column="COD_CLIE"/>
+        <result property="PUNTAJE_ACUMULADO" column="PUN_ACUM"/>
+        <result property="PUNTAJE_ABONADO" column="PUN_ABON"/>
+        <result property="PUNTAJE_UTILIZADO" column="PUN_UTIL"/>
+        <result property="PUNTAJE_COMPROMETIDO" column="PUN_COMP"/>
+        <result property="SALDO_PUNTOS" column="SAL_PUNT"/>
+    </resultMap>
+
+	<select id="getPremiosAcumulados" parameterClass="map" resultMap="premiosAcumuladosMapResult">
+        SELECT DISTINCT
+        T.PAIS_COD_PAIS,
+        T.COD_CONS,
+        <!-- T.NUM_TARJ, -->
+        SUBSTR(F.NOM_CLIE, 1, 25) AS NOM_CLIE,
+        F.COD_CLIE,
+        <!-- T.PUN_TOTA, -->
+        C.PUN_ACUM,
+        C.PUN_ABON,
+        C.PUN_UTIL,
+        C.PUN_COMP,
+        C.SAL_PUNT
+        FROM PRI_TARJE T, PRI_CLIEN F, PRI_CUENT_CLIEN C
+        WHERE T.PAIS_COD_PAIS = F.PAIS_COD_PAIS
+        AND F.COD_CLIE = T.CLIE_COD_CLIE
+        AND F.PAIS_COD_PAIS = C.PAIS_COD_PAIS
+        AND F.COD_CLIE = C.CLIE_COD_CLIE
+        AND T.PAIS_COD_PAIS = #codigoPais#
+        AND T.COD_CONS = #codigoConsultora#
+        ORDER BY F.COD_CLIE
+    </select>
+
+    <resultMap id="premioSolicitadoMapResult" class="java.util.HashMap">
+        <result property="CODIGO_PAIS" column="PAIS_COD_PAIS"/>
+        <result property="CODIGO_CONSULTORA" column="COD_CONS"/>
+        <result property="NUMERO_TARJETA" column="NUM_TARJ"/>
+        <result property="NOMBRE_CLIENTE" column="NOM_CLIE"/>
+        <result property="CODIGO_CLIENTE" column="COD_CLIE"/>
+        <result property="CODIGO_PRODUCTO" column="COD_PROD"/>
+        <result property="DESCRIPCION_PRODUCTO" column="DES_PROD"/>
+        <result property="STATUS_PREMIO" column="STA_PREM"/>
+        <result property="OBSERVACION_PREMIO" column="OBS_PREM"/>
+        <result property="PUNTAJE_TOTAL" column="PUN_TOTA"/>
+		<result property="CANTIDAD_PREMIO" column="CAN_PREM"/>
+    </resultMap>
+    
+	<select id="getPremiosSolicitados" parameterClass="map" resultMap="premioSolicitadoMapResult">
+        SELECT 
+        T.PAIS_COD_PAIS,
+        T.COD_CONS,
+        T.NUM_TARJ,
+        SUBSTR(F.NOM_CLIE, 1, 25) AS NOM_CLIE,
+        F.COD_CLIE,
+        P.COD_PROD,
+        SUBSTR(I.VAL_I18N, 1, 25) AS DES_PROD,
+        DECODE(P.STA_PREM, 
+               'P', 'ENTREGADO', 
+               'R', 'FALTANTE',
+               'U', 'FALTANTE ANUN.',
+               'M', 'MONTO MINIMO',
+               'A', 'FACTURA ANULADA',
+               'O', 'FALTA PEDIDO',
+               'F', 'FALTA PUNTOS',
+               'B', 'FALTA PUNTOS',
+               'Z', 'NO ENTREGADO',
+               'Q', 'ENTR C.PAGO',
+               'POR PROCESAR') AS STA_PREM,
+        DECODE(P.STA_PREM, 'P', 'ATENDIDO', 'NO ATENDIDO') AS OBS_PREM,
+        P.PUN_TOTA,
+        P.CAN_PREM
+        FROM PRI_TARJE T, PRI_CLIEN F, PRI_PREMI P, MAE_PRODU R, GEN_I18N_SICC_PAIS I, SEG_PAIS S
+        WHERE T.PAIS_COD_PAIS = F.PAIS_COD_PAIS
+        AND F.COD_CLIE = T.CLIE_COD_CLIE
+        AND T.PAIS_COD_PAIS = P.PAIS_COD_PAIS
+        AND T.NUM_TARJ = P.TARJ_NUM_TARJ
+        AND T.PAIS_COD_PAIS = #codigoPais#
+        AND T.COD_CONS = #codigoConsultora#
+        AND P.IND_CARN ='0'
+        AND P.COD_PROD = R.COD_SAP
+        AND T.PAIS_COD_PAIS = S.COD_PAIS
+        AND S.OID_PAIS = R.PAIS_OID_PAIS
+        AND R.OID_PROD = I.VAL_OID
+        AND I.ATTR_ENTI = 'MAE_PRODU'
+        ORDER BY T.NUM_TARJ, P.COR_PREM
+    </select>
+    
+    <resultMap id="clienteCumpleanyosMapResult" class="java.util.HashMap">
+        <result property="CODIGO_PAIS" column="COD_PAIS"/>
+        <result property="CODIGO_CLIENTE" column="COD_CLIE"/>
+        <result property="NOMBRE_CLIENTE" column="NOM_CLIE"/>
+        <result property="TELEFONO_CLIENTE" column="TEL_CLIE"/>
+        <result property="FECHA_CUMPLEANYOS" column="FEC_CUMP"/>
+    </resultMap>
+    
+    <select id="getClientesCumpleanyos" parameterClass="map" resultMap="clienteCumpleanyosMapResult">
+        SELECT 
+        COD_PAIS,
+        COD_CLIE,
+        NOM_CLIE,
+        NVL(TEL_CLIE, ' ') TEL_CLIE,
+        TO_CHAR(FEC_NACI, 'DD/MM/') || TO_CHAR(SYSDATE, 'YY') AS FEC_CUMP
+        FROM PRI_CALIF_CLIEN
+        WHERE COD_PAIS = #codigoPais#
+        AND COD_CONS = #codigoConsultora#
+    </select>
+    
+	<resultMap id="carneBeneficiosMapResult" class="java.util.HashMap">
+        <result property="CODIGO_PAIS" column="PAIS_COD_PAIS"/>
+		<result property="CODIGO_CONSULTORA" column="COD_CONS"/>
+        <result property="CODIGO_CLIENTE" column="CLIE_COD_CLIE"/>
+        <result property="NOMBRE_CLIENTE" column="NOM_CLIE"/>
+        <result property="TELEFONO_CLIENTE" column="TEL_CLIE"/>
+		<result property="SALDO_PUNTOS" column="SAL_PUNT"/>
+    </resultMap>
+    
+    <select id="getCarneBeneficios" parameterClass="map" resultMap="carneBeneficiosMapResult">
+		SELECT 
+          C.PAIS_COD_PAIS,
+          PM.COD_CONS,
+		  PM.NOM_CLIE AS NOM_CLIE,
+		  PM.CLIE_COD_CLIE,
+		  NVL(PM.NUM_TELE, ' ') AS TEL_CLIE,
+          C.SAL_PUNT
+		FROM 
+		  PRI_CUENT_CLIEN C, PRI_MOVIM_CLIEN PM, PRI_PREMI PP,PRI_TARJE PT
+		WHERE 
+		  C.CLIE_COD_CLIE = PM.CLIE_COD_CLIE
+		  AND C.PAIS_COD_PAIS = PM.PAIS_COD_PAIS
+          AND PT.PAIS_COD_PAIS = PP.PAIS_COD_PAIS
+          AND PT.NUM_TARJ = PP.TARJ_NUM_TARJ
+          AND PT.PAIS_COD_PAIS = C.PAIS_COD_PAIS
+          AND PT.CLIE_COD_CLIE = C.CLIE_COD_CLIE
+          AND PT.COD_CONS = PM.COD_CONS
+		  AND C.PAIS_COD_PAIS = #codigoPais#
+		  AND PM.COD_CONS = #codigoConsultora#
+		  AND PP.IND_CARN ='1'
+		  AND PP.STA_PREM ='P'
+		  ORDER BY PT.NUM_TARJ, PP.COR_PREM
+    </select>
+	
+    <parameterMap id="ultimasNoticiasConsultoraParameterMap" class="java.util.HashMap">
+        <parameter property="codigoConsultora"/>
+        <parameter property="archivoXML" jdbcType="CLOB"/>
+    </parameterMap>
+
+    <insert id="insertUltimasNoticiasConsultora" parameterMap="ultimasNoticiasConsultoraParameterMap">
+        INSERT INTO IMP_PAQUE_DOCUM_PRIVI(
+        COD_CONS,
+        XML_CONS)
+        VALUES (
+        ?,
+        ?)
+    </insert>
+
+    <update id="executeEliminarUltimasNoticias">
+        TRUNCATE TABLE IMP_PAQUE_DOCUM_PRIVI
+    </update>
+     
+    <resultMap id="mensajesPrivilegeMapResult" class="java.util.HashMap">
+        <result property="CODIGO_PRIVILEGE" column="COD_PRIV"/>
+    </resultMap>
+	
+	<select id="getMensajes" parameterClass="map" resultMap="mensajesPrivilegeMapResult">
+        SELECT
+        	COD_CLIE_PRIV AS COD_PRIV
+			FROM PRI_CONSU_INSCR
+        WHERE 
+		    PAIS_COD_PAIS = #codigoPais#
+        	AND COD_CONS = #codigoConsultora#
+			ORDER BY COD_CLIE_PRIV
+    </select>
+	<resultMap id="indicadorLEbelMapResult" class="java.util.HashMap">
+        <result property="CODIGO_PAIS" column="COD_PAIS"/>
+        <result property="IND_LBEL" column="IND_LBEL"/>
+    </resultMap>
+	<select id="getIndicadorLEbel" parameterClass="map" resultMap="indicadorLEbelMapResult">
+        SELECT 
+        	COD_PAIS,
+			IND_LBEL
+        FROM BAS_PAIS
+        WHERE 
+		    COD_PAIS = #codigoPais#
+	    ORDER BY COD_PAIS
+    </select>
+
+</sqlMap>

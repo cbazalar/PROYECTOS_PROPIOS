@@ -1,0 +1,1133 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="subReporteLECPProyeccionPDF"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Portrait"
+		 pageWidth="669"
+		 pageHeight="842"
+		 columnWidth="669"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 whenResourceMissingType="Empty">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="codigoTramo" isForPrompting="true" class="java.lang.String"/>
+	<parameter name="codigoPeriodo" isForPrompting="true" class="java.lang.String"/>
+	<parameter name="codigoLider" isForPrompting="true" class="java.lang.String"/>
+	<parameter name="codigoPais" isForPrompting="true" class="java.lang.String"/>
+	<queryString><![CDATA[WITH temp AS (
+              SELECT lsrr.cam_recu,
+                     lsrr.cod_regi,
+                     lsrr.cod_zona,
+                     lsrr.cod_secc,
+                     lsrr.cod_lide,
+                     --
+                     ( lsrr.val_mont_carg_tota - lsrr.val_mont_cdrs_tota ) montoTotal_t,
+                     ( base.val_mont_carg_tota_c - base.val_mont_cdrs_tota_c ) montoTotal_c,
+                     ( base.val_mont_carg_tota_nc - base.val_mont_cdrs_tota_nc ) montoTotal_nc,
+                     --
+                     lrrt.val_mont_recu_tota recaudoTotal_t,
+                     base.val_mont_abon_tota_c recaudoTotal_c,
+                     base.val_mont_abon_tota_nc recaudoTotal_nc,
+                     --
+                     ( lsrr.val_mont_carg - lsrr.val_mont_cdrs ) montoNeto_t,
+                     ( base.val_mont_carg_c - base.val_mont_cdrs_c ) montoNeto_c,
+                     ( base.val_mont_carg_nc - base.val_mont_cdrs_nc ) montoNeto_nc,
+                     --
+                     lrrt.val_mont_recu recaNetoComis_t,
+                     lrrt.val_mont_reca_pedi_cons recaNetoComis_c,
+                     lrrt.val_mont_reca_pedi_ncon recaNetoComis_nc,
+                     --
+                     NULL val_porc_comi_t,
+                     base.val_porc_comi_c,
+                     base.val_porc_comi_nc,
+                     --
+                     ( base.val_gana_comi_c + base.val_gana_comi_nc ) val_gana_comi_t,
+                     base.val_gana_comi_c,
+                     base.val_gana_comi_nc,
+                     DECODE (lrrt.LEOB_COD_ESTA_OBJE,  '02', 'SI',  '01', 'NO',  '03', 'NO') indPagoTole,
+                     DECODE (lisr.IND_PEDI_CUMP_EXIG, 1, 'SI', 'NO') indExigePedido,                  
+                     DECODE( pcot.val_porc_mini_cobr, 0, pcot.val_porc_cobr, pcot.val_porc_mini_cobr ) val_porc_meta_cobr
+                   FROM lec_lider_secci_resul_recup lsrr,
+                       lec_lider_secci_recup_tramo lrrt,
+                       lec_lider_secci_resul lisr,
+                       lec_lider_nivel llni,
+                       lec_progr_nivel_tramo pntr,
+                       LEC_PROGR_COBRA_OBJET_TRAMO PCOT,
+                       (
+                        SELECT lsdr.pais_cod_pais,
+                               lsdr.lpro_cod_prog,
+                               lsdr.cod_regi,
+                               lsdr.cod_zona,
+                               lsdr.cod_secc,
+                               lsdr.cod_lide,
+                               lsdr.cam_recu,
+                               --
+                               SUM( CASE WHEN lsdr.ind_pedi_cons = '1' THEN lsdr.val_mont_carg ELSE 0 END ) val_mont_carg_c,
+                               SUM( CASE WHEN lsdr.ind_pedi_cons = '0' THEN lsdr.val_mont_carg ELSE 0 END ) val_mont_carg_nc,
+                               SUM( CASE WHEN lsdr.ind_pedi_cons = '1' THEN lsdr.val_mont_cdrs ELSE 0 END ) val_mont_cdrs_c,
+                               SUM( CASE WHEN lsdr.ind_pedi_cons = '0' THEN lsdr.val_mont_cdrs ELSE 0 END ) val_mont_cdrs_nc,
+                               --
+                               SUM( CASE WHEN lsdr.ind_pedi_cons = '1' THEN lsdr.val_mont_carg_tota ELSE 0 END ) val_mont_carg_tota_c,
+                               SUM( CASE WHEN lsdr.ind_pedi_cons = '0' THEN lsdr.val_mont_carg_tota ELSE 0 END ) val_mont_carg_tota_nc,
+                               SUM( CASE WHEN lsdr.ind_pedi_cons = '1' THEN lsdr.val_mont_cdrs_tota ELSE 0 END ) val_mont_cdrs_tota_c,
+                               SUM( CASE WHEN lsdr.ind_pedi_cons = '0' THEN lsdr.val_mont_cdrs_tota ELSE 0 END ) val_mont_cdrs_tota_nc,
+                               --
+                               SUM( CASE WHEN lsdr.ind_pedi_cons = '1' THEN ldrt.val_mont_abon ELSE 0 END ) val_mont_abon_c,
+                               SUM( CASE WHEN lsdr.ind_pedi_cons = '0' THEN ldrt.val_mont_abon ELSE 0 END ) val_mont_abon_nc,
+                               SUM( CASE WHEN lsdr.ind_pedi_cons = '1' THEN ldrt.val_mont_abon_tota ELSE 0 END ) val_mont_abon_tota_c,
+                               SUM( CASE WHEN lsdr.ind_pedi_cons = '0' THEN ldrt.val_mont_abon_tota ELSE 0 END ) val_mont_abon_tota_nc,
+                               --
+                               MAX( CASE WHEN lsdr.ind_pedi_cons = '1' THEN ldrt.val_porc_comi ELSE 0 END ) val_porc_comi_c,
+                               MAX( CASE WHEN lsdr.ind_pedi_cons = '0' THEN ldrt.val_porc_comi ELSE 0 END ) val_porc_comi_nc,
+                               --
+                               SUM( CASE WHEN lsdr.ind_pedi_cons = '1' THEN ROUND(ldrt.val_mont_abon * (ldrt.val_porc_comi/100),2) ELSE 0 END ) val_gana_comi_c,
+                               SUM( CASE WHEN lsdr.ind_pedi_cons = '0' THEN ROUND(ldrt.val_mont_abon * (ldrt.val_porc_comi/100),2) ELSE 0 END ) val_gana_comi_nc
+                          FROM lec_lider_secci_detal_recup lsdr,
+                               lec_lider_secci_drecu_tramo ldrt       
+                         WHERE lsdr.pais_cod_pais = ldrt.pais_cod_pais(+)
+                           AND lsdr.lpro_cod_prog = ldrt.lpro_cod_prog(+)
+                           AND lsdr.cod_regi = ldrt.cod_regi(+)
+                           AND lsdr.cod_zona = ldrt.cod_zona(+)
+                           AND lsdr.cod_secc = ldrt.cod_secc(+)
+                           AND lsdr.cod_lide = ldrt.cod_lide(+)
+                           AND lsdr.cam_recu = ldrt.cam_recu(+)
+                           AND lsdr.cod_cons = ldrt.cod_cons(+)
+                           AND lsdr.mvcc_oid_movi_cc = ldrt.mvcc_oid_movi_cc(+)
+                           AND ldrt.lpct_cod_tram(+) =  $P{codigoTramo}
+                           AND lsdr.pais_cod_pais = $P{codigoPais}
+                           AND lsdr.cam_recu = $P{codigoPeriodo}                      
+                         GROUP BY lsdr.pais_cod_pais,
+                                  lsdr.lpro_cod_prog,
+                                  lsdr.cod_regi,
+                                  lsdr.cod_zona,
+                                  lsdr.cod_secc,
+                                  lsdr.cod_lide,
+                                  lsdr.cam_recu
+                       ) base
+                 WHERE 1=1
+                   AND lsrr.cam_recu = $P{codigoPeriodo}
+                   AND lsrr.cam_recu = lrrt.cam_recu(+)
+                   AND lsrr.cod_lide = lrrt.cod_lide(+)
+                   AND lrrt.lpct_cod_tram = $P{codigoTramo}
+                   AND lsrr.cod_lide = lisr.cod_lide(+)
+                   AND lsrr.cam_recu = lisr.cam_resu(+)
+                   AND lsrr.cod_lide = llni.cod_lide
+                   AND lsrr.cam_recu BETWEEN llni.cam_inic AND NVL(llni.cam_fin,lsrr.cam_recu)
+                   AND llni.ind_tipo_nive = 'R'
+                   AND lsrr.pais_cod_pais = pntr.pais_cod_pais
+                   AND lsrr.lpro_cod_prog = pntr.lpro_cod_prog
+                   AND llni.lniv_cod_nive = pntr.lniv_cod_nive
+                   AND pntr.cod_tram = $P{codigoTramo}
+                   AND lsrr.cod_lide = $P{codigoLider}
+                   --
+                   AND lsrr.pais_cod_pais = base.pais_cod_pais(+)
+                   AND lsrr.lpro_cod_prog = base.lpro_cod_prog(+)
+                   AND lsrr.cod_regi = base.cod_regi(+)
+                   AND lsrr.cod_zona = base.cod_zona(+)
+                   AND lsrr.cod_secc = base.cod_secc(+)
+                   AND lsrr.cod_lide = base.cod_lide(+)
+                   AND lsrr.cam_recu = base.cam_recu(+)
+                   ---
+                   AND lrrt.pais_cod_pais = PCOT.PAIS_COD_PAIS
+                   AND LRRT.LPRO_COD_PROG   = PCOT.LPRO_COD_PROG
+                   AND LRRT.LPAG_SEC_AMBI_GEOG = PCOT.LPAG_SEC_AMBI_GEOG
+                   AND  LRRT.LPCT_COD_TRAM = PCOT.LPCT_COD_TRAM
+                   AND  PCOT.IND_ACTI = 1
+                    )
+SELECT cam_recu,
+       cod_regi,
+       cod_zona,
+       cod_secc,
+       cod_lide,
+       montototal_t,
+       montototal_c,
+       montototal_nc,
+       recaudototal_t,
+       recaudototal_c,
+       recaudototal_nc,
+       CASE
+          WHEN recaudototal_t >= ( montototal_t * ( val_porc_meta_cobr/100) ) THEN 0
+          ELSE ( montototal_t * ( val_porc_meta_cobr/100) ) - recaudototal_t
+       END Monto_Faltante,
+       montototal_t  -  recaudototal_t  Monto_faltante_100,
+       (montototal_c - recaudototal_c) saldoActual_c,
+       (montototal_nc - recaudototal_nc) saldoActual_nc,
+       ROUND((recaudototal_t/DECODE(montototal_t,0,1,montototal_t))*100,2) porcRecup_t,
+       ROUND((recaudototal_c/DECODE(montototal_c,0,1,montototal_c))*100,2) porcRecup_c,
+       ROUND((recaudototal_nc/DECODE(montototal_nc,0,1,montototal_nc))*100,2) porcRecup_nc, 
+       montoneto_t,
+       montoneto_c,
+       montoneto_nc,
+       (recaudototal_t - recanetocomis_t) recanetonocomis_t,
+       (recaudototal_c - recanetocomis_c) recanetonocomis_c,
+       (recaudototal_nc - recanetocomis_nc) recanetonocomis_nc,
+       recanetocomis_t,
+       recanetocomis_c,
+       recanetocomis_nc,
+       val_porc_comi_t,
+       val_porc_comi_c, 
+       val_porc_comi_nc,
+       val_gana_comi_t,
+       val_gana_comi_c,
+       val_gana_comi_nc,
+       indpagotole,
+       indexigepedido   
+  FROM temp]]></queryString>
+
+	<field name="cam_recu" class="java.lang.String"/>
+	<field name="cod_regi" class="java.lang.String"/>
+	<field name="cod_zona" class="java.lang.String"/>
+	<field name="cod_secc" class="java.lang.String"/>
+	<field name="cod_lide" class="java.lang.String"/>
+	<field name="montototal_t" class="java.math.BigDecimal"/>
+	<field name="montototal_c" class="java.math.BigDecimal"/>
+	<field name="montototal_nc" class="java.math.BigDecimal"/>
+	<field name="recaudototal_t" class="java.math.BigDecimal"/>
+	<field name="recaudototal_c" class="java.math.BigDecimal"/>
+	<field name="recaudototal_nc" class="java.math.BigDecimal"/>
+	<field name="saldoActual_c" class="java.math.BigDecimal"/>
+	<field name="saldoActual_nc" class="java.math.BigDecimal"/>
+	<field name="porcRecup_t" class="java.math.BigDecimal"/>
+	<field name="porcRecup_c" class="java.math.BigDecimal"/>
+	<field name="porcRecup_nc" class="java.math.BigDecimal"/>
+	<field name="montoneto_t" class="java.math.BigDecimal"/>
+	<field name="montoneto_c" class="java.math.BigDecimal"/>
+	<field name="montoneto_nc" class="java.math.BigDecimal"/>
+	<field name="recanetonocomis_t" class="java.math.BigDecimal"/>
+	<field name="recanetonocomis_c" class="java.math.BigDecimal"/>
+	<field name="recanetonocomis_nc" class="java.math.BigDecimal"/>
+	<field name="recanetocomis_t" class="java.math.BigDecimal"/>
+	<field name="recanetocomis_c" class="java.math.BigDecimal"/>
+	<field name="recanetocomis_nc" class="java.math.BigDecimal"/>
+	<field name="val_porc_comi_t" class="java.math.BigDecimal"/>
+	<field name="val_porc_comi_c" class="java.math.BigDecimal"/>
+	<field name="val_porc_comi_nc" class="java.math.BigDecimal"/>
+	<field name="val_gana_comi_t" class="java.math.BigDecimal"/>
+	<field name="val_gana_comi_c" class="java.math.BigDecimal"/>
+	<field name="val_gana_comi_nc" class="java.math.BigDecimal"/>
+	<field name="indpagotole" class="java.lang.String"/>
+	<field name="indexigepedido" class="java.lang.String"/>
+	<field name="Monto_Faltante" class="java.math.BigDecimal"/>
+	<field name="Monto_faltante_100" class="java.math.BigDecimal"/>
+
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="87"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="56"
+						y="0"
+						width="250"
+						height="18"
+						forecolor="#000000"
+						backcolor="#FFFFFF"
+						key="textField-1"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.seguimientoRecuperacion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="318"
+						y="0"
+						width="350"
+						height="18"
+						forecolor="#000000"
+						backcolor="#FFFFFF"
+						key="textField-35"
+						positionType="Float"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="SansSerif" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.seguimientoPagoProyectado}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="61"
+						width="56"
+						height="13"
+						forecolor="#000000"
+						backcolor="#D9D9D9"
+						key="textField-39"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.0"/>
+					<rightPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="6" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.consecutivo}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="48"
+						width="56"
+						height="13"
+						forecolor="#000000"
+						backcolor="#D9D9D9"
+						key="textField-40"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="6" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.total}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="74"
+						width="56"
+						height="13"
+						forecolor="#000000"
+						backcolor="#D9D9D9"
+						key="textField-41"/>
+					<box>					<topPen lineWidth="0.0"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="6" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.noConsecutivo}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="56"
+						y="18"
+						width="50"
+						height="30"
+						forecolor="#000000"
+						backcolor="#D9D9D9"
+						key="textField-42"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.0"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="6" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.montoTotal}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="56"
+						y="48"
+						width="50"
+						height="13"
+						key="textField-43"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{montototal_t}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="56"
+						y="61"
+						width="50"
+						height="13"
+						key="textField-44"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{montototal_c}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="56"
+						y="74"
+						width="50"
+						height="13"
+						key="textField-45"/>
+					<box>					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{montototal_nc}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="106"
+						y="18"
+						width="50"
+						height="30"
+						forecolor="#000000"
+						backcolor="#D9D9D9"
+						key="textField-46"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.0"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.0"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="6" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.recaudoTotal}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="256"
+						y="18"
+						width="50"
+						height="30"
+						forecolor="#000000"
+						backcolor="#D9D9D9"
+						key="textField-47"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.0"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="6" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.recuperacion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="156"
+						y="18"
+						width="50"
+						height="30"
+						forecolor="#000000"
+						backcolor="#D9D9D9"
+						key="textField-49"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.0"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.0"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="5" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.montoFaltaMeta}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="106"
+						y="48"
+						width="50"
+						height="13"
+						key="textField-50"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{recaudototal_t}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="106"
+						y="61"
+						width="50"
+						height="13"
+						key="textField-51"/>
+					<box>					<topPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{recaudototal_c}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="106"
+						y="74"
+						width="50"
+						height="13"
+						key="textField-52"/>
+					<box>					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{recaudototal_nc}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="156"
+						y="48"
+						width="50"
+						height="13"
+						key="textField-53"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{Monto_Faltante}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="156"
+						y="61"
+						width="50"
+						height="13"
+						key="textField-54"/>
+					<box>					<topPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="156"
+						y="74"
+						width="50"
+						height="13"
+						key="textField-55"/>
+					<box>					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="256"
+						y="48"
+						width="50"
+						height="13"
+						key="textField-56"/>
+					<box>					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.0"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{porcRecup_t}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="256"
+						y="61"
+						width="50"
+						height="13"
+						key="textField-57"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{porcRecup_c}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="256"
+						y="74"
+						width="50"
+						height="13"
+						key="textField-58"/>
+					<box>					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{porcRecup_nc}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="318"
+						y="18"
+						width="50"
+						height="30"
+						forecolor="#000000"
+						backcolor="#D9D9D9"
+						key="textField-59"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.0"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="6" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.montoNeto}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="318"
+						y="48"
+						width="50"
+						height="13"
+						key="textField-60"/>
+					<box>					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{montoneto_t}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="318"
+						y="61"
+						width="50"
+						height="13"
+						key="textField-61"/>
+					<box>					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.0"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{montoneto_c}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="368"
+						y="18"
+						width="50"
+						height="30"
+						forecolor="#000000"
+						backcolor="#D9D9D9"
+						key="textField-63"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.0"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.0"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="6" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.recaudoNoComisionable}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="468"
+						y="18"
+						width="50"
+						height="30"
+						forecolor="#000000"
+						backcolor="#D9D9D9"
+						key="textField-64"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.0"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.0"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="6" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.comision}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="418"
+						y="18"
+						width="50"
+						height="30"
+						forecolor="#000000"
+						backcolor="#D9D9D9"
+						key="textField-65"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.0"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.0"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="6" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.recaudoComisionableNeto}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="368"
+						y="48"
+						width="50"
+						height="13"
+						key="textField-66"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{recanetonocomis_t}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="368"
+						y="61"
+						width="50"
+						height="13"
+						key="textField-67"/>
+					<box>					<topPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{recanetonocomis_c}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="368"
+						y="74"
+						width="50"
+						height="13"
+						key="textField-68"/>
+					<box>					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{recanetonocomis_nc}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="418"
+						y="48"
+						width="50"
+						height="13"
+						key="textField-69"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{recanetocomis_t}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="418"
+						y="61"
+						width="50"
+						height="13"
+						key="textField-70"/>
+					<box>					<topPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{recanetocomis_c}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="418"
+						y="74"
+						width="50"
+						height="13"
+						key="textField-71"/>
+					<box>					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{recanetocomis_nc}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="468"
+						y="48"
+						width="50"
+						height="13"
+						key="textField-72"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{val_porc_comi_t}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="468"
+						y="61"
+						width="50"
+						height="13"
+						key="textField-73"/>
+					<box>					<topPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{val_porc_comi_c}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="468"
+						y="74"
+						width="50"
+						height="13"
+						key="textField-74"/>
+					<box>					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{val_porc_comi_nc}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="518"
+						y="18"
+						width="50"
+						height="30"
+						forecolor="#000000"
+						backcolor="#D9D9D9"
+						key="textField-75"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.0"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.0"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="6" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.montoAPagar}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="618"
+						y="18"
+						width="50"
+						height="30"
+						forecolor="#000000"
+						backcolor="#D9D9D9"
+						key="textField-76"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.0"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="6" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.exigenciaPedido}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="568"
+						y="18"
+						width="50"
+						height="30"
+						forecolor="#000000"
+						backcolor="#D9D9D9"
+						key="textField-77"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.0"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.0"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="6" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.pagoPorTolerancia}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="518"
+						y="48"
+						width="50"
+						height="13"
+						key="textField-78"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{val_gana_comi_t}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="518"
+						y="61"
+						width="50"
+						height="13"
+						key="textField-79"/>
+					<box>					<topPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{val_gana_comi_c}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="518"
+						y="74"
+						width="50"
+						height="13"
+						key="textField-80"/>
+					<box>					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{val_gana_comi_nc}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="568"
+						y="48"
+						width="50"
+						height="13"
+						key="textField-81"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{indpagotole}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="568"
+						y="61"
+						width="50"
+						height="13"
+						key="textField-82"/>
+					<box>					<topPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{indpagotole}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="568"
+						y="74"
+						width="50"
+						height="13"
+						key="textField-83"/>
+					<box>					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{indpagotole}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="618"
+						y="48"
+						width="50"
+						height="13"
+						key="textField-84"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{indexigepedido}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="318"
+						y="74"
+						width="50"
+						height="13"
+						key="textField-87"/>
+					<box>					<leftPen lineWidth="0.5"/>
+					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{montoneto_nc}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="618"
+						y="74"
+						width="50"
+						height="13"
+						key="textField-88"/>
+					<box>					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{indexigepedido}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="618"
+						y="61"
+						width="50"
+						height="13"
+						key="textField-89"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{indexigepedido}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="206"
+						y="18"
+						width="50"
+						height="30"
+						forecolor="#000000"
+						backcolor="#D9D9D9"
+						key="textField-90"/>
+					<box>					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.0"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="5" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{subReporteLECPProyeccionForm.montoFalta100}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="206"
+						y="48"
+						width="50"
+						height="13"
+						key="textField-91"/>
+					<box>					<pen lineWidth="0.5"/>
+					<topPen lineWidth="0.5"/>
+					<leftPen lineWidth="0.0"/>
+					<bottomPen lineWidth="0.5"/>
+					<rightPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{Monto_faltante_100}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="206"
+						y="61"
+						width="50"
+						height="13"
+						key="textField-92"/>
+					<box>					<topPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{saldoActual_c}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="206"
+						y="74"
+						width="50"
+						height="13"
+						key="textField-93"/>
+					<box>					<bottomPen lineWidth="0.5"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="7"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{saldoActual_nc}]]></textFieldExpression>
+				</textField>
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="0"  isSplitAllowed="false" >
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

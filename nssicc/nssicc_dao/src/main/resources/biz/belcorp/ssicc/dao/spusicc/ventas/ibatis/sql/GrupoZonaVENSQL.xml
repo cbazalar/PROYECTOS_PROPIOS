@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.GrupoZonaVENSQL">
+	<typeAlias alias="bgrupoZona" type="biz.belcorp.ssicc.dao.spusicc.ventas.model.GrupoZona"/>
+	
+	<resultMap id="baseResult"          class="baseGenerico">
+    	<result property="codigo" 		column="CODIGO" 	/>
+    	<result property="descripcion" 	column="DESCRIPCION"/>
+    </resultMap>
+
+	<select id="getGrupoZona" parameterClass="bgrupoZona" resultClass="bgrupoZona">
+		SELECT V.COD_GRUP AS  codigo,
+       		   V.DES_GRUP AS  descripcion, 
+  			   V.COD_AGRU_GRUP AS codigoAgrupado,	
+ 			   A.DES_AGRU_GRUP AS descripcionAgrupado	
+        FROM  BAS_GRUPO_ZONA V,
+ 			  BAS_AGRUP_GRUPO_ZONA A	 
+		WHERE 
+		     A.COD_AGRU_GRUP = V.COD_AGRU_GRUP
+		     <isNotEmpty prepend="AND" property="codigo">
+		       V.COD_GRUP = #codigo#
+             </isNotEmpty>
+			 <isNotEmpty prepend="AND" property="descripcion">
+		       V.DES_GRUP = #descripcion#
+             </isNotEmpty>
+		ORDER BY V.COD_GRUP	 
+	</select>	
+	
+   <select id="getGrupoZonaZonas" parameterClass="bgrupoZona" resultClass="bgrupoZona">
+		SELECT V.COD_GRUP AS  codigo,
+       		   B.DES_GRUP AS  descripcion, 
+			   V.COD_ZONA  AS  codigoZona, 
+			   Z.DES_ZONA  AS  descripcionZona 
+        FROM  VEN_GRUPO_ZONA V, 
+			  BAS_GRUPO_ZONA B,
+              ZON_ZONA Z
+		WHERE 
+		     B.COD_GRUP = V.COD_GRUP AND
+		     V.COD_ZONA = Z.COD_ZONA
+		     <isNotEmpty prepend="AND" property="codigo">
+		       V.COD_GRUP = #codigo#
+             </isNotEmpty>
+			 <isNotEmpty prepend="AND" property="descripcion">
+		       B.DES_GRUP = #descripcion#
+             </isNotEmpty>
+	</select>	
+		
+	
+    <insert id="insertGrupoZona" parameterClass="bgrupoZona">
+	    INSERT INTO BAS_GRUPO_ZONA
+	    (
+		COD_GRUP,
+		DES_GRUP,
+        COD_AGRU_GRUP,
+		USU_DIGI,
+		FEC_DIGI
+		) 
+	    VALUES 
+	    (
+		#codigo#,
+		#descripcion#,
+        #codigoAgrupado#,
+		#auditInfo.createdBy#,
+		#auditInfo.created#
+	    )
+	</insert>
+	
+    <insert id="insertZonaGrupoZona" parameterClass="bgrupoZona">
+	    INSERT INTO VEN_GRUPO_ZONA
+	    (
+		COD_GRUP,
+	    COD_ZONA,
+		USU_DIGI,
+		FEC_DIGI
+		) 
+	    VALUES 
+	    (
+		#codigo#,
+		#codigoZona#,
+		#auditInfo.createdBy#,
+		#auditInfo.created#
+	    )
+	</insert>
+
+	
+	<update id="updateGrupoZona" parameterClass="bgrupoZona">
+		UPDATE BAS_GRUPO_ZONA
+		SET USU_MODI = #auditInfo.updatedBy#,
+        	FEC_MODI = #auditInfo.lastUpdated#
+			<isNotEmpty prepend="," property="descripcion">
+				DES_GRUP = #descripcion#
+			</isNotEmpty>
+			<isNotEmpty prepend="," property="codigoAgrupado">
+				COD_AGRU_GRUP = #codigoAgrupado#
+			</isNotEmpty>
+		WHERE
+		   COD_GRUP = #codigo# 
+    </update>   
+	
+	<delete id="deleteGrupoZona" parameterClass="bgrupoZona">
+		DELETE FROM BAS_GRUPO_ZONA
+		WHERE
+		   COD_GRUP = #codigo# 
+    </delete>  
+	
+	<delete id="deleteZonaGrupoZona" parameterClass="bgrupoZona">
+		DELETE FROM VEN_GRUPO_ZONA
+		WHERE
+		   COD_GRUP = #codigo# AND
+		   COD_ZONA = #codigoZona#
+    </delete>  
+	
+	 
+	<select id="getZona" parameterClass="bgrupoZona" resultClass="bgrupoZona">
+		SELECT 
+			   Z.OID_ZONA  AS  oidZona,
+			   Z.COD_ZONA  AS  codigoZona, 
+			   Z.DES_ZONA  AS  descripcionZona 
+        FROM  
+               ZON_ZONA Z
+		WHERE 1=1
+		     <isNotEmpty prepend="AND" property="codigoZona">
+		       Z.COD_ZONA = #codigoZona#
+             </isNotEmpty>
+			 <isNotEmpty prepend="AND" property="descripcionZona">
+		       Z.DES_ZONA LIKE  '%'||#descripcionZona#||'%'
+             </isNotEmpty>
+	</select>	
+
+    <!-- OBTIENE LA LISTA DE AGRUPADOS POR GRUPO DE ZONA -->
+    <select id="getListaAgrupadoGrupoZona" parameterClass="java.util.Map"  resultMap="baseResult">
+		SELECT COD_AGRU_GRUP AS CODIGO,
+ 		       DES_AGRU_GRUP AS DESCRIPCION
+		FROM BAS_AGRUP_GRUPO_ZONA
+ 	    ORDER BY 1
+    </select>	
+	
+	<select id="getRegion" parameterClass="java.util.Map"  resultMap="baseResult">
+		SELECT COD_REGI AS CODIGO,
+		       DES_REGI AS DESCRIPCION
+  		FROM ZON_REGIO
+ 		WHERE 1=1
+ 		<isNotEmpty prepend="AND" property="codigoRegion">
+		       COD_REGI = #codigoRegion#
+        </isNotEmpty> 
+        <isNotEmpty prepend="AND" property="descripcionRegion">
+		       DES_REGI LIKE  '%'||#descripcionRegion#||'%'
+        </isNotEmpty> 		
+    </select>
+
+</sqlMap>

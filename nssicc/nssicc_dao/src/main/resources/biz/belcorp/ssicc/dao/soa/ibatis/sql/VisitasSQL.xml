@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+<sqlMap namespace="soa.VisitasSQL">
+
+    <resultMap id="getVisitaResult" class="java.util.HashMap">
+		<result property="numeroRegistros"		        column="NUM_REGI"/> 	
+	    <result property="cantidadTotalRegistros"		column="TOT_REGI"/>	    	     	
+	    <result property="codigoSeccion" 		  		column="COD_SECC"/>    	     	
+	    <result property="codigoTerritorio" 		  	column="COD_TERR"/>
+	     <result property="codigoCliente" 		  		column="COD_CLIE"/>
+		<result property="nombre1"		        		column="VAL_NOM1"/>
+	    <result property="nombre2"						column="VAL_NOM2"/>
+	    <result property="apellido1" 		  			column="VAL_APE1"/>
+	    <result property="apellido2" 		  			column="VAL_APE2"/> 	     	
+	    <result property="direccion" 		  			column="VAL_DIRE_PRIN"/>
+	    <result property="indicadorAutorizada" 			column="VAL_AUTO_PASE"/>    	     	
+	    <result property="correo" 		  				column="VAL_CORR_ELEC"/>
+	    <result property="indicadorAsisConferencia" 	column="VAL_ASIS_REUN_TRIU"/>
+	    <result property="montoSaldo" 					column="VAL_SALD_PEND"/>
+	    <!-- <result property="numeroVisita" 			column="NUM_VIST"/>   -->
+	    <result property="numeroDocumento" 				column="VAL_NUME_DOCU_IDEN"/>
+	    <result property="numeroTelefonoCel" 			column="VAL_NUME_TELE_CELU"/>
+	   <result property="tipoTelefonoCel" 				column="VAL_TIPO_TELE_MOVI"/>
+	    <result property="numeroTelefonoFijo" 			column="VAL_NUME_TELE_FIJO"/>
+	    <result property="tipoTelefonoFijo" 			column="VAL_TIPO_TELE_FIJO"/>
+	    <result property="codigoCampaniaIngreso" 		column="VAL_CAMP_INGR"/>
+	    <result property="codigoTipoVisita" 			column="COD_TIPO_VISI"/>
+	    <result property="nombreTipoVisita" 			column="VAL_TIPO_VISI"/>
+	    <result property="simboloMoneda"		 		column="VAL_SIMB_MONE"/>
+	    <result property="descripcionMoneda" 			column="DES_MONED"/>
+	    <result property="digitoVerificacion" 		column="COD_DIGI_CTRL"/> 	
+	   	    	    	    
+    </resultMap>
+        
+    <select id="getVisita" parameterClass="java.util.Map" resultMap="getVisitaResult">
+
+	WITH TMP AS(			
+			select distinct x.*,
+                    (SELECT cod_digi_ctrl  FROM mae_clien WHERE cod_clie = x.cod_clie) COD_DIGI_CTRL
+			from SOA_VISIT_CONSU x      
+			where   x.cod_pais =#codigoPais#
+			    and x.cod_regi =#codigoRegion#
+			    and x.cod_zona =#codigoZona#
+			     <isNotEmpty prepend="AND" property="codigoSeccion">
+			     	     X.COD_SECC = #codigoSeccion#
+			    </isNotEmpty>
+			     <isNotEmpty prepend="AND" property="codigoCampania">
+			     	     X.COD_PERI = #codigoCampania#
+			    </isNotEmpty>			    
+			     <isNotEmpty prepend="AND" property="codigoTipoVisita">
+			    		X.cod_tipo_visi = #codigoTipoVisita# 
+			    </isNotEmpty>
+			    
+			    <isEmpty prepend="ORDER BY" property="campoOrdenamiento">
+			    		X.COD_SECC, X.VAL_NOM1||' '||X.VAL_NOM2||' '||X.VAL_APE1||' '||X.VAL_APE2
+			    </isEmpty>
+			    			    			    
+	   )
+				SELECT * 
+				FROM (
+				    SELECT  ROWNUM  AS NUM_REGI,
+				            (SELECT COUNT(1) FROM TMP) AS  TOT_REGI,
+				            X.*
+				    FROM TMP X  )
+				    <isNotEmpty prepend="where" property="tamanhoPagina">
+			    		NUM_REGI BETWEEN (#paginaActual# - 1) * #tamanhoPagina# + 1   AND  #paginaActual# * #tamanhoPagina#	
+			    	</isNotEmpty>	    
+			    			    			    			
+	</select>
+	
+	<select id="getPeriodoActual" parameterClass="java.util.Map" resultClass="string">
+		select cod_peri
+		from bas_ctrl_fact bcf               
+		where
+		   bcf.cod_pais= #codigoPais#
+		   and bcf.ind_camp_act='1'
+             and bcf.sta_camp='0'
+	</select>
+	
+	<select id="getOidPeriodoActual" parameterClass="java.util.Map" resultClass="long">
+	    select fin_pkg_gener.fin_fn_obtie_oid_perio( #codigoPeriodo# ) from dual
+	</select>
+	
+	<select id="getOidPeriodoIni" parameterClass="java.util.Map" resultClass="long">
+	    select fin_pkg_gener.fin_fn_obtie_oid_perio( gen_fn_calcu_perio( #codigoPeriodo#, -3 ) ) from dual
+	</select>		
+	
+    
+    
+</sqlMap>

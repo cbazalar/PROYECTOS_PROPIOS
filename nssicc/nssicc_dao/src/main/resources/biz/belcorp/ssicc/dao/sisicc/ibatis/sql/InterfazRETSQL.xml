@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>                                                      
+<!DOCTYPE sqlMap                                                        
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"                                                     
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">                                                      
+
+<sqlMap namespace="sisicc.InterfazRETSQL">     
+     
+     <delete id="deleteInterfazRETRecepcionarVentasRetailDetalle" parameterClass="java.util.Map">													
+		DELETE FROM RET_VENTA_DETAL X
+		WHERE  X.COD_PAIS = #codigoPais#
+		AND TO_NUMBER(TO_CHAR(X.FEC_ENVI,'yyyymmdd')) BETWEEN TO_NUMBER(TO_CHAR(TO_DATE(#fechaInicio#,'dd/MM/yyyy'),'yyyymmdd')) 
+    								AND TO_NUMBER(TO_CHAR(TO_DATE(#fechaFinal#,'dd/MM/yyyy'),'yyyymmdd')) 									
+	</delete>	
+     
+    <delete id="deleteInterfazRETRecepcionarVentasRetail" parameterClass="java.util.Map">													
+		DELETE FROM RET_VENTA_CABEC A
+		WHERE  A.COD_PAIS =#codigoPais#
+    	 AND TO_NUMBER(TO_CHAR(A.FEC_ENVI,'yyyymmdd')) BETWEEN TO_NUMBER(TO_CHAR(TO_DATE(#fechaInicio#,'dd/MM/yyyy'),'yyyymmdd')) 
+    	 									AND TO_NUMBER(TO_CHAR(TO_DATE(#fechaFinal#,'dd/MM/yyyy'),'yyyymmdd')) 									
+	</delete>	
+     
+     <insert id="insertInterfazRETRecepcionarVentasRetail" parameterClass="java.util.Map">													
+		INSERT INTO RET_VENTA_CABEC (
+		   COD_PAIS, COD_CANA, COD_ACCE, 
+		   COD_SBAC, COD_LOCA, COD_TIPO_DOCU, 
+		   VAL_SERI_DOCU, NUM_DOCU_RETA, CAJ_EMIS, 
+		   RET_TRAN, TIP_CLIE, NUM_IDEN_CLIE, 
+		   VAL_CUEN_CONSU, FEC_ENVI, CAM_PROC, 
+		   TIP_DOCU_REFE, SER_DOCU_REFE, FAC_REFE, 
+		   IND_ANUL, VAL_RUC, FEC_PROC) 												
+		VALUES (												
+        #codigoPais#,#codigoCanal#,#codigoAcceso#,
+        #codigoSubAcceso#,#codigoLocal#,#tipoDocumento#,
+        #serieDocumento#,TRIM(#numeroDocumentoRetail#),#cajaEmision#,
+        #transaccionRetail#,#tipoCliente#,#numeroIdentificacionCliente#,
+        #cuentaConsultora#,TO_DATE(#fechaEnvio#,'yyyymmdd'),#campanhaProceso#,
+        #tipoDocumentoReferencia#,#serieDocumentoReferencia#,TRIM(#facturaReferencia#),
+        #indicadorAnulado#,#ruc#,SYSDATE 														
+        )												
+	</insert>				
+	
+	<insert id="insertInterfazRETRecepcionarVentasRetailDetalle" parameterClass="java.util.Map">													
+		INSERT INTO RET_VENTA_DETAL(
+		   COD_PAIS, COD_CANA, COD_ACCE, 
+		   COD_SBAC, COD_LOCA, COD_TIPO_DOCU, 
+		   NUM_DOCU_RETA, TIPO_TRAN_RET, CAM_PROC, 
+		   COD_VENT, COD_PROD, UNI_VEND, 
+		   UNI_DEVU, VAL_MONT_CATA, VAL_MONT_DSCT, 
+		   MON_DEVU, MOT_CAMB, MON_IMPU) 												
+		VALUES (												
+        #codigoPais#,#codigoCanal#,#codigoAcceso#,
+        #codigoSubAcceso#,#codigoLocal#,#tipoDocumento#,
+        TRIM(#numeroDocumentoRetail#),#transaccionRetail#,#campanha#,
+        #codigoVenta#,#codigoProducto#,#unidadesVendidas#,
+        #unidadesDevueltas#,#montoCatalogo#,#montoConDscto#,
+        #montoUnidadesDevueltas#,#motivoCambio#,#montoImpuestos#)												
+	</insert>
+	
+	<select id="getExisteCabeceraVentasRetail" parameterClass="java.util.Map" resultClass="java.lang.Integer">
+		SELECT COUNT(1)
+		FROM RET_VENTA_CABEC
+		WHERE COD_PAIS=#codigoPais#
+			AND COD_SBAC=#codigoSubAcceso#
+			AND COD_TIPO_DOCU=#tipoDocumento#
+			AND NUM_DOCU_RETA=#numeroDocumentoRetail#
+	</select>	
+						
+    <resultMap id="interfazRETEnviarPagoComisionesRetailGZResult"	class="java.util.HashMap">
+        <result property="codigoPlanilla"  column="COD_PLAN_GERE" />
+        <result property="nombreGerente"   column="NOM_GERE_ZONA" />
+        <result property="importe"         column="TOT_IMPO_COMI" />
+	</resultMap>
+								
+    <select id="getInterfazRETEnviarPagoComisionesRetailGZ" parameterClass="java.util.Map" resultMap="interfazRETEnviarPagoComisionesRetailGZResult">   																		
+			SELECT LPAD(A.COD_PLAN_GERE,#longCampoPlanilla#,' ') AS COD_PLAN_GERE,
+				   A.NOM_GERE_ZONA AS NOM_GERE_ZONA,
+				   A.TOT_IMPO_COMI AS TOT_IMPO_COMI				   
+				FROM RET_COMIS_GZONA A
+				WHERE A.COD_PAIS = #codigoPais#
+ 				  AND  <![CDATA[ TO_NUMBER(TO_CHAR(A.FEC_INIC,'yyyymmdd')) >= TO_NUMBER(TO_CHAR(TO_DATE(#fechaInicio#,'dd/MM/yyyy'),'yyyymmdd')) ]]>
+ 				 AND <![CDATA[ TO_NUMBER(TO_CHAR(A.FEC_FINA,'yyyymmdd')) <= TO_NUMBER(TO_CHAR(TO_DATE(#fechaFinal#,'dd/MM/yyyy'),'yyyymmdd'))]]> 	 											
+    </select> 
+
+    <parameterMap id="interfazRETEnviarInformacionVentaParams" class="map" >														
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+        <parameter property="codigoSistema"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>													
+		<parameter property="codigoInterfaz"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+		<parameter property="nombreArchivo"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>										
+		<parameter property="codigoPeriodo"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+		<parameter property="fechaFacturacion"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+    </parameterMap>														
+														
+    <procedure id="executeInterfazRETEnviarInformacionVenta" parameterMap="interfazRETEnviarInformacionVentaParams" >														
+		{call INT_PKG_RETAI.INT_PR_RET_INFOR_VENTA(?, ?, ?, ?, ?, ?)}												
+    </procedure>
+    
+    <parameterMap id="executeInterfazRETEnviarDetalleFacturasVDParams" class="map" >														
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+        <parameter property="codigoSistema"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>													
+		<parameter property="codigoInterfaz"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+		<parameter property="nombreArchivo"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>										
+		<parameter property="codigoPeriodo"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+		<parameter property="fechaFacturacion"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+    </parameterMap>														
+														
+    <procedure id="executeInterfazRETEnviarDetalleFacturasVD" parameterMap="executeInterfazRETEnviarDetalleFacturasVDParams" >														
+		{call INT_PKG_RETAI.INT_PR_RET_DETAL_FACTU_VTADI(?, ?, ?, ?, ?, ?)}												
+    </procedure>    
+    							
+    <parameterMap id="executeInterfazRETEnviarInformacionRetailParams" class="map" >														
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>											
+        <parameter property="codigoSistema"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>													
+		<parameter property="codigoInterfaz"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+		<parameter property="nombreArchivo"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>										
+		<parameter property="codigoPeriodo"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+		<parameter property="fechaFacturacion"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>												
+    </parameterMap>														
+														
+    <procedure id="executeInterfazRETEnviarInformacionRetail" parameterMap="executeInterfazRETEnviarInformacionRetailParams" >														
+		{call INT_PKG_RETAI.INT_PR_RET_ENVIO_CIERR(?, ?, ?, ?, ?, ?, ?, ?)}												
+    </procedure>    
+
+    <parameterMap id="executeInterfazRETEnviarInformacionClientesRetailParams" class="map" >														
+		<parameter property="codigoPais"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoSistema"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>													
+		<parameter property="codigoInterfaz"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="nombreArchivo"		         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaFacturacion"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario"           	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="tipoProceso"           	 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoConsultora"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroDocumento"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>														
+														
+    <procedure id="executeInterfazRETEnviarInformacionClientesRetail" parameterMap="executeInterfazRETEnviarInformacionClientesRetailParams" >														
+		{call INT_PKG_RETAI.INT_PR_RET_ENVIO_CLIEN(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)}
+    </procedure>    
+
+</sqlMap>                                                       
+    

@@ -1,0 +1,957 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.lideres.MantenimientoLIDSQL">
+ 
+  <typeAlias alias="variableVenta" type="biz.belcorp.ssicc.dao.spusicc.lideres.model.VariableVenta"/>
+  <typeAlias alias="tipoIncremento" type="biz.belcorp.ssicc.dao.spusicc.lideres.model.TipoIncremento"/>
+  <typeAlias alias="incrementoVariableVenta" type="biz.belcorp.ssicc.dao.spusicc.lideres.model.IncrementoVariableVenta"/>
+  <typeAlias alias="labelValueAjax" type="biz.belcorp.ssicc.dao.model.LabelValue"/>
+  <typeAlias alias="factorPuntaje" type="biz.belcorp.ssicc.dao.spusicc.lideres.model.FactorPuntaje"/>
+  <typeAlias alias="tipoAsignacionPuntaje" type="biz.belcorp.ssicc.dao.spusicc.lideres.model.TipoAsignacionPuntaje"/>
+  <typeAlias alias="puntajeObtenido" type="biz.belcorp.ssicc.dao.spusicc.lideres.model.PuntajeObtenido"/>
+  <typeAlias alias="objetivoAsignacionPuntaje" type="biz.belcorp.ssicc.dao.spusicc.lideres.model.ObjetivoAsignacionPuntaje"/>
+  <typeAlias alias="baseGenericoLID" type="biz.belcorp.ssicc.dao.sisicc.model.Base"/>  
+
+  <resultMap id="variableVentaResult" class="variableVenta">       
+    <result property="codigo"				column="COD_VARI_VENT_RANK" /> 
+    <result property="descripcion"          column="VAL_I18N" />         
+  </resultMap>
+  
+  <resultMap id="numeroConcursoListResult" class="labelValueAjax">       
+    <result property="label"				column="LABEL" /> 
+    <result property="value"                column="VALUE" />         
+  </resultMap>
+  
+    
+  <resultMap id="tipoIncrementoResult" class="tipoIncremento">       
+    <result property="codigo"				column="COD_TIPO_INCR" /> 
+    <result property="descripcion"          column="DES_TIPO_INCR" />         
+  </resultMap>                                                               
+
+  <resultMap id="incrementoVariableVentaResult" class="incrementoVariableVenta">       
+    <result property="codPais"				column="COD_PAIS" /> 
+    <result property="codMarca"             column="COD_MARC" />         
+	<result property="codPeriodo"           column="COD_PERI" />         
+	<result property="codVariableVenta"     column="COD_VARI_VENT" />         
+	<result property="tipoIncremento"       column="TIIN_COD_TIPO_INCR" />
+	<result property="valorIncremento"      column="VAL_INCRE" />                  
+  </resultMap>
+  
+  <resultMap id="factorPuntajeResult" class="factorPuntaje">       
+  	<result property="codConcurso"               column="COD_CONC"/> 
+	<result property="tipAsignacionPuntaje"      column="TIAP_COD_TIPO_ASIGN_PUNTA"/> 
+	<result property="codPeriodo"                column="COD_PERI"/> 
+	<result property="valorFactorMultiplicador"  column="VAL_FAC_MULT"/>
+	<result property="codPais"                   column="COD_PAIS"/>
+  </resultMap>	
+  
+   <resultMap id="tipoAsigancionPuntajeResult" class="tipoAsignacionPuntaje">       
+  	<result property="codigo"               column="COD_TIPO_ASIGN_PUNTA"/> 
+	<result property="descripcion"      column="DES_TIPO_ASIGN_PUNTA"/>
+  </resultMap>
+  
+  <resultMap id="baseResult"          class="baseGenericoLID">
+    <result property="codigo" 		column="CODIGO" 	/>
+    <result property="descripcion" 	column="DESCRIPCION"/>
+  </resultMap>  
+  
+  <!-- OBTIENE VARIABLE VENTA LIST -->
+  <select id="getVariableVentasList" parameterClass="java.lang.String" resultMap="variableVentaResult">
+			SELECT SC.VAL_I18N, VVR.COD_VARI_VENT_RANK 
+			FROM GEN_I18N_SICC_COMUN SC
+				 , SEG_IDIOM II
+				 , INC_VARIA_VENTA_RANKI VVR
+			WHERE SC.attr_enti = 'INC_VARIA_VENTA_RANKI'
+				  AND SC.IDIO_OID_IDIO = II.OID_IDIO
+				  AND II.COD_ISO_IDIO =#codIdioma#
+				  AND SC.VAL_OID = VVR.OID_VARI_VENT_RANK
+		    ORDER BY 1
+  </select>
+  
+   <!-- OBTIENE TIPO DOCUMETNO LIST -->
+  <select id="getTipoIncrementoList" resultMap="tipoIncrementoResult">
+			SELECT TI.COD_TIPO_INCR
+ 					, TI.DES_TIPO_INCR 
+			FROM LID_TIPO_INCRE TI
+			ORDER BY 1
+			                                
+  </select>
+  
+    
+   <!-- OBTIENE PERIODO MAXIMO -->
+  <select id="getPeriodoMaximo"  parameterClass="java.util.Map" resultClass="string">
+			  SELECT MAX(PZ.COD_PERI) 
+			  FROM INT_SAB_VENTA_PREVI_ZONA PZ
+			  WHERE pz.pais_cod_pais = #codPais#
+					AND pz.cod_marc =  #codMarca# 
+			  
+					
+  </select>
+  
+  <!-- OBTIENE INCREMENTO VARIABLE VENTA LIST -->
+  <select id="getIncrementoVariableVentaList" parameterClass="java.util.Map" resultMap="incrementoVariableVentaResult">
+		<![CDATA[	
+			SELECT VV.COD_PAIS
+ 					, VV.COD_MARC
+					, VV.COD_PERI
+					, VV.COD_VARI_VENT
+					, VV.TIIN_COD_TIPO_INCR
+					, TRIM(TO_CHAR(VV.VAL_INCRE,'999999990.99')) as VAL_INCRE
+			FROM LID_INCRE_VARIA_VENTA VV
+			WHERE    VV.COD_PAIS=#codPais#
+					AND VV.COD_MARC=#codMarca#
+				
+					AND VV.COD_PERI>#periodoProceso# 
+					AND VV.COD_PERI<=#periodoMaximo#
+			
+					AND VV.COD_VARI_VENT=#codVariableVenta# 
+					AND VV.TIIN_COD_TIPO_INCR = #tipoIncremento#
+		]]>			
+  </select>
+  
+   <!-- GRABAR INCREMENTO VARIABLE VENTA -->
+  <insert id="saveIncrementoVariableVenta" parameterClass="incrementoVariableVenta">
+    <![CDATA[
+        INSERT INTO LID_INCRE_VARIA_VENTA (
+		COD_PAIS, 
+		COD_MARC,
+		COD_PERI,
+		COD_VARI_VENT, 
+		TIIN_COD_TIPO_INCR,
+		VAL_INCRE 
+		 ) 
+		VALUES 
+		( 
+		#codPais#, 
+		#codMarca#, 
+		#codPeriodo#,
+		#codVariableVenta#, 
+		#tipoIncremento#, 
+		TO_NUMBER(#valorIncremento#,'999999999.99')
+		)
+    ]]>
+    </insert>
+	
+	 <!-- ACTUALIZA INCREMENTO VARIABLE VENTA -->
+	<update id="updateIncrementoVariableVenta" parameterClass="incrementoVariableVenta">
+    <![CDATA[
+        UPDATE LID_INCRE_VARIA_VENTA SET 
+        VAL_INCRE = TO_NUMBER(#valorIncremento#,'999999999.99'),
+		TIIN_COD_TIPO_INCR = #tipoIncremento#
+        WHERE COD_PAIS = #codPais#
+		  AND COD_MARC = #codMarca#
+		  AND COD_PERI = #codPeriodo#
+		  AND COD_VARI_VENT = #codVariableVenta#
+		  AND TIIN_COD_TIPO_INCR = #tipoIncremento#
+    ]]>
+    </update>
+	
+ <!-- OBTIENE EL NUMERO CONCURSO LIST -->
+  <select id="getNumeroConcursoList" parameterClass="java.util.Map" resultMap="numeroConcursoListResult">
+		<![CDATA[	
+			SELECT T.NUM_CONC AS LABEL
+				 , T.VAL_NOMB AS VALUE
+			FROM INC_CONCU_PARAM_GENER T
+			WHERE   T.PAIS_OID_PAIS =  GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_PAIS(#codPais#)
+      			AND T.MARC_OID_MARC = GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA(#codMarca#)
+				AND T.IND_ACTI = #indicadorActividad#
+				AND T.VAL_OBSE = #valObservacion#
+				AND T.PERD_OID_PERI_HAST >=GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO(#periodo#,GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA(#codMarca#),GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CANAL('VD'))
+		]]>	
+			
+  </select>
+  
+ <!-- OBTIENE EL PERIODO DESDE -->
+  <select id="getPeriodoDesde" parameterClass="java.util.Map" resultClass="string">
+		<![CDATA[	
+			SELECT GEN_PKG_GENER.GEN_FN_DEVUELVE_DES_PERIO(T.PERD_OID_PERI_DESD)
+			FROM INC_CONCU_PARAM_GENER T
+			WHERE   T.PAIS_OID_PAIS =  GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_PAIS(#codPais#)
+      			AND T.MARC_OID_MARC = GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA(#codMarca#)
+				AND T.IND_ACTI = #indicadorActividad#
+				AND T.VAL_OBSE = #valObservacion#
+				AND T.PERD_OID_PERI_HAST >=GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO(#periodoProceso#,GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA(#codMarca#),GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CANAL('VD'))
+				AND T.NUM_CONC = #codigoNumeroConcurso#
+		]]>	
+			
+  </select>
+  <!-- OBTIENE EL PERIODO HASTA -->
+  <select id="getPeriodoHasta" parameterClass="java.util.Map" resultClass="string">
+		<![CDATA[	
+			SELECT GEN_PKG_GENER.GEN_FN_DEVUELVE_DES_PERIO(T.PERD_OID_PERI_HAST)
+			FROM INC_CONCU_PARAM_GENER T
+			WHERE   T.PAIS_OID_PAIS =  GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_PAIS(#codPais#)
+      			AND T.MARC_OID_MARC = GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA(#codMarca#)
+				AND T.IND_ACTI = #indicadorActividad#
+				AND T.VAL_OBSE = #valObservacion#
+				AND T.PERD_OID_PERI_HAST >=GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO(#periodoProceso#,GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA(#codMarca#),GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CANAL('VD'))
+				AND T.NUM_CONC = #codigoNumeroConcurso#
+		]]>	
+			
+  </select>
+  
+  <!-- OBTIENE EL FACTOR DE PUNTAJE -->
+  <select id="getFactorPuntajeList" parameterClass="java.util.Map" resultMap="factorPuntajeResult">
+		<![CDATA[	
+			SELECT  FP.COD_CONC
+					, FP.TIAP_COD_TIPO_ASIGN_PUNTA
+					, FP.COD_PERI
+					, TRIM(TO_CHAR(FP.VAL_FAC_MULT,'9990.99')) as VAL_FAC_MULT
+					, FP.COD_PAIS
+			FROM LID_FACTO_PUNTA_PROGR_LIDER FP
+			WHERE FP.COD_CONC = #codigoNumeroConcurso#
+				  AND FP.COD_PERI >= #periodoDesde# AND FP.COD_PERI <= #periodoHasta#
+				  AND FP.TIAP_COD_TIPO_ASIGN_PUNTA =#codigoTipoAsignacionPuntaje#
+
+		]]>	
+			
+  </select>
+  
+   <!-- OBTIENE EL TIPO ASIGNACION LIST -->
+  <select id="getTipoAsignacionList" parameterClass="java.util.Map" resultMap="tipoAsigancionPuntajeResult">
+	SELECT    TA.COD_TIPO_ASIGN_PUNTA,
+			  TA.DES_TIPO_ASIGN_PUNTA 
+			FROM LID_TIPO_ASIGN_PUNTA TA 
+	WHERE     COD_TIPO_ASIGN_PUNTA NOT IN('04','05')
+			ORDER BY 1
+  </select>
+  
+   <!-- GRABAR FACTOR PUNTAJE -->
+  <insert id="saveFactorPuntaje" parameterClass="factorPuntaje">
+    <![CDATA[
+	   INSERT INTO LID_FACTO_PUNTA_PROGR_LIDER ( 
+       	COD_CONC
+	   ,TIAP_COD_TIPO_ASIGN_PUNTA
+	   ,COD_PERI	
+	   ,VAL_FAC_MULT	
+	   ,COD_PAIS	
+		)
+		   VALUES(
+		   #codConcurso#
+		   ,#tipAsignacionPuntaje#
+		   ,#codPeriodo#
+		   ,TO_NUMBER(#valorFactorMultiplicador#,'9999.99')
+		   ,#codPais#
+		)
+    ]]>
+    </insert>
+	
+	 <!-- ACTUALIZA FACTOR PUNTAJE -->
+	<update id="updateFactorPuntaje" parameterClass="factorPuntaje">
+    <![CDATA[
+			 UPDATE LID_FACTO_PUNTA_PROGR_LIDER SET  VAL_FAC_MULT  = TO_NUMBER(#valorFactorMultiplicador#,'9999.99')
+			 WHERE COD_CONC	=  #codConcurso#
+				  AND TIAP_COD_TIPO_ASIGN_PUNTA = #tipAsignacionPuntaje#
+				  AND COD_PERI	= #codPeriodo#
+				  AND COD_PAIS	=#codPais#
+    ]]>
+    </update>
+    
+     <!-- OBTIENE PUNTAJE OBTENIDO LIST LIST -->
+   <resultMap id="puntajeObtenidoResult" class="java.util.HashMap">
+		<result property="codigoCliente"      		column="COD_CLIE"/>
+		<result property="mensaje"      		column="DES_MENS"/>			
+  </resultMap>  
+     
+     
+  <select id="getPuntajeObtenidoList" resultMap="puntajeObtenidoResult">
+		<![CDATA[	
+				SELECT DISTINCT COD_CLIE, 
+					   LID_PKG_PROCE_LIDER.LID_FN_OBTIE_INFOR_MENSA(COD_CLIE) DES_MENS
+  			      FROM LID_MENSA_PUNTA_OBTEN
+		]]>	
+			
+  </select>
+     <parameterMap id="mensajePuntajeObtenidoMap" class="map">
+        <parameter property="codigoCliente" jdbcType="VARCHAR" mode="IN"/>
+        <parameter property="puntajeObtenidoXML" jdbcType="VARCHAR" mode="IN"/>
+   </parameterMap>  
+   
+    <procedure id="saveMensajePuntajeObtenido" parameterMap="mensajePuntajeObtenidoMap">
+			{call IMP_PKG_PROCE_COMPA.IMP_PR_GENER_MENSA_PUNTA_OBTEN(?,?)}			
+  </procedure>
+  
+   <!-- OBTIENE Objetivo Asgnacion Puntaje -->
+   <resultMap id="objetivoAsignacionPuntajeResult" class="objetivoAsignacionPuntaje">
+   			<result property="codigoPais"      				column="COD_PAIS"/>
+   			<result property="codigoTipoAsignacionPuntaje"  column="COD_TIPO_ASIG_PUNT"/>
+   			<result property="codigoPeriodoIni"      		column="COD_PERI_INIC"/>       
+		  	<result property="codigoPeriodoFin"  	    	column="COD_PERI_FINA"/>
+		  	<result property="valorObjetivo"    			column="VAL_OBJT"/> 
+  </resultMap> 
+  
+  
+  <select id="getObjetivoAsignacionPuntajeList" parameterClass="java.util.Map" resultMap="objetivoAsignacionPuntajeResult">
+		SELECT COD_PAIS, COD_TIPO_ASIG_PUNT, COD_PERI_INIC, COD_PERI_FINA, VAL_OBJT 
+		FROM LID_OBJET_ASIGN_PUNTA 
+		WHERE 
+			COD_PAIS = #codigoPais#
+			AND COD_TIPO_ASIG_PUNT = #codigoTipoAsignacionPuntaje#		
+  </select>
+  
+  <insert id="saveObjetivoAsignacionPuntaje" parameterClass="java.util.Map">
+    <![CDATA[
+    	INSERT INTO LID_OBJET_ASIGN_PUNTA 
+    	VALUES ( #codigoPais# ,
+    			 #codigoTipoAsignacionPuntaje#,
+    			 #codigoPeriodoIni#,
+    			 #codigoPeriodoFin#,	
+    			 TO_NUMBER(#valorObjetivo#,'9999.99') )
+    ]]>
+    </insert>
+      
+    <!-- ACTUALIZA FACTOR PUNTAJE -->
+	<update id="updateObjetivoAsignacionPuntaje" parameterClass="java.util.Map">
+    <![CDATA[
+		UPDATE LID_OBJET_ASIGN_PUNTA
+		SET
+			COD_PAIS = #codigoPais#
+			,COD_TIPO_ASIG_PUNT = #codigoTipoAsignacionPuntaje#
+			,COD_PERI_INIC = #codigoPeriodoIniNuevo#
+			,COD_PERI_FINA = #codigoPeriodoFinNuevo#
+			,VAL_OBJT = TO_NUMBER(#valorObjetivo#,'9999.99')
+		WHERE
+			COD_PAIS = #codigoPais#
+			AND COD_TIPO_ASIG_PUNT = #codigoTipoAsignacionPuntaje#
+			AND COD_PERI_INIC = #codigoPeriodoIni#
+			AND COD_PERI_FINA = #codigoPeriodoFin#
+    ]]>
+    </update>
+    
+    <select id="getCantCrucesRangoPeriodo" parameterClass="java.util.Map" resultClass="long">
+	   <![CDATA[ 
+	   	SELECT COUNT(*) 
+		FROM LID_OBJET_ASIGN_PUNTA
+    	WHERE 
+        	( 	COD_PAIS = #codigoPais# 
+        		AND COD_TIPO_ASIG_PUNT = #codigoTipoAsignacionPuntaje#
+       			AND ( COD_PERI_INIC <> #codigoPeriodoIni# OR COD_PERI_FINA <> #codigoPeriodoFin# )
+           )
+           AND NOT ( 
+           		( #codigoPeriodoIniNuevo# < COD_PERI_INIC AND #codigoPeriodoFinNuevo# < COD_PERI_INIC )
+                OR ( #codigoPeriodoIniNuevo# > COD_PERI_FINA  AND #codigoPeriodoFinNuevo# > COD_PERI_FINA )
+                )
+		]]>     	
+  </select>
+  
+	<delete id="deleteObjetivoAsignacionPuntaje" parameterClass="java.util.Map">
+		DELETE FROM LID_OBJET_ASIGN_PUNTA
+		WHERE 
+		COD_PAIS = #codigoPais#
+		AND COD_TIPO_ASIG_PUNT = #codigoTipoAsignacionPuntaje#
+		AND COD_PERI_INIC = #codigoPeriodoIni#
+		AND COD_PERI_FINA = #codigoPeriodoFin#
+		AND VAL_OBJT = TO_NUMBER(#valorObjetivo#,'9999.99')
+	</delete>
+  
+    <!-- OBTIENE LA ULTIMA CAMPAÑA DE CIERRE DE REGION DE LA ZONA -->
+    <select id="getUltimaCampanaCierreRegionxZona" parameterClass="java.util.Map" resultMap="baseResult">
+		  SELECT OID_PERI CODIGO, COD_PERI DESCRIPCION
+		  FROM (
+				SELECT DISTINCT cra.oid_peri, cor.cod_peri, cra.fec_inic
+				  FROM FAC_CONTR_CIERR con,
+				       FAC_TIPOS_CIERR tip,
+				       CRA_PERIO cra,
+				       SEG_PERIO_CORPO cor,
+				       SEG_PAIS pai,
+				       ZON_REGIO reg,
+				       ZON_ZONA zon,
+				       SEG_MARCA mar,
+				       SEG_CANAL can
+				 WHERE con.TCIE_OID_TIPO_CIER = tip.OID_TIPO_CIER
+				   AND cra.OID_PERI = con.PERD_OID_PERI
+				   AND cor.OID_PERI = cra.PERI_OID_PERI
+				   AND pai.OID_PAIS = cra.PAIS_OID_PAIS
+				   AND reg.OID_REGI = con.ZORG_OID_REGI
+				   AND zon.ZORG_OID_REGI = reg.OID_REGI
+				   AND zon.COD_ZONA = #codigoZona#
+				   AND tip.COD_TIPO_CIER = 'R'
+				   AND pai.COD_PAIS = #codigoPais#
+			       AND mar.COD_MARC = #codigoMarca#
+			       AND can.COD_CANA = #codigoCanal#
+				   AND con.VAL_RESU_PROC = 'OK'
+				   AND reg.MARC_OID_MARC = mar.OID_MARC
+				   AND reg.CANA_OID_CANA = can.OID_CANA
+				   AND reg.PAIS_OID_PAIS = pai.OID_PAIS
+		     ORDER BY cra.FEC_INIC DESC         
+		  ) WHERE ROWNUM = 1
+    </select>
+  
+  <resultMap id="seccionResult" class="java.util.HashMap">
+		<result property="unidadAdministrativa"      	column="UNI_ADM"/>
+		<result property="oidSeccion" 			     	column="OID_SECC"/>		
+		<result property="codigoMarca"			      	column="COD_MARC"/>
+		<result property="codigoCanal"			      	column="COD_CANA"/>
+		<result property="codigoRegion"			      	column="COD_REGI"/>
+		<result property="codigoZona"			      	column="COD_ZONA"/>
+		<result property="codigoLider" 					column="COD_CLIE"/>
+		<result property="nombreResponsable"      		column="NOM_RESP"/>       
+	  	<result property="campanaAsignacion"  	    	column="CAM_ASIG"/>
+	  	<result property="numeroActivasFinalesZona"    			column="TOT_ZONA"/> 
+		<result property="promedioActivasFinalesSeccion" 		column="TOT_SECC"/>	  	
+		<result property="indicadorZona"				column="IND_ZONA"/>
+		<result property="indicadorSeccion"		 		column="IND_SECC"/>
+  </resultMap> 
+  <select id="getSeccionesByCriteria" parameterClass="java.util.Map" resultMap="seccionResult">
+		SELECT UNI_ADM, 
+		       OID_SECC,
+			   #codigoMarca# COD_MARC,
+			   #codigoCanal# COD_CANA,
+			   COD_REGI,
+			   COD_ZONA,
+       		   COD_CLIE,
+  		       LID_PKG_PROCE_LIDER.LID_FN_OBTIE_CAMPA_ASIGN(#codigoPais#, #codigoMarca#, #codigoCanal#, uni_adm) CAM_ASIG,
+       		   responsable NOM_RESP,
+       		   substr(aux_zona,3) TOT_ZONA, 
+       		   substr(aux_secc, 3) TOT_SECC,
+       		   substr(aux_zona,1, 1) IND_ZONA, 
+       		   substr(aux_secc, 1, 1) IND_SECC
+		FROM
+		(SELECT sub.cod_subg_vent || reg.cod_regi || zon.cod_zona || sec.cod_secc uni_adm,
+		        sec.oid_secc,
+				reg.cod_regi, 
+				zon.cod_zona, 
+		       cli.cod_clie, cli.val_nom1 || ' ' || cli.val_nom2 || ' ' || cli.val_ape1 || ' ' || cli.val_ape2 responsable,
+	           LID_PKG_PROCE_LIDER.LID_FN_OBTIE_PROME_ZONA(zon.oid_zona, #oidUltimoPeriodoCR#) aux_zona,           
+    	       LID_PKG_PROCE_LIDER.LID_FN_OBTIE_PROME_SECCI(zon.oid_zona, sec.oid_secc, #oidUltimoPeriodoCR#, 
+    	       									#oidPenultimoPeriodoCR#, #oidAntePenultimoPeriodoCR#) aux_secc
+		FROM   ZON_SECCI sec, 
+		       ZON_ZONA zon, 
+		       ZON_REGIO reg, 
+		       ZON_SUB_GEREN_VENTA sub, 
+		       MAE_CLIEN cli,
+		       SEG_PAIS pai,
+			   SEG_CANAL can,
+			   SEG_MARCA mar
+		WHERE  sec.zzon_oid_zona = zon.oid_zona
+		  AND  zon.zorg_oid_regi = reg.oid_regi
+		  AND  reg.zsgv_oid_subg_vent = sub.oid_subg_vent
+		  AND  cli.oid_clie (+) = sec.clie_oid_clie
+		  AND  zon.cana_oid_cana = can.oid_cana
+		  AND  zon.marc_oid_marc = mar.oid_marc
+		  AND  zon.pais_oid_pais = pai.oid_pais
+		  AND  can.cod_cana = #codigoCanal#
+		  AND  mar.cod_marc = #codigoMarca#
+		  AND  pai.cod_pais = #codigoPais#    
+		  AND  zon.cod_zona = #codigoZona#
+		  AND  sec.IND_ACTI = 1
+		  AND  sec.IND_BORR = 0
+		)  
+		ORDER BY 1		
+  </select>
+
+  <select id="validarAsignacionLiderSeccion" parameterClass="java.util.Map" resultClass="string">
+		SELECT LID_PKG_PROCE_LIDER.LID_FN_VALID_ASIGN_LIDER_SECCI(#codigoPais#, #codigoMarca#, 
+					#codigoCanal#, #codigoCliente#, #indicadorReingreso#,#indicadorNoValidaUnicoLider#,#numeroActivasFinalesZona#, #promedioActFinalesSeccion#)
+		FROM DUAL
+  </select>
+    
+  <resultMap id="baseUltimoResponsableSeccion"    class="java.util.HashMap">
+      <result property="oidHistoricoGerente" 	    column="OID_HIST_GERE"        javaType="java.lang.String"/>
+      <result property="codigoResponsable"  	  column="GERE"/>
+      <result property="codigoPeriodoDesde"  	  column="COD_PERI_DESD"/>
+  </resultMap>
+    
+	<!-- OBTIENE DATOS ULTIMO RESPONSABLE DE LA SECCION -->
+    <select id="getUltimoResponsableSeccion" parameterClass="java.util.Map" resultMap="baseUltimoResponsableSeccion">
+		SELECT ger.OID_HIST_GERE, 
+		       ger.GERE,
+		       (SELECT A.COD_PERI
+			      FROM SEG_PERIO_CORPO A, 
+			           CRA_PERIO B, 
+			           SEG_CANAL C, 
+			           SEG_MARCA D
+			     WHERE A.OID_PERI = B.PERI_OID_PERI
+			       AND B.OID_PERI = ger.PERD_OID_PERI_DESD
+			       AND B.CANA_OID_CANA = C.OID_CANA
+			       AND B.MARC_OID_MARC = D.OID_MARC
+			       AND C.COD_CANA = #codigoCanal#
+			       AND D.COD_MARC = #codigoMarca#) COD_PERI_DESD
+         FROM ZON_HISTO_GEREN ger, SEG_MARCA mar, 
+         	  SEG_CANAL can, SEG_PAIS pai
+        WHERE ger.PAIS_OID_PAIS = pai.OID_PAIS
+          AND ger.MARC_OID_MARC = mar.OID_MARC
+          AND ger.CANA_OID_CANA = can.OID_CANA
+          AND pai.COD_PAIS = #codigoPais#
+          AND mar.COD_MARC = #codigoMarca#
+          AND can.COD_CANA = #codigoCanal#
+          AND UA = #unidadAdministrativa#
+          AND ger.FEC_HAST IS NULL
+	</select>
+    
+    <!-- ACTUALIZA FECHA HASTA DEL RESPONSABLE DE LA SECCION -->
+	<update id="updateFechaHastaHistoricoGerente" parameterClass="java.util.Map">
+		UPDATE ZON_HISTO_GEREN
+		   SET    FEC_HAST = 
+		            CASE
+		              WHEN GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO2(#codigoPeriodoDesde#) = TO_NUMBER(#oidPeriodoActualHistoricoGerente#) THEN
+		                to_date(#fechaProceso#,'dd/mm/yyyy')
+		              ELSE
+		                (
+		                  select    fec_fina
+		                  from      cra_perio
+		                  where     pais_oid_pais = #oidPais#  
+		                    and     oid_peri = GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO2(
+		      	                      PER_PKG_REPOR_PERCE.PER_FN_OBTIE_PERIO(
+		      	                        GEN_PKG_GENER.GEN_FN_DEVUELVE_DES_PERIO(TO_NUMBER(#oidPeriodoActualHistoricoGerente#)),
+		      	                        #oidPais#,
+		      	                        #oidMarca#,
+		      	                        #oidCanal#,
+		      	                        -1
+		      	                      ) 
+		    	                    )
+		                )  
+		            END,
+				  PERD_OID_PERI_HAST = 
+			        CASE
+			          WHEN GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO2(#codigoPeriodoDesde#) = TO_NUMBER(#oidPeriodoActualHistoricoGerente#) THEN
+			            TO_NUMBER(#oidPeriodoActualHistoricoGerente#)
+			          ELSE  
+			            GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO2(
+			              PER_PKG_REPOR_PERCE.PER_FN_OBTIE_PERIO(
+			                GEN_PKG_GENER.GEN_FN_DEVUELVE_DES_PERIO(TO_NUMBER(#oidPeriodoActualHistoricoGerente#)),
+   	                        #oidPais#,
+   	                        #oidMarca#,
+   	                        #oidCanal#,
+			                -1
+			              ) 
+			            )
+			        END,  
+				  IND_DESV_AUTO = 0,
+		          USU_MODI = #codigoUsuario#,
+		          FEC_MODI = SYSDATE   
+		WHERE     OID_HIST_GERE = TO_NUMBER(#oidHistoricoGerente#)
+    </update>
+        
+	<!-- INSERTA UN REGISTRO EN LA ENTIDAD HISTORICO GERENTE -->        
+	<insert id="insertHistoricoGerente" parameterClass="java.util.Map">
+		INSERT INTO ZON_HISTO_GEREN
+		  (OID_HIST_GERE,
+		   MARC_OID_MARC,
+		   CANA_OID_CANA,
+		   UA,
+		   GERE,
+		   FEC_DESD,
+		   FEC_HAST,
+		   PAIS_OID_PAIS,
+		   PERD_OID_PERI_DESD,
+		   PERD_OID_PERI_HAST,
+		   COD_LIDE_CLAS,
+		   ACFI_EXIG_SECC_NOMB,
+		   NUM_ACTI_FINA_SECC,
+		   ACFI_EXIG_ZONA_NOMB,
+		   NUM_ACTI_FINA_ZONA
+		   )
+		VALUES
+		  (ZON_HGER_SEQ.NEXTVAL,
+		   GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA(#codigoMarca#),
+		   GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CANAL(#codigoCanal#),
+		   #unidadAdministrativa#,
+		   #codigoCliente#,
+		   to_date(#fechaProceso#,'dd/mm/yyyy'),
+		   NULL,
+		   GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_PAIS(#codigoPais#),
+		   #oidPeriodo#,
+		   NULL,
+		   #codigoClasificacionLideres#,
+		   (SELECT NVL(MIN_ACTI_FINA_SECC,0)
+	  		  FROM LID_PARAM
+	 		 WHERE COD_PAIS = #codigoPais#),
+	 	   #promedioActFinalesSeccion#,
+	 	   (SELECT NVL(MIN_ACTI_FINA_ZONA,0)
+	  		  FROM LID_PARAM
+	 		 WHERE COD_PAIS = #codigoPais#), 
+	 	   #numeroActivasFinalesZona#  
+	 	   )  	
+    </insert>
+  	        
+   <!-- ACTUALIZA LA LIDER DE LA SECCION -->
+	<update id="updateLiderSeccion" parameterClass="java.util.Map">
+		UPDATE ZON_SECCI
+   		   SET CLIE_OID_CLIE = #oidCliente#
+ 		 WHERE OID_SECC = #oidSeccion#
+    </update>
+  	        
+	<!-- INSERTA UN REGISTRO EN LA ENTIDAD BUZON DE MENSAJES PARA LA RESPONSABLE ANTERIO DE LA SECCION -->   	        
+	<insert id="insertBuzonMensajeResponsable" parameterClass="java.util.Map">
+    	INSERT INTO MSG_BUZON_MENSA
+    		(OID_BUZO_MENS ,
+			 MENS_OID_MENS,
+			 CLIE_OID_CLIE,
+			 MODU_OID_MODU_ORIG ,
+			 FEC_GRAB,
+			 IND_ACTI,    
+			 IND_LIST_CONS,
+			 NUM_SECU,
+			 DATO_VARI_01,
+			 DATO_VARI_02,
+			 DATO_VARI_03,
+			 DATO_VARI_04,
+			 DATO_VARI_05)
+		VALUES(MSG_BUME_SEQ.NEXTVAL, 
+		      (SELECT OID_MENS FROM MSG_MENSA WHERE COD_MENS =#codigoMensaje#),
+   		       #oidCliente#,
+			   #oidModuloOrigen#,
+			   SYSDATE,
+			   1,
+			   0,
+			   MSG_BUM2_SEQ.NEXTVAL,
+			   (SELECT OID_TIPO_PERI FROM SEG_TIPO_PERIO WHERE COD_TIPO_PERI = #tipoPeriodo#),
+			   #oidPeriodo#,
+			   TO_CHAR(SYSDATE,'DD/MM/YYYY HH24:MI:SS'),
+			   #unidadAdministrativa#,
+			   <isNotEmpty property="codigoResponsableAnterior">
+				GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CLIENTE(#codigoResponsableAnterior#)
+			   </isNotEmpty>
+			   <isEmpty property="codigoResponsableAnterior">
+			     NULL
+			   </isEmpty>
+			   )
+  	</insert>
+    
+ 	<resultMap id="baseParametro"    class="java.util.HashMap">
+        <result property="codigoPais" 				        column="COD_PAIS" />
+    	<result property="activasFinalesZona" 	            column="MIN_ACTI_FINA_ZONA"   javaType="java.lang.String"/>
+    	<result property="activasFinalesSeccion" 	        column="MIN_ACTI_FINA_SECC"   javaType="java.lang.String"/>
+    	<result property="numeroPedidosObjetivo" 	        column="MIN_PEDI_OBJT"        javaType="java.lang.String"/>
+    	<result property="indicadorExigirConstancia"        column="IND_CONS"/>
+    	<result property="numeroMaximoCampaniasSinPedido" 	column="NUM_CAMP_SIN_PEDI"    javaType="java.lang.String"/>
+    	<result property="campanaInicioRecuperacion"     	column="COD_PERI_INIC_RECU"   />
+    	<result property="campanaFinRecuperacion" 	        column="COD_PERI_FINA_RECU"   />
+    	<result property="puntajeMinimoRecuperacion" 	    column="PUNT_MINI_RECU"    javaType="java.lang.String"/>
+    	<result property="numeroPeriodoCriticoConsecutivos" column="NUM_PERI_CRIT_DESV"    javaType="java.lang.String"/>
+    	<result property="puntajeMinimoProductividad" 	    column="VAL_PUNT_MINI_PROD"    javaType="java.lang.String"/>
+    	<result property="ratioCriticidad" 	                column="VAL_RATI_CRIT"    javaType="java.lang.String"/>
+    	<result property="numeroCampanaComodin" 	        column="NUM_COMO_CANA"         javaType="java.lang.String"/>
+    </resultMap>    
+    
+	<!-- OBTIENE DATOS PARAMETRO DE LIDERES -->
+    <select id="getParametro" parameterClass="string" resultMap="baseParametro">
+		SELECT COD_PAIS, 
+ 		       MIN_ACTI_FINA_ZONA, 
+       		   MIN_ACTI_FINA_SECC, 
+       		   MIN_PEDI_OBJT, 
+       		   IND_CONS,
+       		   NUM_CAMP_SIN_PEDI,
+       		   COD_PERI_INIC_RECU,
+       		   COD_PERI_FINA_RECU,
+       		   PUNT_MINI_RECU,
+       		   NUM_PERI_CRIT_DESV,
+       		   VAL_PUNT_MINI_PROD,
+       		   TRIM(TO_CHAR(VAL_RATI_CRIT,'99999990.99')) VAL_RATI_CRIT,
+       		   TRIM(TO_CHAR(NUM_COMO_CANA,'9999999')) NUM_COMO_CANA
+  		  FROM LID_PARAM
+ 		 WHERE COD_PAIS = #value#  
+	</select>
+	
+	<!-- INSERTA REGISTRO DE PARAMETRO DE LIDERES -->
+    <insert id="insertParametro" parameterClass="java.util.Map">
+		INSERT INTO LID_PARAM
+ 			(COD_PAIS, MIN_ACTI_FINA_ZONA, MIN_ACTI_FINA_SECC, MIN_PEDI_OBJT, IND_CONS, 
+ 			 NUM_CAMP_SIN_PEDI, COD_PERI_INIC_RECU, COD_PERI_FINA_RECU, PUNT_MINI_RECU,
+ 			 NUM_PERI_CRIT_DESV,VAL_RATI_CRIT,VAL_PUNT_MINI_PROD,NUM_COMO_CANA)
+		VALUES
+ 			(#codigoPais#,#activasFinalesZona#,#activasFinalesSeccion#,#numeroPedidosObjetivo#,#indicadorExigirConstancia#,
+ 			#numeroMaximoCampaniasSinPedido#,#campanaInicioRecuperacion#,#campanaFinRecuperacion#,#puntajeMinimoRecuperacion#,
+ 			#numeroPeriodoCriticoConsecutivos#,TO_NUMBER(#ratioCriticidad#,'99999990.99'),#puntajeMinimoProductividad#,TO_NUMBER(#numeroCampanaComodin#,'99999999'))
+	</insert>    
+	
+	<!-- ACTUALIZA REGISTRO DE PARAMETRO DE LIDERES -->
+    <update id="updateParametro" parameterClass="java.util.Map">
+		UPDATE LID_PARAM
+		   SET MIN_ACTI_FINA_ZONA = #activasFinalesZona#, 
+		       MIN_ACTI_FINA_SECC = #activasFinalesSeccion#, 
+		       MIN_PEDI_OBJT = #numeroPedidosObjetivo#, 
+		       IND_CONS = #indicadorExigirConstancia#,
+		       NUM_CAMP_SIN_PEDI = #numeroMaximoCampaniasSinPedido#,
+		       COD_PERI_INIC_RECU = #campanaInicioRecuperacion#,
+		       COD_PERI_FINA_RECU = #campanaFinRecuperacion#,
+		       PUNT_MINI_RECU = #puntajeMinimoRecuperacion#,
+		       NUM_PERI_CRIT_DESV = #numeroPeriodoCriticoConsecutivos#,
+		       VAL_RATI_CRIT = TO_NUMBER(#ratioCriticidad#,'99999990.99'),
+		       VAL_PUNT_MINI_PROD = #puntajeMinimoProductividad#,
+		       NUM_COMO_CANA=TO_NUMBER(#numeroCampanaComodin#,'99999999')
+		 WHERE COD_PAIS = #codigoPais#
+	</update>    
+	    
+	<delete id="deleteClasificacionLiderConsultoraAnterior" parameterClass="java.util.Map">
+		DELETE FROM mae_clien_clasi 
+		WHERE oid_clie_clas IN (SELECT a.oid_clie_clas
+		FROM mae_clien_clasi a,
+		     mae_clien_tipo_subti b ,
+		     MAE_TIPO_CLASI_CLIEN x ,
+		     MAE_CLASI y,
+		     mae_clien m
+		WHERE  a.ctsu_oid_clie_tipo_subt = b.Oid_Clie_Tipo_Subt
+		AND b.clie_oid_clie = m.oid_clie 
+		and m.cod_clie = #codigoLider#
+		AND b.Ind_Ppal = 1
+		AND a.tccl_oid_tipo_clasi = x.oid_tipo_clas
+		AND x.cod_tipo_clas = '01'
+		AND a.clas_oid_clas = y.oid_clas
+		AND y.cod_clas = '01'
+		AND b.sbti_oid_subt_clie = x.sbti_oid_subt_clie
+		AND x.oid_tipo_clas = y.tccl_oid_tipo_clas)
+	</delete>    
+	 
+	<select id="getConsultoraClasificacionLider"  parameterClass="java.util.Map" resultClass="string">
+		SELECT COUNT(1)
+	      FROM mae_clien_clasi a,
+			   mae_clien_tipo_subti b ,
+			   MAE_TIPO_CLASI_CLIEN x ,
+			   MAE_CLASI y
+	     WHERE a.ctsu_oid_clie_tipo_subt = b.Oid_Clie_Tipo_Subt
+		    AND b.clie_oid_clie = #oidCliente#
+			AND b.Ind_Ppal = 1
+			AND a.tccl_oid_tipo_clasi = x.oid_tipo_clas
+			AND x.cod_tipo_clas = '01'
+			AND a.clas_oid_clas = y.oid_clas
+			AND y.cod_clas = '01'
+			AND b.sbti_oid_subt_clie = x.sbti_oid_subt_clie
+			AND x.oid_tipo_clas = y.tccl_oid_tipo_clas 			 					
+	</select> 
+	 
+	<insert id="insertClasificacionConsultoraLider" parameterClass="java.util.Map">
+        INSERT INTO MAE_CLIEN_CLASI
+		  (OID_CLIE_CLAS,
+		   CTSU_OID_CLIE_TIPO_SUBT,
+		   CLAS_OID_CLAS,
+		   PERD_OID_PERI,
+		   TCCL_OID_TIPO_CLASI,
+		   FEC_CLAS,
+		   IND_PPAL,
+		   FEC_ULTI_ACTU)
+		VALUES
+		  (Mae_Clcl_Seq.NEXTVAL,
+		   (SELECT x.oid_clie_tipo_subt FROM mae_clien_tipo_subti x WHERE x.ind_ppal = 1 AND x.clie_oid_clie = #oidCliente#),
+		   (SELECT y.oid_clas
+				FROM mae_clien_tipo_subti b ,
+				     MAE_TIPO_CLASI_CLIEN x ,
+				     MAE_CLASI y
+				WHERE b.clie_oid_clie = #oidCliente#
+				AND b.Ind_Ppal = 1		
+				AND x.cod_tipo_clas = '01'		
+				AND y.cod_clas = '01'
+				AND b.sbti_oid_subt_clie = x.sbti_oid_subt_clie
+				AND x.oid_tipo_clas = y.tccl_oid_tipo_clas) ,
+		    #oidPeriodo# ,
+		   (SELECT x.OID_TIPO_CLAS
+				FROM mae_clien_tipo_subti b ,
+				     MAE_TIPO_CLASI_CLIEN x ,
+				     MAE_CLASI y
+				WHERE b.clie_oid_clie = #oidCliente#
+				AND b.Ind_Ppal = 1		
+				AND x.cod_tipo_clas = '01'		
+				AND y.cod_clas = '01'
+				AND b.sbti_oid_subt_clie = x.sbti_oid_subt_clie
+				AND x.oid_tipo_clas = y.tccl_oid_tipo_clas),
+		   trunc(sysdate),
+		   0,
+		   null)    
+	</insert>    
+    
+
+	<resultMap id="condicionLideresResult"    class="java.util.HashMap">
+        <result property="codigoCondicion" 		column="COD_COND"   		  javaType="java.lang.String"/>
+    	<result property="descripcionCondicion" column="DES_COND"   		  javaType="java.lang.String"/>
+    	<result property="indicadorReqMeta" 	column="IND_REQU_META"   	  javaType="java.lang.String"/>    	    	
+    </resultMap>    
+    
+	<!-- OBTIENE Lista Condicones Lideres ACTIVAS -->
+    <select id="getListCondicionesLideres" resultMap="condicionLideresResult">
+		SELECT COD_COND, 
+   			   DES_COND, 
+   			   IND_REQU_META
+  		  FROM LID_CONDI
+  		  WHERE IND_ACTI=1
+	</select>	
+	
+	<insert id="insertCondicionDespachoCanasta" parameterClass="java.util.Map">
+        INSERT INTO LID_CONDI_CANAS (
+   			COD_PERI, 
+   			COD_COND, 
+   			VAL_META, 
+   			VAL_REQU_LIDE, 
+   			USU_DIGI,
+   			FEC_DIGI) 
+		VALUES (#codigoPeriodo# , 
+				#codigoCondicionDespacho# , 
+				#meta# ,
+    			#indicadorLider#,
+    			#usuario#,
+    			SYSDATE)    
+    </insert>    
+    
+      <update id="updateCondicionDespachoCanasta" parameterClass="java.util.Map">
+		UPDATE LID_CONDI_CANAS
+		   SET COD_COND = #codigoCondicionDespacho#, 
+		       VAL_META = #meta#, 
+		       VAL_REQU_LIDE = #indicadorLider#, 
+		       USU_MODI = #usuario#,
+		       FEC_MODI =SYSDATE
+		 WHERE COD_PERI = #codigoPeriodo#
+	</update>    
+	
+	<resultMap id="condicionDespachoCanastaResult"    class="java.util.HashMap">
+        <result property="codigoPeriodo" 		column="COD_PERI"   		  javaType="java.lang.String"/>
+    	<result property="codigoCondicion" 	    column="COD_COND"   		  javaType="java.lang.String"/>
+    	<result property="valorMeta" 	        column="VAL_META"   		  javaType="java.lang.String"/>
+    	<result property="valorRequiereLider" 	column="VAL_REQU_LIDE"        javaType="java.lang.String"/>    	
+    </resultMap>    
+    
+	<!-- OBTIENE DATOS condicion despacho de la canasta -->
+    <select id="getListCondicionDespachoCanasta" parameterClass="string" resultMap="condicionDespachoCanastaResult">
+		SELECT COD_PERI, 
+   			   COD_COND, 
+   			   VAL_META, 
+   			   VAL_REQU_LIDE
+  		  FROM LID_CONDI_CANAS
+ 		 WHERE COD_PERI = #value# 
+	</select>
+    
+    
+	<resultMap id="productosCanastaResult"    class="java.util.HashMap">
+	    <result property="codigoPeriodo" 		column="COD_PERI"   	  javaType="java.lang.String"/>
+        <result property="codigoSap" 			column="COD_SAP"   		  javaType="java.lang.String"/>
+    	<result property="descripcionProducto" 	column="DES_SAP"   		  javaType="java.lang.String"/>
+    	<result property="codigoOferta" 	    column="COD_TIPO_OFER"    javaType="java.lang.String"/>
+    	<result property="descripcionOferta" 	column="DES_TIPO_OFER"    javaType="java.lang.String"/>
+    	<result property="numUnidades" 			column="NUM_UNID"    	  javaType="java.lang.String"/>
+    	<result property="precioContable" 		column="IMP_PREC_CONT"    javaType="java.lang.String"/>
+    	<result property="codigoVenta" 			column="COD_VENT"    	  javaType="java.lang.String"/>
+    	<result property="indicadorActivo" 		column="IND_ACTI"    	  javaType="java.lang.String"/>    	
+    </resultMap>
+        
+    <select id="getListProductosCanasta" parameterClass="string" resultMap="productosCanastaResult">
+			SELECT A.COD_PERI, 
+			      A.COD_SAP,
+			  	  pq_apl_aux.Valor_Gen_I18n_Sicc(1,B.OID_PROD,'MAE_PRODU') DES_SAP,
+			  	  A.COD_TIPO_OFER,
+			  	  (SELECT pq_apl_aux.Valor_Gen_I18n_Sicc(1,B.OID_TIPO_OFER,'PRE_TIPO_OFERT')
+    			   FROM LID_TIPO_OFERT L,PRE_TIPO_OFERT B
+    				WHERE L.COD_TIPO_OFER = B.COD_TIPO_OFER
+    				 AND L.COD_TIPO_OFER = A.COD_TIPO_OFER) DES_TIPO_OFER,
+			  	  A.NUM_UNID,
+			  	  A.IMP_PREC_CONT,
+			  	  A.COD_VENT,
+			  	  A.IND_ACTI
+			FROM LID_PRODU_CANAS A ,MAE_PRODU B
+			WHERE A.COD_PERI =#codigoPeriodo#
+			 AND A.COD_SAP = B.COD_SAP
+			ORDER BY A.COD_PERI,A.COD_SAP
+	</select>
+	
+	<insert id="insertProductosCanasta" parameterClass="java.util.Map">
+       INSERT INTO LID_PRODU_CANAS (
+			   COD_PERI, COD_SAP, COD_TIPO_OFER, 
+			   NUM_UNID, IMP_PREC_CONT, COD_VENT, 
+			   IND_ACTI, USU_DIGI, FEC_DIGI) 
+		VALUES (#codigoPeriodo# , 
+				#codigoSap#,
+				#codigoOferta#,
+		    	#numUnidades#, 
+		    	#precioContable#, 
+		    	#codigoVenta#,
+		    	#indicadorActivo#, 
+		    	#usuario#, 		    	
+		    	SYSDATE)		    
+    </insert>    
+    
+      <update id="updateProductosCanasta" parameterClass="java.util.Map">
+			UPDATE LID_PRODU_CANAS
+			SET    NUM_UNID      = #numUnidades#,
+			       IMP_PREC_CONT = #precioContable#,
+			       COD_VENT      = #codigoVenta#,
+			       IND_ACTI      = #indicadorActivo#,
+			       USU_MODI      = #usuario#,
+			       FEC_MODI      = SYSDATE
+			WHERE  COD_PERI      = #codigoPeriodo#
+			AND    COD_SAP       = #codigoSap#
+			AND    COD_TIPO_OFER = #codigoOferta#
+
+	</update>    
+	
+	
+	<resultMap id="tipoOfertaResult"    class="java.util.HashMap">
+        <result property="codigoTipoOferta" 	column="COD_TIPO_OFER"	  javaType="java.lang.String"/>
+    	<result property="descripcionOferta" 	column="DES_TIPO_OFER"	  javaType="java.lang.String"/>    	    	
+    </resultMap>
+        
+    <select id="getListTipoOferta"  resultMap="tipoOfertaResult">
+			SELECT L.COD_TIPO_OFER,
+				pq_apl_aux.Valor_Gen_I18n_Sicc(1,B.OID_TIPO_OFER,'PRE_TIPO_OFERT') DES_TIPO_OFER
+    		FROM LID_TIPO_OFERT L,PRE_TIPO_OFERT B
+    		WHERE L.COD_TIPO_OFER = B.COD_TIPO_OFER    			  
+	</select>
+	
+	
+	<select id="getDevuelveOidMatrizFacturacion"  parameterClass="java.util.Map" resultClass="int">
+				 SELECT X.OID_CABE
+				 FROM SEG_PERIO_CORPO A,
+				 	  CRA_PERIO B,
+				 	  SEG_CANAL C,
+				 	  SEG_MARCA D,
+				 	  PRE_MATRI_FACTU_CABEC X    
+				 WHERE A.COD_PERI = #codigoPeriodo# AND
+				 A.OID_PERI = B.PERI_OID_PERI AND
+				 B.CANA_OID_CANA = C.OID_CANA AND
+				 B.MARC_OID_MARC = D.OID_MARC
+				 AND C.COD_CANA = #codigoCanal#
+				 AND D.COD_MARC = #codigoMarca#
+				 AND X.PERD_OID_PERI = B.OID_PERI
+ 	</select>
+	
+		<select id="getDescripcionInternacionalizableProducto"  parameterClass="string" resultClass="string">
+			SELECT pq_apl_aux.Valor_Gen_I18n_Sicc(1,B.OID_PROD,'MAE_PRODU') DES_PROD
+			FROM MAE_PRODU B
+			WHERE B.COD_SAP =TRIM(#value#)
+ 		</select>
+ 		 		
+ 	<parameterMap id="paramExecuteInsertProductosCanasta" class="map">
+		<parameter property="codigoPais" 			jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoPeriodo" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoSap" 			jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoOferta" 			jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoVenta" 			jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="numUnidades" 			jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="precioContable" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="indicadorActivo" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="usuario" 				jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="mensajeError" 			jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT" />
+	</parameterMap>
+
+	<procedure id="executeInsertProductosCanasta" parameterMap="paramExecuteInsertProductosCanasta">
+		{call LID_PKG_PROCE_LIDER.LID_PR_GENER_PRODU_CANAS(?, ?, ?, ?, ?, ?, ?, ?, ?,?) }
+	</procedure>
+	
+	<select id="getRegionesCerradas"  parameterClass="java.util.Map" resultClass="string">
+			SELECT DISTINCT A.COD_REGI
+			FROM ZON_REGIO A,
+			     FAC_CONTR_CIERR B,
+				 FAC_TIPOS_CIERR C
+			WHERE A.OID_REGI=B.ZORG_OID_REGI
+			 AND B.PERD_OID_PERI = #oidPeriodo# 
+		  <isNotEmpty property="codigoRegion">	
+		    <iterate prepend="AND" property="codigoRegion" open=" A.COD_REGI IN (" close=")" conjunction=",">
+        	 	#codigoRegion[]#
+        	</iterate>    
+		  </isNotEmpty>	
+			 AND B.TCIE_OID_TIPO_CIER = C.OID_TIPO_CIER 
+			 AND C.COD_TIPO_CIER=#tipoCierre#
+ 		</select>
+
+	<resultMap id="getLIDValidaPeriodosConcursoResult" class="java.util.HashMap">       
+		<result property="periodoDesde"			column="PERI_DESD" /> 
+	    <result property="periodoHasta"         column="PERI_HAST" />         
+    </resultMap>                                                               
+	<select id="getLIDValidaPeriodosConcurso" parameterClass="java.util.Map" resultMap="getLIDValidaPeriodosConcursoResult">
+		SELECT    GEN_PKG_GENER.GEN_FN_DEVUELVE_DES_PERIO(PERD_OID_PERI_DESD) PERI_DESD,
+		          GEN_PKG_GENER.GEN_FN_DEVUELVE_DES_PERIO(PERD_OID_PERI_HAST ) PERI_HAST 
+		FROM      INC_CONCU_PARAM_GENER
+		WHERE     PAIS_OID_PAIS = GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_PAIS(#codigoPais#)
+		  AND     NUM_CONC = #codigoConcurso#	
+	</select>
+</sqlMap>

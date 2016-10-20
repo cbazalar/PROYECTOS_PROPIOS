@@ -1,0 +1,9 @@
+CREATE OR REPLACE TRIGGER "PROD_BIU_TR" 
+ BEFORE INSERT OR UPDATE
+ ON MAE_PRODU
+ FOR EACH ROW
+BEGIN
+  :new.fec_ulti_actu := sysdate;
+END;
+/
+

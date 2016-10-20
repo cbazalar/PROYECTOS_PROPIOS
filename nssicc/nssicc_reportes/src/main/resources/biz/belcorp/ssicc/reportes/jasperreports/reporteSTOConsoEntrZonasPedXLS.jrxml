@@ -1,0 +1,365 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteSTOConsoEntrZonasPedXLS"
+		 columnCount="1"
+		 printOrder="Horizontal"
+		 orientation="Landscape"
+		 pageWidth="2834"
+		 pageHeight="842"
+		 columnWidth="2834"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 whenResourceMissingType="Empty"
+		 isIgnorePagination="true">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="codigoRegion" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoRegion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="tipoOrden" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("tipoOrden")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicionesZonas" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicionesZonas")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="titulo" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("titulo")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[select xx.cod_peri,         
+       xx.cod_zona as des_regi,       
+       yy.BOLETAS_A_TIEMPO/xx.BOLETAS_TOTALES BOLETAS_A_TIEMPO       
+  from (select j.cod_peri, g.cod_zona, count(*) BOLETAS_TOTALES
+          FROM ped_solic_cabec a,
+               zon_terri_admin d,
+               zon_secci       f,
+               zon_zona        g,
+               zon_regio       h,
+               cra_perio       i,
+               seg_perio_corpo j
+         WHERE a.ztad_oid_terr_admi = d.oid_terr_admi
+           AND d.zscc_oid_secc = f.oid_secc
+           and a.esso_oid_esta_soli <> 4
+           AND f.zzon_oid_zona = g.oid_zona
+           AND g.zorg_oid_regi = h.oid_regi
+           AND a.perd_oid_peri = i.oid_peri
+           and i.peri_oid_peri = j.oid_peri
+           and j.cod_peri like to_char(sysdate,'YYYY')||'%'  --Periodos que van del anio en curso
+           and h.cod_regi = nvl($P{codigoRegion},h.cod_regi) -- Region seleccionada
+           AND a.tspa_oid_tipo_soli_pais IN
+               (SELECT tspa_oid_tipo_soli_pais
+                  FROM int_lar_tipo_solici_pedido_dis)
+           and (select sum(ind_oc)
+                  from ped_solic_cabec
+                 where soca_oid_soli_cabe = a.oid_soli_cabe) > 0 --Si el tipo de orden es BER colocar =0
+         group by j.cod_peri,g.cod_zona) xx,
+       (select a.cod_peri,
+               a.cod_zona,
+               count(distinct num_docu) BOLETAS_A_TIEMPO
+          from int_solic_conso_orden_trans a
+         where a.tip_orde = $P{tipoOrden} --Tipo de Orden seleccionado
+           and nvl(a.cod_esta_ent2, 0) = '01'
+           and a.cod_peri like to_char(sysdate,'YYYY')||'%'  --Periodos que van del anio en curso
+           and a.cod_regi = nvl($P{codigoRegion},a.cod_regi) -- Region seleccionada
+           and a.fec_proc <= (select w.fec_inic
+                                from cra_crono       w,
+                                     cra_activ       x,
+                                     seg_pais        y,
+                                     zon_zona        z,
+                                     cra_perio       z1,
+                                     seg_perio_corpo z2
+                               where w.CACT_OID_ACTI = x.OID_ACTI
+                                 and x.PAIS_OID_PAIS = y.OID_PAIS
+                                 and w.ZZON_OID_ZONA = z.OID_ZONA
+                                 and x.cod_acti = 'FA'
+                                 and y.COD_PAIS = a.cod_pais
+                                 and z.COD_ZONA = a.cod_zona
+                                 and w.PERD_OID_PERI = z1.oid_peri
+                                 and z1.peri_oid_peri = z2.oid_peri
+                                 and z2.cod_peri = a.cod_peri)
+         group by a.cod_peri, a.cod_zona) yy
+         where xx.cod_peri = yy.cod_peri 
+           and xx.cod_zona = yy.cod_zona
+           $P!{condicionesZonas}]]></queryString>
+
+	<field name="COD_PERI" class="java.lang.String"/>
+	<field name="DES_REGI" class="java.lang.String"/>
+	<field name="BOLETAS_A_TIEMPO" class="java.math.BigDecimal"/>
+
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="90"  isSplitAllowed="true" >
+				<crosstab >
+					<reportElement
+						x="0"
+						y="27"
+						width="1071"
+						height="48"
+						key="crosstab-1"/>
+					<crosstabHeaderCell>						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="100"
+						height="16"
+						backcolor="#CCCCCC"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement>
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true" isPdfEmbedded ="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOConsolidadoEntrega.zona}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+					</crosstabHeaderCell>					<rowGroup name="DES_REGI" width="100" totalPosition="End">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{DES_REGI}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="100"
+						height="16"
+						key="textField"/>
+					<box>					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{DES_REGI}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+						<crosstabTotalRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="100"
+						height="16"
+						backcolor="#CCCCCC"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement>
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true" isPdfEmbedded ="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOConsolidadoEntrega.promedio}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabTotalRowHeader>
+					</rowGroup>
+					<columnGroup name="COD_PERI" height="16" totalPosition="End" headerPosition="Center">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{COD_PERI}]]></bucketExpression>
+						</bucket>
+						<crosstabColumnHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="100"
+						height="16"
+						backcolor="#CCCCCC"
+						key="textField"/>
+					<box>					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true" isPdfEmbedded ="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{COD_PERI}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabColumnHeader>
+						<crosstabTotalColumnHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="100"
+						height="16"
+						backcolor="#CCCCCC"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement>
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true" isPdfEmbedded ="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSTOConsolidadoEntrega.promedio}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabTotalColumnHeader>
+					</columnGroup>
+
+					<measure name="BOLETAS_A_TIEMPO_Nothing" class="java.math.BigDecimal">
+						<measureExpression><![CDATA[$F{BOLETAS_A_TIEMPO}]]></measureExpression>
+					</measure>
+					<measure name="VAL_PORC_COL" class="java.math.BigDecimal" calculation="Average">
+						<measureExpression><![CDATA[$F{BOLETAS_A_TIEMPO}]]></measureExpression>
+					</measure>
+					<measure name="VAL_PORC_FIL" class="java.math.BigDecimal" calculation="Average">
+						<measureExpression><![CDATA[$F{BOLETAS_A_TIEMPO}]]></measureExpression>
+					</measure>
+					<crosstabCell width="100" height="16">
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" pattern="#,##0.00 %" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="100"
+						height="16"
+						key="textField"/>
+					<box>					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{BOLETAS_A_TIEMPO_Nothing}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="100" height="16" columnTotalGroup="COD_PERI">
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" pattern="#,##0.00 %" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="100"
+						height="16"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{VAL_PORC_FIL}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="100" height="16" rowTotalGroup="DES_REGI">
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" pattern="#,##0.00 %" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="100"
+						height="16"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{VAL_PORC_COL}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="100" height="16" rowTotalGroup="DES_REGI" columnTotalGroup="COD_PERI">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<whenNoDataCell>						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</whenNoDataCell>					</crosstab>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="136"
+						y="5"
+						width="356"
+						height="16"
+						key="textField-1"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$P{titulo}]]></textFieldExpression>
+				</textField>
+			</band>
+		</summary>
+</jasperReport>

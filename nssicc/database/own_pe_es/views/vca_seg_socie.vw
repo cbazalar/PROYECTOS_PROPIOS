@@ -1,0 +1,15 @@
+CREATE OR REPLACE VIEW VCA_SEG_SOCIE AS
+SELECT T1.COD_USUA COD_USUA
+          ,T2.OID_SOCI OID_SOCI
+          ,T2.COD_SOCI COD_SOCI
+          ,T2.PAIS_OID_PAIS PAIS_OID_PAIS
+          ,T2.VAL_DIRE VAL_DIRE
+          ,T2.VAL_TLFN VAL_TLFN
+          ,T2.VAL_DENO VAL_DENO
+          ,T2.VAL_IDEN_FISC VAL_IDEN_FISC
+          ,T2.VAL_FAX VAL_FAX
+FROM VCA_MGU_PERMI_USUAR T1
+    ,SEG_SOCIE T2
+  WHERE t1.val_prop = to_char(t2.oid_SOCI)
+    and t1.cod_prop = 'Sociedad';
+

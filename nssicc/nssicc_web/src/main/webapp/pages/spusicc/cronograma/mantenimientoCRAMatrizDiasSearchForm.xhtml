@@ -1,0 +1,189 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ssicc="http://java.sun.com/jsf/composite/componentes/ssicc">
+
+<body>
+	<ui:composition template="/templates/templateMantenimientoSearch.xhtml">
+		<ui:param name="mAlias"
+			value="#{mantenimientoCRAMatrizDiasSearchAction}" />
+
+		<ui:define name="titulo_Pantalla">
+			<h:outputText
+				value="#{i18n['mantenimientoCRAMatrizDiasSearchForm.title']}"
+				styleClass="clsEncabezadoPantalla" />
+		</ui:define>
+
+		<ui:define name="body_criterio_busqueda">
+			<h:panelGrid columns="5" id="panelMatriz">
+
+				<ssicc:label key="#{i18n['mantenimientoCRAMatrizDias.codigoPais']}"
+					required="true" />
+				<ssicc:label
+					value="#{mPantallaPrincipalBean.currentUser.pais.descripcion}"
+					required="true" />
+				<ssicc:labelBlank />
+				<ssicc:labelBlank />
+				<ssicc:labelBlank />
+
+				<!-- ############ GRUPO DE ZONAS ############## -->
+				<ssicc:label
+					key="#{i18n['mantenimientoCRAMatrizDias.grupoFacturacion']}" />
+				<ssicc:selectManyMenu id="grupoZona"
+					value="#{mAlias.formBusqueda.grupoZona}">
+					<f:selectItems value="#{mAlias.siccGrupoFacturacionList}"
+						var="lista" itemLabel="#{lista.descripcion}"
+						itemValue="#{lista.codigo}" />
+				</ssicc:selectManyMenu>
+
+				<!-- ############ ACTIVIDAD ############## -->
+				<ssicc:label key="#{i18n['mantenimientoCRAMatrizDias.actividad']}" />
+				<ssicc:selectManyMenu id="actividad"
+					value="#{mAlias.formBusqueda.actividad}">
+					<f:selectItems value="#{mAlias.siccActividadList}" var="lista"
+						itemLabel="#{lista.descripcion}" itemValue="#{lista.codigo}" />
+				</ssicc:selectManyMenu>
+
+				<!-- ######### BOTON ########## -->
+				<ssicc:linkAjax icon="/resources/images/go-down.png"
+					title="#{i18n['anadir.actividad']}"
+					accion="#{mantenimientoCRAMatrizDiasSearchAction.anadirActividad}"
+					process="@this :principalForm:panelMatriz" 
+					update=":principalForm:idBody_final_busqueda :principalForm:mensajesGrowl" />
+			</h:panelGrid>
+			<h:outputScript>
+        var anterior="";
+          function calcularDesplazamiento(diasDesplazamiento,evt){
+	   
+	   		var keyCode = document.layers ? evt.which : document.all ? evt.keyCode : evt.keyCode; 
+			var orden = document.getElementById("ordenActividadOrigen2").value;
+			var des = diasDesplazamiento.value;
+			
+			if (des==''){
+				document.getElementById("ordenDesplazado:input").value = '';	
+			}
+			else{
+				document.getElementById("ordenDesplazado:input").value = parseInt(orden) + parseInt(des);
+			}
+		}
+
+		function marcar(obj) {
+	<!-- /* despinto la anterior */ -->
+	if (anterior) anterior.style.backgroundColor='#FFFFFF';
+
+	obj.style.backgroundColor='#d7e1f2';
+	anterior = obj;
+	}
+	</h:outputScript>
+
+
+		</ui:define>
+
+
+		<ui:define name="body_final_busqueda">
+
+
+			<div
+				style="overflow: scroll; height: 250px; padding: 0; width: 1050px;">
+				<table class="ui-datatable-tablewrapper" cellspacing="0" id="tablaPrincipal"
+					style="background: white" width="2200">
+					<c:forEach var="variable" items="${mAlias.craCargaMatrizDiasList}">
+						<tr onClick="marcar(this)">
+							<th width="200" class="ui-state-default"><h:outputText
+									value="#{variable.grupoZona}" /></th>
+
+							<c:if test="${variable.grupoZona == 'Grupo Zona'}">
+								<c:forEach var="i" begin="1" end="21" step="1"
+									varStatus="status">
+									<td width="200" align="center" class="ui-state-default"><h:outputText
+											value="#{variable.actividades[i]}" /></td>
+
+								</c:forEach>
+							</c:if>
+
+							<c:if test="${variable.grupoZona != 'Grupo Zona'}">
+								<c:forEach var="variable2" items="${variable.actividades2}">
+									<c:forEach var="variable3" items="${variable2.lista}">
+										<td width="200" align="center"><c:forEach var="variable4"
+												items="${variable3.listaB}">
+												<p:commandLink value="#{variable4}" styleClass="clsLink"
+													style="color:#4167B1 !important"
+													actionListener="#{mantenimientoCRAMatrizDiasSearchAction.openActividadPopup}"
+													update=":principalForm:dialogPopup">
+													<f:param name="DATOS"
+														value="#{variable.oidGrupoZona}|#{variable4}|#{variable3.index}|#{variable.grupoZona}"></f:param>
+												</p:commandLink>
+												<br />
+											</c:forEach></td>
+									</c:forEach>
+								</c:forEach>
+							</c:if>
+						</tr>
+					</c:forEach>
+				</table>
+			</div>
+
+			<h:panelGrid width="600" style="margin-top:40px" id="craCargaMatrizDiasFueraPeriodoList">
+				<p:dataTable value="#{mAlias.craCargaMatrizDiasFueraPeriodoList}"
+				    emptyMessage="#{msg['dataTable.noExistenRegistrosFiltro']}"
+					var="lista" scrollHeight="400" scrollable="true">
+
+					<p:column width="100">
+						<f:facet name="header">
+							<h:outputText
+								value="#{i18n['craCargaMatrizDiasFueraPeriodoList.grupoZona']}" />
+						</f:facet>
+						<h:outputText value="#{lista.grupoZona}" />
+					</p:column>
+
+					<p:column width="100">
+						<f:facet name="header">
+							<h:outputText
+								value="#{i18n['craCargaMatrizDiasFueraPeriodoList.nombreActividad']}" />
+						</f:facet>
+						<p:commandLink value="#{lista.nombreActividad}"
+							styleClass="clsLink" style="color:#4167B1 !important"
+							actionListener="#{mantenimientoCRAMatrizDiasSearchAction.openActividadPopup}"
+							update=":principalForm:dialogPopup">
+							<f:param name="DATOS"
+								value="#{lista.oidGrupoZona}|#{lista.nombreActividad}|#{lista.orden}|#{lista.grupoZona}"></f:param>
+						</p:commandLink>
+					</p:column>
+
+					<p:column width="100">
+						<f:facet name="header">
+							<h:outputText
+								value="#{i18n['craCargaMatrizDiasFueraPeriodoList.orden']}" />
+						</f:facet>
+						<h:outputText value="#{lista.orden}" />
+					</p:column>
+				</p:dataTable>
+
+			</h:panelGrid>
+
+			<h:panelGrid id="dialogPopup">
+				<p:dialog id="idMatrizDias"
+					title="#{i18n['mantenimientoCRAMatrizDiasPopupForm.title']}"
+					widgetVar="viewMatrizDiasPopup"
+					header="#{i18n['mantenimientoCRAMatrizDiasPopupForm.title']}"
+					modal="false" height="250" width="650">
+					<ui:include
+						src="/pages/spusicc/cronograma/MantenimientoCRAMatrizDiasPopupForm.xhtml" />
+				</p:dialog>
+			</h:panelGrid>
+			
+			<ssicc:confirmDialogConfirmar id="confirmDialogInsertarPopup"
+				manage="#{mAlias}" mensaje="#{i18n['confirm.save.information']}"
+				accion="#{mantenimientoCRAMatrizDiasSearchAction.setSavePopup}"
+				update=":principalForm:messagesPrincipalForm :principalForm:idBody_final_busqueda" />
+		</ui:define>
+
+
+
+	</ui:composition>
+</body>
+</html>

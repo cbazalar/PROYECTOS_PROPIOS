@@ -1,0 +1,370 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.mensaje.ProcesoMENSQL">
+ 
+ 
+    <select id="getPlantillaProceso" parameterClass="java.util.Map" resultClass="string">
+		 SELECT X.PLAN_COD_PLAN
+		 FROM MSG_CONFI_PROCE_CABEC X
+		 WHERE X.COD_PAIS =#codigoPais#
+		  AND X.PROC_COD_PROC = (
+		            SELECT Y.COD_PROC
+		            FROM MSG_PROCE_MENSA Y
+		            WHERE Y.COD_IDEN_APLI =#codigoInterfaz#
+		          )
+		  AND X.TIP_PROC=#tipoProceso#
+    </select>
+ 
+     <parameterMap id="executaProcesoMensajesParams" class="java.util.Map">
+    	<parameter property="codigoPais"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoPeriodo"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="fechaFacturacion"      jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="tipoProceso"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="codigoInterfaz"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="codigoPlantilla"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="codigoUsuario"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	 </parameterMap>
+
+  	<procedure id="executaProcesoMensajes" parameterMap="executaProcesoMensajesParams">
+			{call MSG_PKG_PROCE_MENSA.MSG_PR_GENER_MENSA(?,?,?,?,?,?,?)}
+	</procedure>
+ 
+  <resultMap id="mensajeResult" class="java.util.HashMap">
+      <result property="correoGerenteZonales"	column="VAL_TEXT_COMU"/>
+      <result property="oidCliente" 			column="OID_CLIE"/>
+      <result property="fechaCierre" 			column="FEC_CIER"/>
+      <result property="codigoRegion" 			column="COD_REGI"/>
+      <result property="codigoZona" 			column="COD_ZONA"/>
+   </resultMap>
+ 
+  <select id="getCorreosGz" parameterClass="java.util.Map" resultMap="mensajeResult">
+			SELECT
+				DISTINCT B.VAL_TEXT_COMU,
+				         A.OID_CLIE OID_CLIE,
+				         (SELECT to_char(b.fec_fina,'dd/MM/yyyy')
+						 FROM seg_perio_corpo a,
+							 cra_perio b,
+							 seg_canal c,
+							 seg_marca d
+						 WHERE a.cod_peri = #codigoPeriodo# AND
+						 a.oid_peri = b.peri_oid_peri and
+						 b.CANA_OID_CANA = c.OID_CANA and
+						 b.MARC_OID_MARC = d.OID_MARC
+						 and c.COD_CANA = 'VD'
+						 and d.COD_MARC = 'T') FEC_CIER,
+						 (select z.cod_regi
+						  from zon_regio z
+						  where z.OID_REGI = c.ZORG_OID_REGI) COD_REGI,
+						 c.cod_zona
+			FROM 
+				mae_clien A,
+				mae_clien_comun B,
+				zon_zona C
+			WHERE A.OID_CLIE = B.CLIE_OID_CLIE
+				AND B.TICM_OID_TIPO_COMU = 3
+				AND A.OID_CLIE = C.CLIE_OID_CLIE
+				AND C.IND_ACTI = 1
+    </select>
+
+    <parameterMap id="executeProcesarEliminarBuzonMensajeParams" class="java.util.Map">
+    	<parameter property="codigoPais"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+  	<procedure id="executeProcesarEliminarBuzonMensaje" parameterMap="executeProcesarEliminarBuzonMensajeParams">
+			{call MSG_PKG_PROCE_MENSA.MSG_PR_ELIMI_BUZON_MENSA(?)}
+	</procedure>
+
+
+     <parameterMap id="executePedidoClienteParams" class="java.util.Map">
+    	<parameter property="codigoPais"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoMarca"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoCanal"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>    	
+    	<parameter property="codigoPeriodo"          jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="fechaFacturacion"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="codigoUsuario"          jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	 </parameterMap>
+
+  	<procedure id="executePedidoCliente" parameterMap="executePedidoClienteParams">
+			{call MSG_PKG_PROCE_MENSA.MSG_PR_PEDID_CLIEN(?,?,?,?,?,?)}
+	</procedure>
+
+	 <parameterMap id="executeProcesoActualizarMensajesParams" class="java.util.Map">
+    	<parameter property="codigoPais"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoPeriodo"          jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoMarca"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoCanal"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoUsuario"          jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>    	
+	<parameter property="indicadorCruce"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>   	
+	</parameterMap>
+  	<procedure id="executeProcesoActualizarMensajes" parameterMap="executeProcesoActualizarMensajesParams">
+			{call MSG_PKG_PROCE_MENSA.MSG_PR_ACTUA_MENSA_CAMPA(?,?,?,?,?,?)}
+	</procedure>
+		
+	
+	 <resultMap id="datosProductoCUVPeriodo"    class="java.util.HashMap">
+	    <result property="codigoPeriodo" 				column="COD_PERI"/>
+   		<result property="codigoCUV" 					column="VAL_CODI_VENT"/>
+    	<result property="descripcionProducto" 			column="DES_PROD"/>
+    	<result property="precio"       				column="VAL_PREC_PROC"/>
+    	<result property="catalogo"         			column="COD_CATA"/>
+    	<result property="descripcionCatalogo"      	column="DES_CATA"/>
+    	<result property="pagina"    					column="VAL_NUME_PAGI"/>
+    	<result property="descripcionError"      		column="DES_ERRO"/>
+	</resultMap>  
+   
+    <select id="getDatosProductoCUVPeriodo" parameterClass="java.util.Map" resultMap="datosProductoCUVPeriodo">
+        SELECT
+          #codigoPeriodo# COD_PERI, 
+          ofde.VAL_CODI_VENT,     
+         (
+           SELECT v.val_i18n
+             FROM v_gen_i18n_sicc v
+            WHERE v.attr_enti = 'MAE_PRODU'
+              AND v.idio_oid_idio = 1
+              AND v.val_oid = prod.oid_prod
+         ) des_prod,
+         ofde.precio_unitario val_prec_proc,
+         ocat.cod_cata,
+         CASE
+            WHEN ocat.des_cata LIKE '%ESIKA%' THEN 'ESIKA'
+            WHEN ocat.des_cata LIKE '%EBEL%' THEN 'EBEL'
+            WHEN ocat.des_cata LIKE '%CYZONE%' THEN 'CYZONE'
+            WHEN ocat.des_cata LIKE '%REVISTA%' THEN 'REVISTA'
+            WHEN ocat.des_cata LIKE '%FOLLETO%' THEN 'FOLLETO'
+            ELSE 'O/C'
+         END des_cata,
+         ofde.num_pagi_cata val_nume_pagi,
+         '' DES_ERRO
+    FROM pre_ofert ofer,
+         pre_ofert_detal ofde,
+         pre_matri_factu mafa,         
+         pre_matri_factu_cabec mfca,
+         mae_produ prod,
+         pre_catal ocat,
+         SEG_PERIO_CORPO X,
+         cra_perio y
+   WHERE mafa.mfca_oid_cabe = mfca.oid_cabe
+     AND ofer.mfca_oid_cabe = mfca.oid_cabe
+     AND ofer.oid_ofer = ofde.ofer_oid_ofer
+     AND ofde.oid_deta_ofer = mafa.ofde_oid_deta_ofer
+     AND ofde.prod_oid_prod = prod.oid_prod
+     AND ofer.ocat_oid_cata = ocat.oid_cata
+     AND ofde.VAL_CODI_VENT = #codigoCUV#
+     AND X.COD_PERI = #codigoPeriodoSiguiente#
+     AND X.OID_PERI = Y.PERI_OID_PERI
+     AND mfca.perd_oid_peri = Y.OID_PERI
+    </select>
+    
+    <delete id="deleteCargaMasivaFaltanteAnunciado" parameterClass="java.util.Map" >
+	    DELETE FROM  msg_produ_falta_anunc x
+	   WHERE x.pais_cod_pais = #codigoPais#
+	     AND x.camp_cod_camp = #codigoPeriodo#
+    </delete>
+      
+	  <parameterMap id="executeProcesoActualizarFaltanteAnunciadoParams" class="java.util.Map">
+    	<parameter property="codigoPais"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoPeriodo"          jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoCUV"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 
+    	<parameter property="descripcionProducto"    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 
+    	<parameter property="precio"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 
+    	<parameter property="descripcionCatalogo"    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 
+    	<parameter property="pagina"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 
+    	<parameter property="codigoUsuario"          jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>    	
+	</parameterMap>
+  	<procedure id="executeProcesoActualizarFaltanteAnunciado" parameterMap="executeProcesoActualizarFaltanteAnunciadoParams">
+			{call MSG_PKG_PROCE_MENSA.MSG_PR_ACTUA_FALTA_ANUNC(?,?,?,?,?,?,?,?)}
+	</procedure>
+
+	<select id="getDevuelveFaltanteAnunciado" parameterClass="java.util.Map" resultMap="datosProductoCUVPeriodo">
+        SELECT
+         	camp_cod_camp COD_PERI, 
+			val_codi_vent, 
+			des_prod,
+			val_prec_prod VAL_PREC_PROC, 
+			'' COD_CATA, 
+			des_cata, 
+			val_nume_pagi, 
+            '' DES_ERRO
+	    FROM msg_produ_falta_anunc t
+	   WHERE T.PAIS_COD_PAIS = #codigoPais#
+	     AND T.camp_cod_camp = #codigoPeriodo#
+	     AND T.EST_REGI 	<![CDATA[	 <>  ]]>   '9'
+	   ORDER BY val_codi_vent  
+    </select>
+
+  <delete id="deleteFaltanteAnunciado" parameterClass="java.util.Map" >
+	   DELETE FROM  msg_produ_falta_anunc x
+	   WHERE x.pais_cod_pais = #codigoPais#
+	     AND x.camp_cod_camp = #codigoPeriodo#
+	     AND x.val_codi_vent = #codigoCUV#
+    </delete>
+    
+    <select id="getDevuelveFaltanteAnunciadoCodigoCUV" parameterClass="java.util.Map" resultMap="datosProductoCUVPeriodo">
+        SELECT
+         	camp_cod_camp COD_PERI, 
+			val_codi_vent, 
+			des_prod,
+			val_prec_prod VAL_PREC_PROC, 
+			'' COD_CATA, 
+			des_cata, 
+			val_nume_pagi, 
+            '' DES_ERRO
+	    FROM msg_produ_falta_anunc t
+	   WHERE T.PAIS_COD_PAIS = #codigoPais#
+	     AND T.camp_cod_camp = #codigoPeriodo#
+	     AND T.val_codi_vent = #codigoCUV#
+    </select>
+
+   <select id="getDevuelveCodigoCampanha" parameterClass="java.util.Map" resultClass="string">
+			SELECT PER_PKG_REPOR_PERCE.PER_FN_OBTIE_PERIO(#codigoPeriodo#, #oidPais#,
+															 GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA('T'),
+															 GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CANAL('VD'),
+															 #numeroCampanna#) 
+			FROM DUAL                                                                     	
+    </select>	      	
+	
+	<resultMap id="datosRegion"    class="java.util.HashMap">
+	    <result property="codigoRegion"			column="CODIGO"/>
+   		<result property="descRegion" 			column="DESCRIPCION"/>
+	</resultMap>
+    
+    <select id="getDatosRegion" parameterClass="java.util.Map" resultMap="datosRegion">
+        SELECT DISTINCT
+			   ZON_REGIO.COD_REGI AS CODIGO, 
+		   	   UPPER(NVL(ZON_REGIO.DES_REGI, ' ')) AS DESCRIPCION
+	  	FROM 	SEG_PAIS,
+	       		SEG_MARCA,
+	       		SEG_CANAL,
+	       		ZON_REGIO
+	 	WHERE (	(ZON_REGIO.IND_ACTI = 1)
+		  		<isNotEmpty prepend="AND" property="codigoPais">
+          	  		(SEG_PAIS.COD_PAIS = #codigoPais#) 
+    	  		</isNotEmpty>
+		  		<isNotEmpty prepend="AND" property="codigoMarca">
+          	  		(SEG_MARCA.COD_MARC = #codigoMarca#)
+    	  		</isNotEmpty>
+		  		<isNotEmpty prepend="AND" property="codigoCanal">
+          	  		(SEG_CANAL.COD_CANA = #codigoCanal#)
+    	  		</isNotEmpty>
+		  		<isNotEmpty prepend="AND" property="codigoRegion">
+          	  		(ZON_REGIO.COD_REGI = #codigoRegion#)
+    	  		</isNotEmpty>    	  		
+	        AND (SEG_PAIS.OID_PAIS = ZON_REGIO.PAIS_OID_PAIS)
+	        AND (SEG_MARCA.OID_MARC = ZON_REGIO.MARC_OID_MARC)
+	        AND (SEG_CANAL.OID_CANA = ZON_REGIO.CANA_OID_CANA)
+	        )
+	    ORDER BY 2 ASC
+    </select> 
+	
+	<resultMap id="datosZonaByRegion"    class="java.util.HashMap">
+	    <result property="codigoRegion"		column="COD_REGI"/>
+   		<result property="codigoZona" 		column="COD_ZONA"/>
+   		<result property="codigoCliente" 	column="COD_CLIE"/>
+   		<result property="gerente" 			column="GERENTE"/>
+	</resultMap>
+    
+    <select id="getDatosZonaByRegion" parameterClass="java.util.Map" resultMap="datosZonaByRegion">
+        SELECT ZR.COD_REGI, ZZ.COD_ZONA, MC.COD_CLIE,
+		       MC.VAL_APE1 || ' ' || MC.VAL_APE2 || ', ' || MC.VAL_NOM1 GERENTE
+		  FROM ZON_REGIO ZR, ZON_ZONA ZZ, MAE_CLIEN MC
+		 WHERE ZZ.ZORG_OID_REGI = ZR.OID_REGI
+		   AND ZZ.CLIE_OID_CLIE = MC.OID_CLIE
+		   AND ZR.COD_REGI = #codigoRegion#
+		   AND ZZ.COD_ZONA = #codigoZona#
+		   AND ZR.IND_ACTI = '1'
+		   AND ZR.IND_BORR = '0'
+		   AND ZZ.IND_ACTI = '1'
+		   AND ZZ.IND_BORR = '0'
+		 ORDER BY 1
+    </select>
+    
+    <delete id="deleteCargaMasivaConferencias" parameterClass="java.util.Map" >
+	    DELETE FROM MSG_MENSA_CONFE X
+		 WHERE X.CAM_PROC = #codigoPeriodo#
+		   AND X.COD_REGI = #codigoRegion#
+    </delete>
+    
+    <parameterMap id="executeProcesoActualizarConferenciasParams" class="java.util.Map">
+    	<parameter property="codigoPais"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoPeriodo"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoRegion"          jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 
+    	<parameter property="codigoZona"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="gerente"    			jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 
+    	<parameter property="local"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 
+    	<parameter property="direccion"    			jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 
+    	<parameter property="fecha"                 jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/> 
+    	<parameter property="hora"                 	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoUsuario"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>    	
+	</parameterMap>
+  	<procedure id="executeProcesoActualizarConferencias" parameterMap="executeProcesoActualizarConferenciasParams">
+			{call MSG_PKG_PROCE_MENSA.MSG_PR_ACTUA_CONFE(?,?,?,?,?,?,?,?,?,?)}
+	</procedure>
+	
+	<resultMap id="datosConferencias"    class="java.util.HashMap">
+	    <result property="correlativo" 		column="COR_CONF"/>
+	    <result property="codigoRegion" 	column="COD_REGI"/>
+   		<result property="codigoZona" 		column="COD_ZONA"/>
+    	<result property="gerente" 			column="NOM_GERE_ZONA"/>
+    	<result property="local"       		column="VAL_LOCA"/>
+    	<result property="direccion"        column="VAL_DIRE"/>
+    	<result property="fecha"      		column="VAL_FECH"/>
+    	<result property="hora"    			column="VAL_HORA"/>
+	</resultMap>
+	
+	<select id="getDevuelveConferencias" parameterClass="java.util.Map" resultMap="datosConferencias">
+        SELECT COR_CONF,
+        	   COD_REGI,
+		       COD_ZONA,
+		       NOM_GERE_ZONA,
+		       VAL_LOCA,
+		       VAL_DIRE,
+		       VAL_FECH,
+		       VAL_HORA
+		  FROM MSG_MENSA_CONFE
+		 WHERE CAM_PROC = #codigoPeriodo#
+		  <isNotEmpty property="codigoRegion">
+		   AND COD_REGI = #codigoRegion#
+		 </isNotEmpty>
+		  <isNotEmpty property="codigoZona">
+		   AND COD_ZONA = #codigoZona#
+		 </isNotEmpty>
+		   AND EST_REGI <![CDATA[ <> ]]> '9'
+		 ORDER BY COD_REGI, COD_ZONA
+    </select>
+    
+    <update id="deleteConferencias" parameterClass="java.util.Map" >
+		UPDATE MSG_MENSA_CONFE
+		   SET EST_REGI = '9',
+		       USU_MODI = #codigoUsuario#,
+		       FEC_MODI = SYSDATE
+		 WHERE CAM_PROC = #codigoPeriodo#
+		   AND COD_REGI = #codigoRegion#
+		   AND COD_ZONA = #codigoZona#
+		   AND COR_CONF = #correlativo#
+    </update>
+    
+    <select id="getDevuelveCodigoRegionZona" parameterClass="java.util.Map" resultClass="string">
+		 SELECT 
+			Y.COD_REGI
+		 FROM ZON_ZONA X,
+		      ZON_REGIO Y
+		 WHERE X.COD_ZONA=#codigoZona#
+		   AND X.ZORG_OID_REGI = Y.OID_REGI
+    </select>
+    
+     <select id="getDevuelveCampanaIndicadorCruce" parameterClass="java.util.Map" resultClass="java.lang.Integer">	
+	    select count(*) cantidad from cra_perio cp, seg_perio_corpo spc
+		where cp.peri_oid_peri = spc.oid_peri
+		and cod_peri = #codigoPeriodo#
+		and ind_peri_cruc = 1
+    </select>
+    
+    <select id="getDevuelveCampanaAnterior" parameterClass="java.util.Map" resultClass="string">	  
+    	select GEN_FN_CALCU_PERIO(#codigoPeriodo#, -1) from dual
+    </select>
+     
+  
+    
+</sqlMap>

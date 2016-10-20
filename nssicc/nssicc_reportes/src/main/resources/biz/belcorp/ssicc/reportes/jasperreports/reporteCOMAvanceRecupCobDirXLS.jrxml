@@ -1,0 +1,437 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="reporteLECPagoSociaEmpreXLS" pageWidth="84979" pageHeight="1700784" whenNoDataType="AllSectionsNoDetail" columnWidth="84979" leftMargin="0" rightMargin="0" topMargin="0" bottomMargin="0" resourceBundle="ReportResources" whenResourceMissingType="Empty" isIgnorePagination="true">
+	<property name="ireport.scriptlethandling" value="0"/>
+	<property name="ireport.encoding" value="ISO-8859-1"/>
+	<property name="ireport.zoom" value="1.0"/>
+	<property name="ireport.x" value="0"/>
+	<property name="ireport.y" value="0"/>
+	<import value="net.sf.jasperreports.engine.*"/>
+	<import value="java.util.*"/>
+	<import value="net.sf.jasperreports.engine.data.*"/>
+	<parameter name="parameterMap" class="java.util.Map" isForPrompting="false"/>
+	<parameter name="codigoPais" class="java.lang.String">
+		<defaultValueExpression><![CDATA[$P{parameterMap}.get("codigoPais")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoPeriodo" class="java.lang.String">
+		<defaultValueExpression><![CDATA[$P{parameterMap}.get("codigoPeriodo")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoPeriodoRecup" class="java.lang.String">
+		<defaultValueExpression><![CDATA[$P{parameterMap}.get("codigoPeriodoRecup")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicion" class="java.lang.String">
+		<defaultValueExpression><![CDATA[$P{parameterMap}.get("condicion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicionRegionCorreo" class="java.lang.String">
+		<defaultValueExpression><![CDATA[$P{parameterMap}.get("condicionRegionCorreo")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicionZonaCorreo" class="java.lang.String">
+		<defaultValueExpression><![CDATA[$P{parameterMap}.get("condicionZonaCorreo")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="titulo" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA[$P{parameterMap}.get("titulo")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoRegion" class="java.lang.String" isForPrompting="false">
+		<defaultValueExpression><![CDATA[$P{parameterMap}.get("codigoRegion")]]></defaultValueExpression>
+	</parameter>
+	<queryString>
+		<![CDATA[WITH temp AS
+            (
+              SELECT brec.cod_regi codigoRegion,
+                     brec.cam_reca campaRecaudo,
+                     SUM(NVL(brec.val_mont_carg,0)) facturadoNeto,
+                     SUM(NVL(brec.val_mont_abon,0)) montoRecuperado
+                FROM com_base_recup_consu brec,
+                     mae_clien clie
+               WHERE brec.clie_cod_clie = clie.cod_clie
+                 AND brec.cam_reca = $P{codigoPeriodoRecup}
+               GROUP BY brec.cod_regi,
+                        brec.cam_reca
+            )
+SELECT temp.codigoRegion REGION,
+       NVL(( SELECT clie.val_nom1 || ' ' || clie.val_nom2 || ' ' || clie.val_ape1 || ' ' || clie.val_ape2
+               FROM zon_regio zorg,
+                    mae_clien clie
+              WHERE zorg.clie_oid_clie = clie.oid_clie
+                AND zorg.cod_regi = temp.codigoRegion ),'SIN HOMOLOGAR') NOMBRES,
+       temp.facturadoNeto FACTURADO,
+       temp.montoRecuperado RECUPERADO,
+       ROUND((temp.montoRecuperado / temp.facturadoNeto) * 100,2)  RECUP,
+       temp.campaRecaudo CAMP,
+       temp.facturadoNeto - temp.montoRecuperado FALTA
+  FROM temp
+ORDER BY REGION]]>
+	</queryString>
+	<field name="REGION" class="java.lang.String"/>
+	<field name="NOMBRES" class="java.lang.String"/>
+	<field name="FACTURADO" class="java.math.BigDecimal"/>
+	<field name="RECUPERADO" class="java.math.BigDecimal"/>
+	<field name="CAMP" class="java.lang.String"/>
+	<field name="RECUP" class="java.math.BigDecimal"/>
+	<field name="FALTA" class="java.math.BigDecimal"/>
+	<variable name="FACTURADO" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{FACTURADO}]]></variableExpression>
+	</variable>
+	<variable name="RECUPERADO" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{RECUPERADO}]]></variableExpression>
+	</variable>
+	<variable name="RECUP" class="java.math.BigDecimal">
+		<variableExpression><![CDATA[$V{FACTURADO}.doubleValue()==0?new BigDecimal(0): $V{RECUPERADO}.multiply(new BigDecimal(100)).divide($V{FACTURADO},2,6)]]></variableExpression>
+	</variable>
+	<variable name="FALTA" class="java.math.BigDecimal" calculation="Sum">
+		<variableExpression><![CDATA[$F{FALTA}]]></variableExpression>
+	</variable>
+	<background>
+		<band splitType="Stretch"/>
+	</background>
+	<title>
+		<band height="81" splitType="Stretch">
+			<staticText>
+				<reportElement key="element-12" mode="Transparent" x="1" y="50" width="89" height="15" forecolor="#000000" backcolor="#CCCCCC"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Right">
+					<font fontName="SansSerif" size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Campaña Proceso:]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true">
+				<reportElement key="textField-11" x="90" y="50" width="85" height="15"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{codigoPeriodo}]]></textFieldExpression>
+			</textField>
+			<staticText>
+				<reportElement key="element-13" mode="Transparent" x="1" y="66" width="89" height="15" forecolor="#000000" backcolor="#CCCCCC"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Right">
+					<font fontName="SansSerif" size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[Campaña Recup.:]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true">
+				<reportElement key="textField-12" x="90" y="66" width="85" height="15"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$P{codigoPeriodoRecup}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true">
+				<reportElement key="textField-16" x="74" y="6" width="666" height="23"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="14" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<textFieldExpression><![CDATA["RESUMEN DEL PAIS"]]></textFieldExpression>
+			</textField>
+		</band>
+	</title>
+	<pageHeader>
+		<band splitType="Stretch"/>
+	</pageHeader>
+	<columnHeader>
+		<band height="61" splitType="Stretch">
+			<staticText>
+				<reportElement key="element-1" mode="Opaque" x="1" y="31" width="89" height="30" forecolor="#000000" backcolor="#CCCCCC"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[AREA]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="element-2" mode="Opaque" x="90" y="31" width="281" height="30" forecolor="#000000" backcolor="#CCCCCC"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[NOMBRE GTE. REGION]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="element-5" mode="Opaque" x="371" y="31" width="84" height="30" forecolor="#000000" backcolor="#CCCCCC"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[FACTURADO NETO]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="element-6" mode="Opaque" x="455" y="31" width="108" height="30" forecolor="#000000" backcolor="#CCCCCC"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[RECUPERADO]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="element-8" mode="Opaque" x="563" y="31" width="78" height="30" forecolor="#000000" backcolor="#CCCCCC"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[% RECUPERADO]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="element-9" mode="Opaque" x="641" y="31" width="79" height="30" forecolor="#000000" backcolor="#CCCCCC"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[CAMP]]></text>
+			</staticText>
+			<staticText>
+				<reportElement key="element-14" mode="Opaque" x="720" y="31" width="89" height="30" forecolor="#000000" backcolor="#CCCCCC"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[FALTA X RECUPERAR META 90% ]]></text>
+			</staticText>
+		</band>
+	</columnHeader>
+	<detail>
+		<band height="16" splitType="Stretch">
+			<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true">
+				<reportElement key="textField-1" x="1" y="0" width="89" height="15"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{REGION}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true">
+				<reportElement key="textField-2" x="90" y="0" width="281" height="15"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Left">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{NOMBRES}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="$###,###,##0.00" isBlankWhenNull="true">
+				<reportElement key="textField-5" x="371" y="0" width="84" height="15"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{FACTURADO}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="$###,###,##0.00" isBlankWhenNull="true">
+				<reportElement key="textField-6" x="455" y="0" width="108" height="15"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{RECUPERADO}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.00" isBlankWhenNull="true">
+				<reportElement key="textField-8" x="563" y="0" width="78" height="15"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{RECUP}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.00" isBlankWhenNull="true">
+				<reportElement key="textField-9" x="641" y="0" width="79" height="15"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{CAMP}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="$###,###,##0.00" isBlankWhenNull="true">
+				<reportElement key="textField-13" x="720" y="0" width="89" height="15"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+				</box>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$F{FALTA}]]></textFieldExpression>
+			</textField>
+		</band>
+	</detail>
+	<columnFooter>
+		<band height="22" splitType="Stretch">
+			<staticText>
+				<reportElement key="element-17" mode="Opaque" x="90" y="1" width="281" height="15" forecolor="#000000" backcolor="#CCCCCC"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+				</box>
+				<textElement textAlignment="Center" verticalAlignment="Middle">
+					<font fontName="SansSerif" size="8" isBold="true" pdfFontName="Helvetica-Bold"/>
+				</textElement>
+				<text><![CDATA[TOTALES]]></text>
+			</staticText>
+			<textField isStretchWithOverflow="true" pattern="$###,###,##0.00" isBlankWhenNull="true">
+				<reportElement key="textField-17" x="371" y="1" width="84" height="15"/>
+				<box leftPadding="2" rightPadding="2">
+					<pen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#666666"/>
+					<bottomPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+				</box>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{FACTURADO}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="$###,###,##0.00" isBlankWhenNull="true">
+				<reportElement key="textField-18" x="455" y="1" width="108" height="15"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="1.0" lineColor="#666666"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+				</box>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{RECUPERADO}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.00" isBlankWhenNull="true">
+				<reportElement key="textField-19" x="563" y="1" width="78" height="15"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="1.0" lineColor="#666666"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+				</box>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{RECUP}]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="#0.00" isBlankWhenNull="true">
+				<reportElement key="textField-20" x="641" y="1" width="79" height="15"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="1.0" lineColor="#666666"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+				</box>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[]]></textFieldExpression>
+			</textField>
+			<textField isStretchWithOverflow="true" pattern="$###,###,##0.00" isBlankWhenNull="true">
+				<reportElement key="textField-21" x="720" y="1" width="89" height="15"/>
+				<box leftPadding="2" rightPadding="2">
+					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+					<bottomPen lineWidth="1.0" lineColor="#666666"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#666666"/>
+				</box>
+				<textElement textAlignment="Center">
+					<font fontName="SansSerif" size="8"/>
+				</textElement>
+				<textFieldExpression><![CDATA[$V{FALTA}]]></textFieldExpression>
+			</textField>
+		</band>
+	</columnFooter>
+	<pageFooter>
+		<band splitType="Stretch"/>
+	</pageFooter>
+	<summary>
+		<band splitType="Stretch"/>
+	</summary>
+</jasperReport>

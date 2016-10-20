@@ -1,0 +1,11 @@
+CREATE OR REPLACE VIEW VCA_SEG_ACCES AS
+SELECT T1.COD_USUA COD_USUA
+          ,T2.OID_ACCE OID_ACCE
+          ,T2.CANA_OID_CANA CANA_OID_CANA
+          ,T2.COD_ACCE COD_ACCE
+          ,T2.IND_ACCE IND_ACCE
+FROM VCA_MGU_PERMI_USUAR T1
+    ,SEG_ACCES T2
+  WHERE t1.val_prop = to_char(t2.oid_acce)
+    and t1.cod_prop = 'Acceso';
+

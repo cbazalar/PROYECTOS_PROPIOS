@@ -1,0 +1,618 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" 
+      xmlns:h="http://java.sun.com/jsf/html" 
+      xmlns:f="http://java.sun.com/jsf/core"
+      xmlns:ui="http://java.sun.com/jsf/facelets"       
+      xmlns:p="http://primefaces.org/ui"
+      xmlns:ssicc="http://java.sun.com/jsf/composite/componentes/ssicc"
+      xmlns:bel="http://www.belcorp.biz/ssicc/components">
+	
+<body>
+
+<ui:composition template="/templates/templateConsultaSearch.xhtml">
+  <ui:param name="mAlias" value="#{consultaEVIConsultaMicaRecepcionAction}"/>
+  
+  <ui:define name="titulo_Pantalla">
+        <h:outputText value="#{i18n['consultaEVIConsultaMicaRecepcionForm.title']}" styleClass="clsEncabezadoPantalla" />        
+  </ui:define>
+  
+  
+  <ui:define name="body_toolbar_adicionales">
+ 
+             <ssicc:linkAjax icon="#{resource['images:buscarForm3.png']}" 
+                             value="#{msg['botonBuscar.titulo']}" 
+               				 title="#{msg['botonBuscar.tooltip']}" width="30" height="30"
+                             accion="#{consultaEVIConsultaMicaRecepcionAction.find}"
+                             update=":principalForm:panelToolBar :principalForm:listaBusquedaForm, :principalForm:panelCriterioBusqueda, 
+	        		    	  :principalForm:mensajesGrowl, :principalForm:idBody_final_busqueda @this" />
+ 
+                                              
+   </ui:define>
+  
+  <ui:define name="body_criterio_busqueda">
+   
+	<h:panelGrid columns="2" >
+       
+       <ssicc:label key="#{i18n['consultaEVIConsultaMicaRecepcionForm.codigoPais']}" required="true" />
+       <ssicc:label value="#{mPantallaPrincipalBean.currentCountry.descripcion}" required="true" />
+              
+         
+       <ssicc:label key="#{i18n['consultaEVIConsultaMicaRecepcionForm.codigoPeriodo']}" required="true" />       
+	   <ssicc:selectMenu id="codPeriodo" value="#{mAlias.formBusqueda.codigoPeriodo}" required="true"
+							accionListener="#{consultaEVIConsultaMicaRecepcionAction.loadRegiones}" 
+       						update=":principalForm:codigoRegion:selectMany">
+      	
+      	<f:selectItems value="#{mAlias.siccPeriodoList}" var="lista" 
+      					itemLabel="#{lista.label}" itemValue="#{lista.value}"/>
+       		
+       </ssicc:selectMenu>
+       
+       <ssicc:label key="#{i18n['consultaEVIConsultaMicaRecepcionForm.tipoReporte']}"/>
+       <ssicc:selectMenu id="tipoReporte" value="#{mAlias.formBusqueda.tipoReporte}"
+       					accionListener="#{consultaEVIConsultaMicaRecepcionAction.loadTipoConsulta}" 
+       					update=":principalForm:codigoZona:selectMany">
+      		<f:selectItem itemLabel="Por Región" itemValue="1"/>
+       		<f:selectItem itemLabel="Por Zona" itemValue="0"/>
+       		
+       </ssicc:selectMenu>
+
+       <ssicc:label key="#{i18n['consultaEVIConsultaMicaRecepcionForm.regionList']}"  />
+       <ssicc:selectManyMenu id="codigoRegion" value="#{mAlias.formBusqueda.regionList}" 
+       							accionListener="#{consultaEVIConsultaMicaRecepcionAction.showZonasxRegion}" 
+       							update=":principalForm:codigoZona:selectMany">
+       		<f:selectItems value="#{mAlias.siccRegionList}" var="listaRegion" 
+       						itemLabel="#{listaRegion.label}" itemValue="#{listaRegion.value}"/>
+       </ssicc:selectManyMenu>
+      
+       <!-- Zona  -->
+       <ssicc:label key="#{i18n['consultaEVIConsultaMicaRecepcionForm.zonaList']}"  />
+       <ssicc:selectManyMenu id="codigoZona" value="#{mAlias.formBusqueda.zonaList}" disabled="#{mAlias.desactivaZona}" >
+       		<f:selectItems value="#{mAlias.siccZonaList}" 
+       					   var="listaZona" itemLabel="#{listaZona.label}" itemValue="#{listaZona.value}"/>
+       </ssicc:selectManyMenu>
+       
+       <ssicc:label key="#{i18n['consultaEVIConsultaMicaRecepcionForm.fechaRecepcion']}"  />
+       <ssicc:calendar id="fechaCobroDesdeD" value="#{mAlias.formBusqueda.fechaRecepcionD}" />
+       
+       <h:inputHidden value="#{mAlias.formBusqueda.codigoPais}" />    
+
+    </h:panelGrid>    
+    
+    
+     <h:panelGroup id="panelDatateble" rendered="#{mAlias.mostrarListaRegion}">
+		<h:panelGrid id="panelDatateble1">
+				
+				<p:dataTable widgetVar="dataTableWidgetVar" id="dataTableTest"
+					var="lista" paginator="true" value="#{mAlias.dtRECProdlist}"
+					emptyMessage="#{msg['dataTable.noExistenRegistrosFiltro']}"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown} {Exporters}"
+	                currentPageReportTemplate="{totalRecords} registros encontrados"
+					rows="10" rowIndexVar="rowIndex"   paginatorPosition="top">
+
+					<!-- Exportar -->
+				     <f:facet name="{Exporters}">
+				            &nbsp;&nbsp;&nbsp;&nbsp;
+				            <h:commandLink>
+				                <p:graphicImage value="#{resource['images:excelForm.png']}"
+								                width="26"
+								                height="24"                    
+                                                title="#{msg['botonExcel.tooltip']}" styleClass="clsImagen" 
+						               			style="vertical-align:middle"/>  
+				                <p:dataExporter type="xls" target="dataTableTest" fileName="consultaEVIMicaRecepcion" postProcessor="#{mDataExporterBean.postProcessXLS}"/>
+				            </h:commandLink>          
+						
+				    </f:facet>
+				    <!-- COD_REGI -->
+					<p:column width="40"  exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.COD_REGI']}" />
+			            </f:facet>
+			           
+			            <p:commandLink actionListener="#{consultaEVIConsultaMicaRecepcionAction.openPopupDetalle}"  
+				   	 	 				style="font-weight:bold;color: #355A8F;"
+					        			oncomplete="window.open('#{facesContext.externalContext.requestContextPath}/pages/scsicc/searchEVIConsultaMicaRecepcionForm.xhtml', 'detallePedidoFolioFormSTO',
+						        'dependent=yes,status=0,scrollbars=1,toolbar=0,menubar=0,location=0,directories=0,resizable=0,width=900 height=500');">
+						    	 <h:outputText value="#{lista.COD_REGI}" />    
+				            	<f:param name="codigo" value="#{lista.COD_REGI}" />	            	           
+				        </p:commandLink>  
+			        </p:column>  
+			        
+			        <p:column width="40"  style="display:none" exportable="true">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.COD_REGI']}" />
+			            </f:facet>
+	    	            <h:outputText value="#{lista.COD_REGIExcel}" />    
+			        </p:column> 
+			        <!-- COD_REGI -->
+			        <!-- DES_REGI -->
+			        <p:column width="90" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.DES_REGI']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.DES_REGI}" />  
+			        </p:column>  
+			        
+			         <p:column width="90" style="display:none" exportable="true">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.DES_REGI']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.DES_REGIExcel}" />  
+			        </p:column>
+			       <!-- DES_REGI -->     
+			       <!-- NUM_PEDI_ESTI -->
+			        <p:column width="50"  style="text-align: right;" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.NUM_PEDI_ESTI']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_ESTI}" />  
+			        </p:column>  
+			        
+			         <p:column width="50"  style="display:none" exportable="true">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.NUM_PEDI_ESTI']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_ESTIExcel}" />  
+			        </p:column>  
+			        <!-- NUM_PEDI_ESTI -->
+			        
+			        <!-- NUM_PEDI_ANTE -->
+			        <p:column width="50"  style="text-align: right;" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.NUM_PEDI_ANTE']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_ANTE}" />  
+			        </p:column>  
+			        
+			         <p:column width="50"  style="display:none" exportable="true">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.NUM_PEDI_ANTE']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_ANTEExcel}" />  
+			        </p:column>  
+			        
+			        <!-- NUM_PEDI_ANTE -->
+			        <!-- NUM_PEDI_REAL_CAB -->
+			         <p:column width="50"  style="text-align: right;" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.NUM_PEDI_REAL_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_REAL_CAB}" />  
+			        </p:column>  
+			        
+			        <p:column width="50"  style="display:none" exportable="true">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.NUM_PEDI_REAL_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_REAL_CABExcel}" />  
+			        </p:column> 
+			        
+			        <!-- NUM_PEDI_REAL_CAB -->
+			        
+			        <!-- VAL_PORC_RECE_CAB -->
+			         <p:column width="50"   style="text-align: right;" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.VAL_PORC_RECE_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.VAL_PORC_RECE_CAB}" />  
+			        </p:column>  
+			        
+			        <p:column width="50"   style="display:none" exportable="true">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.VAL_PORC_RECE_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.VAL_PORC_RECE_CABExcel}" />  
+			        </p:column> 
+			        
+			        <!-- VAL_PORC_RECE_CAB -->
+			        
+			        <!-- NUM_PEDI_RECA_CAB -->
+			         <p:column width="50"  style="text-align: right;" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.NUM_PEDI_RECA_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_RECA_CAB}" />  
+			        </p:column>  
+			        
+			        <p:column width="50"  style="display:none" exportable="true">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.NUM_PEDI_RECA_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_RECA_CABExcel}" />  
+			        </p:column>  
+			        <!-- NUM_PEDI_RECA_CAB -->
+			        
+			        <!-- VAL_DIFE_REAL_ESTI -->
+			         <p:column width="50" style="text-align: right;" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.VAL_DIFE_REAL_ESTI']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.VAL_DIFE_REAL_ESTI}" />  
+			        </p:column> 
+			        
+			         <p:column width="50" style="display:none" exportable="true">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.VAL_DIFE_REAL_ESTI']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.VAL_DIFE_REAL_ESTIExcel}" />  
+			        </p:column> 
+			        
+			        <!-- VAL_DIFE_REAL_ESTI --> 
+			        
+			        
+			        <!-- TOT_FACT_REGU_CAB --> 
+			         <p:column width="50"  style="text-align: right;" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.TOT_FACT_REGU_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.TOT_FACT_REGU_CAB}" />  
+			        </p:column>  
+			        
+			         <p:column width="50"  style="display:none" exportable="true">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.TOT_FACT_REGU_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.TOT_FACT_REGU_CABExcel}" />  
+			        </p:column>  
+			        <!-- TOT_FACT_REGU_CAB --> 
+			        
+			        <!-- TOT_FACT_BOLS_CAB --> 
+			         <p:column width="50"  style="text-align: right;" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.TOT_FACT_BOLS_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.TOT_FACT_BOLS_CAB}" />  
+			        </p:column>  
+			        
+			         <p:column width="50"  style="display:none" exportable="true">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.TOT_FACT_BOLS_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.TOT_FACT_BOLS_CABExcel}" />  
+			        </p:column> 
+			        <!-- TOT_FACT_BOLS_CAB --> 
+			        
+			        <p:column width="50"  >  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.FEC_RECE']}" />           
+			            </f:facet>
+			            <h:outputText value="#{lista.FEC_RECE}" >  
+			              <f:convertDateTime pattern="dd/MM/yyyy"/>
+			            </h:outputText>
+			        </p:column>  
+			        
+			        <p:column width="50" style="text-align: right;">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.NUM_PEDI_REAL_DET']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_REAL_DET}" />  
+			        </p:column>  
+			        
+			        <p:column width="50"  style="text-align: right;">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.VAL_PORC_ENVI']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.VAL_PORC_ENVI}" />  
+			        </p:column>  
+			        
+			        <p:column width="50"  style="text-align: right;">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.NUM_PEDI_RECA_DET']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_RECA_DET}" />  
+			        </p:column>  
+			        
+			        <p:column width="50"  style="text-align: right;">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.NUM_PRIM_PEDI_DET']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PRIM_PEDI_DET}" />  
+			        </p:column>  
+			        
+			        <p:column width="50" style="text-align: right;">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.TOT_FACT_REGU_DET']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.TOT_FACT_REGU_DET}" />  
+			        </p:column>  
+			        
+			        <p:column width="50"  style="text-align: right;">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['regionEVIList.TOT_FACT_BOLS_DET']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.TOT_FACT_BOLS_DET}" />  
+			        </p:column>  
+					
+			
+
+				</p:dataTable>
+			</h:panelGrid>
+		</h:panelGroup>
+    
+    
+    <h:panelGroup id="panelDatatebleZona" rendered="#{mAlias.mostrarListaZona}">
+		<h:panelGrid id="panelDatateble1Zona">
+				
+				<p:dataTable widgetVar="dataTableWidgetVarZona" id="dataTableTestZona"
+					var="lista" paginator="true" value="#{mAlias.dtRECProdlistZona}"
+					emptyMessage="#{msg['dataTable.noExistenRegistrosFiltro']}"
+					paginatorTemplate="{CurrentPageReport} {FirstPageLink} {PreviousPageLink} {PageLinks} {NextPageLink} {LastPageLink} {RowsPerPageDropdown} {Exporters}"
+	                currentPageReportTemplate="{totalRecords} registros encontrados"
+					rows="10" rowIndexVar="rowIndex"   paginatorPosition="top">
+
+					<!-- Exportar -->
+				     <f:facet name="{Exporters}">
+				            &nbsp;&nbsp;&nbsp;&nbsp;
+				            <h:commandLink>
+				                <p:graphicImage value="#{resource['images:excelForm.png']}"
+								                width="26"
+								                height="24"                    
+                                                title="#{msg['botonExcel.tooltip']}" styleClass="clsImagen" 
+						               			style="vertical-align:middle"/>  
+				                <p:dataExporter type="xls" target="dataTableTestZona" fileName="consultaEVIMicaRecepcion" postProcessor="#{mDataExporterBean.postProcessXLS}"/>
+				            </h:commandLink>          
+						
+				    </f:facet>
+				    
+				    
+				    
+					<p:column width="40" >  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.COD_REGI']}" />
+			            </f:facet>
+			           
+			           <h:outputText value="#{lista.COD_REGI}" />  
+			        </p:column>  
+			        
+			        <!-- COD_ZONA -->
+			        <p:column width="90"  exportable="false" >  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.COD_ZONA']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.COD_ZONA}" />  
+			        </p:column>  
+			        
+			        <p:column width="90"  style="display:none" exportable="true" >  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.COD_ZONA']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.COD_ZONAExcel}" />  
+			        </p:column>  
+			        
+			         <!-- COD_ZONA -->  
+			        
+			        <!-- DES_ZONA -->  
+			         <p:column width="90"  exportable="false" >  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.DES_ZONA']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.DES_ZONA}" />  
+			        </p:column> 
+			        
+			          <p:column width="90"  style="display:none" exportable="true" >  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.DES_ZONA']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.DES_ZONAExcel}" />  
+			        </p:column>
+			             
+			        <!-- DES_ZONA -->  
+			        
+			          <!-- GER_ZONA -->  
+			         <p:column width="90" exportable="false"  >  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.GER_ZONA']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.GER_ZONA}" />  
+			        </p:column>  
+			        
+			        <p:column width="90"  style="display:none" exportable="true" >  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.GER_ZONA']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.GER_ZONAExcel}" />  
+			        </p:column> 
+			          
+			        <!-- GER_ZONA -->  
+			        
+			        <!-- NUM_PEDI_ESTI -->  
+			        <p:column width="50"  style="text-align: right;" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.NUM_PEDI_ESTI']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_ESTI}" />  
+			        </p:column> 
+			        
+			        <p:column width="50"  style="display:none" exportable="true" >  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.NUM_PEDI_ESTI']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_ESTIExcel}" />  
+			        </p:column>  
+			        <!-- NUM_PEDI_ESTI -->  
+			        
+			        
+			        <!-- NUM_PEDI_ANTE -->  
+			        <p:column width="50"  style="text-align: right;" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.NUM_PEDI_ANTE']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_ANTE}" />  
+			        </p:column>  
+			        
+			        <p:column width="50"  style="display:none" exportable="true">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.NUM_PEDI_ANTE']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_ANTEExcel}" />  
+			        </p:column>  
+			        
+			        <!-- NUM_PEDI_ANTE -->  
+			        
+			        <!-- NUM_PEDI_REAL_CAB -->  
+			         <p:column width="50"  style="text-align: right;" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.NUM_PEDI_REAL_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_REAL_CAB}" />  
+			        </p:column>
+
+ 					<p:column width="50"  style="display:none" exportable="true">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.NUM_PEDI_REAL_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_REAL_CABExcel}" />  
+			        </p:column>
+ 
+			        <!-- NUM_PEDI_REAL_CAB -->  
+			        
+			         <!-- VAL_PORC_RECE_CAB --> 
+			         <p:column width="50"   style="text-align: right;" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.VAL_PORC_RECE_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.VAL_PORC_RECE_CAB}" />  
+			        </p:column>  
+			        
+			        <p:column width="50"   style="display:none" exportable="true">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.VAL_PORC_RECE_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.VAL_PORC_RECE_CABExcel}" />  
+			        </p:column>  
+			         <!-- VAL_PORC_RECE_CAB --> 
+			         
+			         <!-- NUM_PEDI_RECA_CAB --> 
+			         <p:column width="50"  style="text-align: right;" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.NUM_PEDI_RECA_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_RECA_CAB}" />  
+			        </p:column>  
+			        
+			         <p:column width="50"  style="display:none" exportable="true">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.NUM_PEDI_RECA_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_RECA_CABExcel}" />  
+			        </p:column>  
+			        
+			        <!-- NUM_PEDI_RECA_CAB --> 
+			        
+			        <!-- VAL_DIFE_REAL_ESTI --> 
+			         <p:column width="50" style="text-align: right;" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.VAL_DIFE_REAL_ESTI']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.VAL_DIFE_REAL_ESTI}" />  
+			        </p:column>  
+			        
+			         <p:column width="50" style="display:none" exportable="true">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.VAL_DIFE_REAL_ESTI']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.VAL_DIFE_REAL_ESTIExcel}" />  
+			        </p:column>  
+			        
+			        <!-- VAL_DIFE_REAL_ESTI --> 
+			        
+			        
+			        <!-- TOT_FACT_REGU_CAB --> 
+			         <p:column width="50"  style="text-align: right;" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.TOT_FACT_REGU_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.TOT_FACT_REGU_CAB}" />  
+			        </p:column>  
+			        
+			          <p:column width="50"  style="display:none" exportable="true" >  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.TOT_FACT_REGU_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.TOT_FACT_REGU_CABExcel}" />  
+			        </p:column> 
+			        
+			        <!-- TOT_FACT_REGU_CAB --> 
+			        
+			        
+			          <!-- TOT_FACT_BOLS_CAB --> 
+			         <p:column width="50"  style="text-align: right;" exportable="false">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.TOT_FACT_BOLS_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.TOT_FACT_BOLS_CAB}" />  
+			        </p:column>  
+			        
+			        <p:column width="50"  style="display:none" exportable="true" >  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.TOT_FACT_BOLS_CAB']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.TOT_FACT_BOLS_CABExcel}" />  
+			        </p:column> 
+			          <!-- TOT_FACT_BOLS_CAB --> 
+			        
+			        <p:column width="50"  >  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.FEC_RECE']}" />           
+			            </f:facet>
+			            <h:outputText value="#{lista.FEC_RECE}" >  
+			              <f:convertDateTime pattern="dd/MM/yyyy"/>
+			            </h:outputText>
+			        </p:column>  
+			        
+			        <p:column width="50" style="text-align: right;">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.NUM_PEDI_REAL_DET']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_REAL_DET}" />  
+			        </p:column>  
+			        
+			        <p:column width="50"  style="text-align: right;">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.VAL_PORC_ENVI']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.VAL_PORC_ENVI}" />  
+			        </p:column>  
+			        
+			        <p:column width="50"  style="text-align: right;">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.NUM_PEDI_RECA_DET']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PEDI_RECA_DET}" />  
+			        </p:column>  
+			        
+			        <p:column width="50"  style="text-align: right;">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.NUM_PRIM_PEDI_DET']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.NUM_PRIM_PEDI_DET}" />  
+			        </p:column>  
+			        
+			        <p:column width="50" style="text-align: right;">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.TOT_FACT_REGU_DET']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.TOT_FACT_REGU_DET}" />  
+			        </p:column>  
+			        
+			        <p:column width="50"  style="text-align: right;">  
+			            <f:facet name="header">
+			               <h:outputText value="#{i18n['zonaEVIList.TOT_FACT_BOLS_DET']}" />
+			            </f:facet>
+			            <h:outputText value="#{lista.TOT_FACT_BOLS_DET}" />  
+			        </p:column>  
+					
+			
+
+				</p:dataTable>
+			</h:panelGrid>
+		</h:panelGroup>
+       
+    
+  </ui:define>
+
+
+
+</ui:composition>
+
+</body>
+</html>

@@ -1,0 +1,10 @@
+CREATE OR REPLACE TRIGGER "CLIE_BI_TR" 
+ BEFORE INSERT
+ ON MAE_CLIEN
+ FOR EACH ROW
+BEGIN
+  :new.fec_crea := sysdate;
+  :new.FEC_ULTI_GENE_CUPO := sysdate;
+END;
+/
+

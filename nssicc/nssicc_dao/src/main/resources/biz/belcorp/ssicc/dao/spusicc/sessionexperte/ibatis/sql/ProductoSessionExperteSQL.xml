@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.sessionexperte.ProductoSessionExperteSQL">
+
+  <typeAlias alias="productoProgSSE" 		type="biz.belcorp.ssicc.dao.spusicc.sessionexperte.model.ProductoDeProgramaSessionExperte"/>
+  <typeAlias alias="cabeceraProducto"		type="biz.belcorp.ssicc.dao.spusicc.sessionexperte.model.LabelDatosProductoValue"/>
+
+	<resultMap id="baseResult"          class="baseGenerico">
+		<result property="codigo" 		column="CODIGO" 	/>
+		<result property="descripcion" 	column="DESCRIPCION"/>
+	</resultMap>
+
+  <resultMap id="productosProgSSEResult" class="productoProgSSE">  
+	<result property="codigoPais" 				column="COD_PAIS"/>
+	<result property="codigoPrograma" 			column="COD_PROG"/>
+	<result property="codigoAnho" 			    column="COD_ANHO"/>
+	<result property="codigoProducto" 			column="COD_PROD"/>
+	<result property="descripcionProducto" 		column="DES_PROD"/>
+	<result property="estadoRegistro" 			column="EST_REGI"/>
+  </resultMap>
+  
+    <resultMap id="productosCicloSSEResult" class="productoProgSSE">  
+	<result property="codigoPais" 				column="COD_PAIS"/>
+	<result property="codigoPrograma" 			column="COD_PROG"/>
+	<result property="codigoAnho" 			    column="COD_ANHO"/>
+	<result property="codigoProducto" 			column="COD_PROD"/>
+    <result property="codigoCiclo" 			    column="COD_CICLO"/>
+	<result property="tipoCiclo" 		        column="DES_CICLO"/>
+	<result property="descripcionProducto" 		column="DES_PROD"/>
+	<result property="limiteUnidadesProducto" 	column="VAL_LIMI_UNID"/>
+	<result property="limiteFrecuenciaProducto" column="VAL_LIMI_FREC"/>
+	<result property="indicadorUnidad"          column="IND_LIMI_UNID"/>
+	<result property="estadoRegistro"          column="EST_REGI"/>	
+  </resultMap>
+
+    <!-- OBTIENE PRODUCTOS DE UN PROGRAMA SESSION EXPERTE SEGUN CRITERIOS  -->
+	<select id="getBaseProductosDeProgramaSessionExperte" parameterClass="productoProgSSE" 
+		resultMap="baseResult">
+		SELECT  prod.COD_PROD AS CODIGO,
+				prod.DES_PROD AS DESCRIPCION
+		FROM SSE_PROGR_PRODU prod
+		WHERE	prod.COD_PAIS = #codigoPais#
+			AND	prod.COD_PROG = #codigoPrograma#
+			<isNotEmpty prepend="AND" property="codigoAnho">
+				prod.COD_ANHO = #codigoAnho#
+	    	</isNotEmpty>
+		ORDER BY
+			prod.COD_PROD
+	</select>
+
+    <!-- OBTIENE PRODUCTOS DE UN PROGRAMA SESSION EXPERTE SEGUN CRITERIOS  -->
+	<select id="getProductosDeProgramaSessionExperte" parameterClass="productoProgSSE" 
+		resultMap="productosProgSSEResult">
+		SELECT                                 
+				prod.COD_PAIS || '|' || prod.COD_PROG || '|' || prod.COD_ANHO || '|' || prod.COD_PROD  "ID"	,      
+				prod.COD_PAIS	,
+				prod.COD_PROG	,
+				prod.COD_ANHO   ,
+				prod.COD_PROD	,
+				prod.DES_PROD	,
+				prod.EST_REGI
+		FROM SSE_PROGR_PRODU prod
+		<dynamic prepend="where">
+			<isNotEmpty prepend="AND" property="codigoPais">
+				prod.COD_PAIS = #codigoPais#
+	    	</isNotEmpty>
+			<isNotEmpty prepend="AND" property="codigoPrograma">
+				prod.COD_PROG = #codigoPrograma#
+	    	</isNotEmpty>
+			<isGreaterThan prepend="AND" property="codigoAnho" compareValue="0">
+				prod.COD_ANHO = #codigoAnho#
+			</isGreaterThan> 
+			<isNotEmpty prepend="AND" property="codigoProducto">
+				prod.COD_PROD = #codigoProducto#
+	    	</isNotEmpty>
+			<isNotEmpty prepend="AND" property="descripcionProducto">
+				prod.EST_REGI = #estadoRegistro#
+	    	</isNotEmpty>
+		</dynamic>
+        
+		ORDER BY
+			prod.COD_ANHO desc, prod.COD_PROG asc
+	</select> 
+
+	<!-- INSERTA UN NUEVO PROGRAMA SESSION EXPERTE -->
+    <insert id="insertProductoDeProgramaSessionExperte" parameterClass="productoProgSSE">
+	INSERT INTO SSE_PROGR_PRODU
+    	(	cod_pais, cod_prog, cod_anho, cod_prod, des_prod, est_regi,
+			usu_digi, fec_digi)
+	VALUES
+		(	#codigoPais#		,
+			#codigoPrograma#	,
+			#codigoAnho#        ,
+			#codigoProducto#	,
+			#descripcionProducto#		,      
+			#estadoRegistro#	,
+			#auditInfo.createdBy#,
+			#auditInfo.created#
+		)
+	</insert>
+	
+	<!-- INSERTA UN NUEVO CICLO DE PRODUCTO SESSION EXPERTE -->
+    <insert id="insertProductoDeProgramaCicloSSE" parameterClass="productoProgSSE">
+	INSERT INTO SSE_PROGR_PRODU_CICLO
+    	(	cod_pais, cod_prog, cod_prod, cod_anho, cod_ciclo, val_limi_unid, val_limi_frec, ind_limi_unid,est_regi,
+			usu_digi, fec_digi)
+	VALUES
+		(	#codigoPais#		,
+			#codigoPrograma#	,
+			#codigoProducto#	,
+			#codigoAnho#        ,
+			#codigoCiclo#       ,
+			#limiteUnidadesProducto#,
+			#limiteFrecuenciaProducto#,
+			#indicadorUnidad#,		
+			#estadoRegistro#,
+			#auditInfo.createdBy#,
+			#auditInfo.created#
+		)
+	</insert>
+	
+	<!-- ACTUALIZA UN PRODUCTO DE PROGRAMA SESSION EXPERTE -->
+	<update id="updateProductoDeProgramaSessionExperte" parameterClass="productoProgSSE">
+		UPDATE SSE_PROGR_PRODU
+		SET des_prod 	= #descripcionProducto#	,
+			val_limi_unid 	= #limiteUnidadesProducto#	,
+			est_regi	= #estadoRegistro#	,
+			usu_modi	= #auditInfo.updatedBy#		,
+			fec_modi	= #auditInfo.lastUpdated#
+		WHERE cod_pais = #codigoPais#
+			AND cod_prog = #codigoPrograma#
+			AND cod_prod = #codigoProducto#
+	</update>
+	
+	<!-- ACTUALIZA UN CICLO DE PRODUCTO SESSION EXPERTE -->	
+	<update id="updateProductoDeProgramaCicloSSE" parameterClass="productoProgSSE">
+		UPDATE SSE_PROGR_PRODU_CICLO
+		SET val_limi_frec 	= #limiteFrecuenciaProducto#	,
+			val_limi_unid 	= #limiteUnidadesProducto#	,
+			ind_limi_unid	= #indicadorUnidad#	,
+			usu_modi	= #auditInfo.updatedBy#		,
+			fec_modi	= #auditInfo.lastUpdated#
+		WHERE cod_pais = #codigoPais#
+			AND cod_prog = #codigoPrograma#
+			AND cod_prod = #codigoProducto#
+			AND cod_anho = #codigoAnho#        
+	    	AND cod_ciclo = #codigoCiclo# 
+	</update>
+
+	<!-- ACTUALIZA ESTADO UN CICLO DE PRODUCTO SESSION EXPERTE -->	
+	<update id="deleteProductoDeProgramaCicloSessionExperte" parameterClass="productoProgSSE">
+		UPDATE SSE_PROGR_PRODU_CICLO
+		SET est_regi = #estadoRegistro#,
+			usu_modi	= #auditInfo.updatedBy#,
+			fec_modi	= #auditInfo.lastUpdated#
+		WHERE cod_pais = #codigoPais#
+			AND cod_prog = #codigoPrograma#
+			AND cod_prod = #codigoProducto#
+			AND cod_anho = #codigoAnho#        
+	    	AND cod_ciclo = #codigoCiclo# 
+	</update>
+
+	<!-- BORRA/ACTUALIZA UN PROGRAMA SESSION EXPERTE A ESTADO INACTIVO-->
+	<update id="deleteProductoDeProgramaSessionExperte" parameterClass="productoProgSSE">
+		UPDATE SSE_PROGR_PRODU
+		SET est_regi	= #estadoRegistro#	,
+			usu_modi	= #auditInfo.updatedBy#		,
+			fec_modi	= #auditInfo.lastUpdated#
+		WHERE cod_pais = #codigoPais#
+			AND cod_prog = #codigoPrograma#
+			AND cod_prod = #codigoProducto#
+	</update>
+
+    <!-- OBTIENE UN PRODUCTO DE UN PROGRAMA SESSION EXPERTE SEGUN CRITERIOS  -->
+	<select id="getDatosProductoByCriteria" parameterClass="productoProgSSE" resultClass="cabeceraProducto">
+		SELECT	pais.cod_pais as codigoPais,
+				prod.cod_sap as codigoProducto, 
+				OCR_SOLIC_PEDIDOS.GEN_FN_DESC_PROD(PROD.OID_PROD) as descripcionProducto
+		FROM MAE_PRODU prod, SEG_PAIS pais
+		WHERE 
+			prod.cod_sap = #codigoProducto#
+			AND prod.pais_oid_pais= pais.oid_pais
+			AND pais.cod_pais = #codigoPais#
+			AND not exists (select pp.cod_prod from  sse_progr_produ pp where 
+				pp.cod_pais = pais.cod_pais
+				AND pp.cod_prog = #codigoPrograma#
+				AND pp.Cod_Anho = #codigoAnho#
+	            AND pp.cod_prod = prod.cod_sap
+		        AND pp.est_regi='1')
+		ORDER BY
+			prod.cod_sap
+	</select> 
+	
+	<!-- OBTIENE CICLOS DE PRODUCTOS SEGUN CRITERIOS  -->
+	<select id="getCiclosDeProductoSessionExperteByCriteria" parameterClass="productoProgSSE" 
+		resultMap="productosCicloSSEResult">
+		SELECT                                 
+				prod.COD_PAIS || '|' || prod.COD_PROG || '|' || prod.COD_ANHO || '|' || prod.COD_PROD || '|' || cic.COD_CICLO  "ID"	,      
+				prod.COD_PAIS   ,
+				prod.COD_PROG   ,
+				prod.COD_ANHO   ,
+				prod.COD_PROD	,
+				prod.DES_PROD	,
+				cic.COD_CICLO   ,
+				tip.DES_CICLO   ,
+				cic.IND_LIMI_UNID	,
+				cic.VAL_LIMI_UNID,
+				cic.VAL_LIMI_FREC,
+				cic.EST_REGI
+		FROM SSE_PROGR_PRODU prod, SSE_PROGR_PRODU_CICLO cic, SSE_TIPO_CICLO tip
+		WHERE
+		    cic.COD_PAIS = prod.COD_PAIS AND
+			cic.COD_PROG = prod.COD_PROG AND
+			cic.COD_ANHO = prod.COD_ANHO AND
+			cic.COD_PROD = prod.COD_PROD AND
+			tip.TIP_CICLO = SUBSTR(COD_CICLO,5,1)
+			<isNotEmpty prepend="AND" property="codigoPais">
+				prod.COD_PAIS = #codigoPais#
+	    	</isNotEmpty>
+			<isNotEmpty prepend="AND" property="codigoPrograma">
+				prod.COD_PROG = #codigoPrograma#
+	    	</isNotEmpty>
+			<isNotEmpty prepend="AND" property="codigoProducto">
+				prod.COD_PROD = #codigoProducto#
+	    	</isNotEmpty>       
+			<isNotEmpty prepend="AND" property="codigoAnho">
+				prod.COD_ANHO = #codigoAnho#
+	    	</isNotEmpty>
+			<isNotEmpty prepend="AND" property="codigoCiclo">
+				cic.COD_CICLO = #codigoCiclo#
+	    	</isNotEmpty>
+		ORDER BY
+			cic.COD_CICLO
+	</select> 
+	
+	<select id="getCodigoProductoPrograma" parameterClass="productoProgSSE" 
+		resultClass="string">
+		SELECT  cod_prod
+		FROM SSE_PROGR_PRODU prod
+		WHERE
+			prod.cod_pais = #codigoPais#
+			and prod.cod_prog = #codigoPrograma#
+			and prod.cod_anho = #codigoAnho#
+			and prod.des_prod = #descripcionProducto#
+
+	</select> 
+	
+</sqlMap>

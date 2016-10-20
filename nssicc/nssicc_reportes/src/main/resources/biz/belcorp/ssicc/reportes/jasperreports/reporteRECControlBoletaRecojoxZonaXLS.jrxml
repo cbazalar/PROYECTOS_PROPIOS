@@ -1,0 +1,787 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="classic"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Portrait"
+		 pageWidth="2396"
+		 pageHeight="152654"
+		 columnWidth="2396"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 whenResourceMissingType="Empty">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="condicionRegion" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicionRegion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicionZona" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicionZona")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaInicial" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaInicial")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaFinal" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaFinal")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicionNovedad" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicionNovedad")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicionRecojo" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicionRecojo")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[SELECT
+C.COD_REGI AS REGION, -- CODIGO DE REGION
+C.COD_ZONA AS ZONA, -- CODIGO DE ZONA
+C.COD_PERI_PROC AS CAMPAÑA_PROCESO, -- CODIGO DE CAMPAÑA DE PROCESO
+MC.COD_CLIE AS CLIENTE, -- CODIGO DE CLIENTE DE BOLETA DE RECOJO
+MC.VAL_NOM1||' '||MC.VAL_APE1||' '||MC.VAL_APE2 AS NOM_CONS,
+C.VAL_NUME_BORE AS NUMERO_BOLETA_RECOJO, -- NUMERO DE BOLETA DE RECOJO
+DECODE(C.NUM_RECO,1,'PRIMER RECOJO',2,'SEGUNDO RECOJO') AS NUMERO_RECOJO, -- NUMERO DE RECOJO
+TO_CHAR(C.FEC_INGR,'DD/MM/YYYY') AS FECHA_PRIMER_ENVIO,
+TO_CHAR(C.FEC_RECO,'DD/MM/YYYY') AS FECHA_PRIMER_RECOJO,
+TO_CHAR(C.FEC_ING2,'DD/MM/YYYY') AS FECHA_SEGUNDO_ENVIO,
+TO_CHAR(C.FEC_REC2,'DD/MM/YYYY') AS FECHA_SEGUNDO_RECOJO,
+(
+SELECT E2.DES_ESTA_BORE
+FROM INT_REC_ESTAD_BOREC E2
+WHERE 
+E2.OID_ESTA_BORE = C.ESBO_OID_ESTA_BOR1 
+) estado,
+(
+SELECT E2.DES_ESTA_BORE
+FROM INT_REC_ESTAD_BOREC E2
+WHERE 
+E2.OID_ESTA_BORE = C.ESBO_OID_ESTA_BOR2 
+) RESULTADO,
+LB.COD_PROD COD_SAP_RECL, -- CODIGO SAP DE PRODUCTO
+GEN_PKG_GENER.GEN_FN_DEVUELVE_DESCRIPCION(LB.PROD_OID_PROD ,'MAE_PRODU','es')  AS DES_PROD_RECL, -- DESCRIPCION DE PRODUCTO
+DECODE(LB.COPA_OID_PARA_GRAL,
+                  NULL,
+                  INT_PKG_RECLA.GEN_FN_DEVUE_COD_VENTA_MFACT(LB.TOFE_OID_TIPO_OFER,
+                                                             LB.MAFA_OID_MATR_FACT,
+                                                             LB.PROD_OID_PROD),
+                  INT_PKG_RECLA.GEN_FN_DEVUE_COD_VENTA_FICTI(LB.LOPA_OID_LOTE_PREM_ARTI,
+                                                             LB.PANP_OID_PARA_NIVE_PREM,
+                                                             LB.COPA_OID_PARA_GRAL,
+                                                             LB.PROD_OID_PROD)) VAL_CODI_VENT_RECL,
+LB.NUM_UNID_RECL AS UNID_RECL,
+Decode(lb.cod_prod_disc,null,LB.COD_PROD, lb.cod_prod_disc) AS COD_SAP_RECOGIDO, -- CODIGO SAP DE PRODUCTO
+GEN_PKG_GENER.GEN_FN_DEVUELVE_DESCRIPCION(Decode(lb.prod_oid_prod_disc,null,LB.prod_oid_prod, lb.prod_oid_prod_disc) ,'MAE_PRODU','es') AS DES_PROD_RECOGIDO, -- DESCRIPCION DE PRODUCTO
+LB.NUM_UNID_RECO AS UNID_RECOGIDA, -- NUMERO DE UNIDADES RECLAMADAS
+LB.COD_OPER AS OPERACION,
+(
+SELECT NUM_RECL
+FROM REC_CABEC_RECLA
+WHERE OID_CABE_RECL = LB.CARE_OID_CABE_RECL
+) AS NUM_RECL
+FROM INT_REC_LINEA_BOREC LB,
+	 INT_REC_CABEC_BOREC C,
+	 MAE_CLIEN MC,
+	INT_REC_ESTAD_BOREC REB	,
+        ZON_ZONA Z, 
+         ZON_REGIO R
+WHERE 
+ C.CLIE_OID_CLIE = MC.OID_CLIE
+AND LB.COD_CABE_BORE = C.COD_CABE_BORE
+AND  ((TRUNC(C.FEC_INGR) <= TO_DATE($P{fechaFinal},'DD/MM/YYYY')
+AND TRUNC(C.FEC_INGR) >= TO_DATE($P{fechaInicial},'DD/MM/YYYY')) OR (TRUNC(C.FEC_ING2) <= TO_DATE($P{fechaFinal},'DD/MM/YYYY')
+AND TRUNC(C.FEC_ING2) >= TO_DATE($P{fechaInicial},'DD/MM/YYYY')))
+AND R.COD_REGI= C.COD_REGI
+AND Z.COD_ZONA = C.COD_ZONA
+AND C.ESBO_OID_ESTA_BOR2=REB.OID_ESTA_BORE(+) 
+$P!{condicionRegion}
+$P!{condicionZona}
+$P!{condicionRecojo}
+$P!{condicionRecojo}
+Order by C.COD_REGI,
+C.COD_ZONA,
+C.COD_PERI_PROC,
+MC.COD_CLIE]]></queryString>
+
+	<field name="REGION" class="java.lang.String"/>
+	<field name="ZONA" class="java.lang.String"/>
+	<field name="CAMPAÑA_PROCESO" class="java.lang.String"/>
+	<field name="CLIENTE" class="java.lang.String"/>
+	<field name="NOM_CONS" class="java.lang.String"/>
+	<field name="NUMERO_BOLETA_RECOJO" class="java.math.BigDecimal"/>
+	<field name="NUMERO_RECOJO" class="java.lang.String"/>
+	<field name="FECHA_PRIMER_ENVIO" class="java.lang.String"/>
+	<field name="FECHA_PRIMER_RECOJO" class="java.lang.String"/>
+	<field name="FECHA_SEGUNDO_ENVIO" class="java.lang.String"/>
+	<field name="FECHA_SEGUNDO_RECOJO" class="java.lang.String"/>
+	<field name="ESTADO" class="java.lang.String"/>
+	<field name="RESULTADO" class="java.lang.String"/>
+	<field name="COD_SAP_RECL" class="java.lang.String"/>
+	<field name="DES_PROD_RECL" class="java.lang.String"/>
+	<field name="VAL_CODI_VENT_RECL" class="java.lang.String"/>
+	<field name="UNID_RECL" class="java.math.BigDecimal"/>
+	<field name="COD_SAP_RECOGIDO" class="java.lang.String"/>
+	<field name="DES_PROD_RECOGIDO" class="java.lang.String"/>
+	<field name="UNID_RECOGIDA" class="java.math.BigDecimal"/>
+	<field name="OPERACION" class="java.lang.String"/>
+	<field name="NUM_RECL" class="java.math.BigDecimal"/>
+
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="25"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="43"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-1"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaForm.region}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="43"
+						y="0"
+						width="43"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-2"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaForm.zona}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="86"
+						y="0"
+						width="55"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-3"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.campanaProceso}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="141"
+						y="0"
+						width="51"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-4"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.cliente}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="192"
+						y="0"
+						width="227"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-5"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.consultora}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="419"
+						y="0"
+						width="122"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-6"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.numeroBoletaRecojo}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="541"
+						y="0"
+						width="96"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-7"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.numeroRecojo}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="637"
+						y="0"
+						width="102"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-8"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.fechaPrimerEnvio}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="739"
+						y="0"
+						width="102"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-9"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.fechaPrimerRecojo}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="841"
+						y="0"
+						width="123"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-10"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.fechaSegundoEnvio}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="964"
+						y="0"
+						width="123"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-11"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.fechaSegundoRecojo}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1087"
+						y="0"
+						width="67"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-12"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="Thin" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.estado}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1154"
+						y="0"
+						width="70"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-13"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.resultado}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1224"
+						y="0"
+						width="104"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-14"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="Thin" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.codigoSap}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1328"
+						y="0"
+						width="210"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-15"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.producto}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1538"
+						y="0"
+						width="134"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-16"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.codigoVenta}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1672"
+						y="0"
+						width="122"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-17"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.unidades}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1794"
+						y="0"
+						width="115"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-18"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.codigoSAPRecojido}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1909"
+						y="0"
+						width="210"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-19"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.productoRecojido}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2119"
+						y="0"
+						width="118"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-20"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.unidadesRecojidas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2237"
+						y="0"
+						width="68"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-21"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.operacion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2305"
+						y="0"
+						width="86"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-22"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="Thin" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECControlBoletaRecojoxZonaXLS.numeroReclamo}]]></textFieldExpression>
+				</textField>
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="15"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="43"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{REGION}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="43"
+						y="0"
+						width="43"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{ZONA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="86"
+						y="0"
+						width="55"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{CAMPAÑA_PROCESO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="141"
+						y="0"
+						width="51"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{CLIENTE}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="192"
+						y="0"
+						width="227"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{NOM_CONS}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="419"
+						y="0"
+						width="122"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{NUMERO_BOLETA_RECOJO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="541"
+						y="0"
+						width="96"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{NUMERO_RECOJO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="637"
+						y="0"
+						width="102"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{FECHA_PRIMER_ENVIO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="739"
+						y="0"
+						width="102"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{FECHA_PRIMER_RECOJO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="841"
+						y="0"
+						width="123"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{FECHA_SEGUNDO_ENVIO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="964"
+						y="0"
+						width="123"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{FECHA_SEGUNDO_RECOJO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1087"
+						y="0"
+						width="67"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{ESTADO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1154"
+						y="0"
+						width="70"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{RESULTADO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1224"
+						y="0"
+						width="104"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_SAP_RECL}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1328"
+						y="0"
+						width="210"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{DES_PROD_RECL}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1538"
+						y="0"
+						width="134"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{VAL_CODI_VENT_RECL}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1672"
+						y="0"
+						width="122"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{UNID_RECL}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1794"
+						y="0"
+						width="115"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{COD_SAP_RECOGIDO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1909"
+						y="0"
+						width="210"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{DES_PROD_RECOGIDO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="2119"
+						y="0"
+						width="118"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{UNID_RECOGIDA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="2237"
+						y="0"
+						width="68"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="None" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{OPERACION}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="2305"
+						y="0"
+						width="86"
+						height="15"
+						key="textField"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" leftPadding="2" rightBorder="Thin" rightBorderColor="#000000" rightPadding="2" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement verticalAlignment="Middle">
+						<font fontName="Times New Roman" size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{NUM_RECL}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

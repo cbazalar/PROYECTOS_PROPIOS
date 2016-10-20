@@ -1,0 +1,1023 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+<sqlMap namespace="edu.ProcesosEDUSQL">
+    <typeAlias alias="calificacionAptasTipoCalificacion" type="biz.belcorp.ssicc.dao.edu.model.CalificacionAptasTipoCalificacion"/>	
+    <typeAlias alias="parametroProceso" type="biz.belcorp.ssicc.dao.edu.model.ParametroProceso"/>	
+    <typeAlias alias="calificacionAptasDemandaCurso" type="biz.belcorp.ssicc.dao.edu.model.CalificacionAptasDemandaCurso"/>	
+    <typeAlias alias="calificacionAptaDemandaCampanha" type="biz.belcorp.ssicc.dao.edu.model.CalificacionAptaDemandaCampanha"/>		
+    <typeAlias alias="calificacionAptaDemandaCliente" type="biz.belcorp.ssicc.dao.edu.model.CalificacionAptaDemandaCliente"/>		
+    <typeAlias alias="calificacionAptaDemandaRegion" type="biz.belcorp.ssicc.dao.edu.model.CalificacionAptaDemandaRegion"/>		
+    <typeAlias alias="calificacionAptaDemandaZona" type="biz.belcorp.ssicc.dao.edu.model.CalificacionAptaDemandaZona"/>		
+    <typeAlias alias="auditoria" 				   type="biz.belcorp.ssicc.dao.edu.model.Auditoria"/>		
+    <typeAlias alias="detalleAuditoria" 		   type="biz.belcorp.ssicc.dao.edu.model.DetalleAuditoria"/>		
+
+    <resultMap id="cursosCalificacionAptasAutomaticaResult" class="calificacionAptasTipoCalificacion">
+		<result property="codigoPais"                  column = "PAIS_COD_PAIS"/>           		
+		<result property="codigoEmpresa"               column = "EMCO_COD_EMPR_COME"/>        	
+		<result property="nombreEmpresa"               column = "DES_EMPR_COME"/>        	
+		<result property="codigoCurso"                 column = "COD_CURS_CAPA"/>        	
+		<result property="nombreCurso"                 column = "NOM_CURS_CAPA"/>		
+		<result property="tipoCalificacion"            column = "TIP_CALI"/>        	
+	</resultMap>
+
+    <resultMap id="previoCalificacionAptasDemandaResult" class="java.util.HashMap">
+		<result property="codigoCurso"                 column = "COD_CURS_CAPA"/>        	
+		<result property="codigoCliente"               column = "COD_CLIE"/>        	
+		<result property="primerNombre"                column = "PRI_NOMB"/>        	
+		<result property="segundoNombre"               column = "SEG_NOMB"/>        	
+		<result property="apellidoPaterno"             column = "APE_PATE"/>        	
+		<result property="apellidoMaterno"             column = "APE_MATE"/>        	
+		<result property="campannaIngreso"             column = "CAM_INGR"/>		
+		<result property="codigoRegion"                column = "COD_REGI"/>		
+		<result property="codigoZona"                  column = "COD_ZONA"/>		
+	</resultMap>
+
+   <resultMap id="listaStatusConsultoraResult" class="java.util.HashMap">
+		<result property="codigoCliente"               column = "COD_CLIE"/>        	
+		<result property="nivelActual"                 column = "NIV_ACTU"/>        	
+		<result property="nivelSiguiente"              column = "NIV_SGTE"/>  
+      	<result property="descripcionEstado"           column = "DES_CAPA"/>  
+      	<result property="codigoPeriodo"	           column = "CAM_PROC"/>  
+      	<result property="codigoRegion"           	   column = "COD_REGI"/>  
+	</resultMap>
+
+    <select id="getListaStatusConsultora" parameterClass="java.util.Map" resultMap="listaStatusConsultoraResult">
+		SELECT 
+             COD_CLIE,
+             NIV_ACTU,
+			 NIV_SGTE,
+			 DES_CAPA,
+			 CAM_PROC,
+			 COD_REGI
+		FROM EDU_GTT_STATU_CONSU
+		ORDER BY COD_CLIE
+	</select>
+
+
+    <select id="getCampannaActualProceso" parameterClass="java.util.Map" resultClass="string">
+       SELECT 
+          EDU_PKG_CALIF.EDU_FN_DEVUE_CAMPA_PROCE_ACTUA(#codigoPais#, #codigoEmpresa#)
+	   FROM DUAL	
+	</select>
+
+    <select id="getCantidadPlanillasRegion" parameterClass="java.util.Map" resultClass="int">
+       SELECT 
+          EDU_PKG_PROCE_GENER.EDU_FN_CANTI_PLANI_REGION(#codigoPais#, #codigoEmpresa#,#codigoRegion#,#codigoZona#,#campanhaProceso#)
+	   FROM DUAL	
+	</select>
+
+    <select id="getFechaProcesoFacturacion" parameterClass="java.util.Map" resultClass="string">
+       SELECT 
+          EDU_PKG_CALIF.EDU_FN_DEVUE_FECHA_FACTU_ACTUA(#codigoPais#, #codigoEmpresa#)
+	   FROM DUAL	
+	</select>
+
+    <select id="getCursosCalificacionAptasAutomaticaByCriteria" parameterClass="java.util.Map" resultMap="cursosCalificacionAptasAutomaticaResult">
+		SELECT
+			A.PAIS_COD_PAIS,
+			A.EMCO_COD_EMPR_COME,        	
+			B.DES_EMPR_COME,			
+			A.COD_CURS_CAPA,    
+			A.NOM_CURS_CAPA,    	
+            C.TIP_CALI  
+		FROM EDU_EMPRE_COMER B,
+		     EDU_PARAM_CURSO_CAPAC A,
+             EDU_FRECU_CALIF C
+			 
+		WHERE A.PAIS_COD_PAIS  = #codigoPais#
+		AND   A.PAIS_COD_PAIS  = B.PAIS_COD_PAIS 
+		AND   A.EMCO_COD_EMPR_COME   = B.COD_EMPR_COME
+		<![CDATA[
+			AND   A.EST_REGI   <> '9'
+		]]>
+		AND   C.COD_FREC_CALI = A.FRCA_COD_FREC_CALI
+		AND   EDU_PKG_CALIF.EDU_FN_DEVUE_CURSO_CALIF_AUTOM(A.PAIS_COD_PAIS, A.EMCO_COD_EMPR_COME, A.COD_CURS_CAPA, #codigoPeriodo#) = '1'
+		<isNotEmpty prepend="AND" property="tipoCalificacion">
+			C.TIP_CALI = #tipoCalificacion#
+		</isNotEmpty>		
+		<isNotEmpty prepend="AND" property="estadoRegistro">
+			A.EST_REGI = #estadoRegistro#
+		</isNotEmpty>		
+		<isNotEmpty prepend="AND" property="codigoCurso">
+			A.COD_CURS_CAPA = #codigoCurso#
+		</isNotEmpty>		
+		<isNotEmpty prepend="AND" property="codigoEmpresa">
+			A.EMCO_COD_EMPR_COME= #codigoEmpresa#       	
+		</isNotEmpty>	
+		ORDER BY A.PAIS_COD_PAIS, A.EMCO_COD_EMPR_COME,	A.COD_CURS_CAPA
+	</select>
+
+
+    <parameterMap id="paramCalificacionAptasAutomatica" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCurso"               jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="indicadorBloqueo"          jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuario.login"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+
+    <procedure id="executeCalificacionAptasAutomatica" parameterMap="paramCalificacionAptasAutomatica" >
+		{call EDU_PKG_CALIF.EDU_PR_CALIF_APTAS_AUTOM(?, ?, ?, ?, ?, ? )}
+    </procedure>
+
+    <parameterMap id="paramCalificacionAptasDemanda" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCurso"               jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuario.login"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+
+    <procedure id="executeCalificacionAptasDemanda" parameterMap="paramCalificacionAptasDemanda" >
+		{call EDU_PKG_CALIF.EDU_PR_CALIF_APTAS_DEMAM(?, ?, ?, ?, ? )}
+    </procedure>
+
+    <select id="getPrevioCalificacionAptasDemanda" parameterClass="java.util.Map" resultMap="previoCalificacionAptasDemandaResult">
+		SELECT 
+             A.COD_CURS_CAPA,
+             B.COD_CLIE,
+			 B.PRI_NOMB,
+			 B.SEG_NOMB,	
+			 B.APE_PATE,
+	         B.APE_MATE,
+			 B.CAM_INGR,
+			 B.COD_REGI,
+			 B.COD_ZONA	 
+		
+		FROM EDU_GTT_CLIEN_PAIS A,
+		     EDU_MAEST_CLIEN B
+			 
+		WHERE B.PAIS_COD_PAIS		= A.COD_PAIS
+		  AND B.EMCO_COD_EMPR_COME  = A.COD_EMPR_COME
+		  AND B.COD_CLIE = A.COD_CLIE
+		ORDER BY A.COD_CLIE
+	</select>
+
+    <select id="getGTTParamProceso" parameterClass="java.util.Map" resultClass="int">
+		SELECT count(1)
+         FROM EDU_GTT_PARAM_PROCE X
+       WHERE X.COD_PROC = #codigoProceso#
+         AND X.COD_PARA = #codigoPrograma#
+	 </select>
+
+
+   <parameterMap id="paramPrevioCalificacionAptasDemanda" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoProceso"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPrograma"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="registrosObtenidos"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+
+    <procedure id="executePrevioCalificacionAptasDemanda" parameterMap="paramPrevioCalificacionAptasDemanda" >
+		{call EDU_PKG_CALIF.EDU_PR_CARGA_APTAS_DEMAM(?, ?, ?, ?, ?, ?) }
+    </procedure>
+
+   
+    <parameterMap id="paramActualizarPlanillaProgramacion" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuario.login"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+
+    <procedure id="executeActualizarPlanillaProgramacion" parameterMap="paramActualizarPlanillaProgramacion" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_ACTUA_PLANI_PROGR(?, ?, ?)}
+    </procedure>
+	
+    <parameterMap id="paramCerrarCursosVigentes" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoProceso"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoParam"               jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuarioLogin"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+
+    <procedure id="executeCerrarCursosVigentes" parameterMap="paramCerrarCursosVigentes" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_CIERR_CURSO_DICTA(?, ?, ?, ?, ?, ?)}
+    </procedure>
+
+    <parameterMap id="paramExecutePasarConsultorasProgramadaAPendienteRegion" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoProceso"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoParam"               jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuarioLogin"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+
+    <procedure id="executePasarConsultorasProgramadaAPendienteRegion" parameterMap="paramExecutePasarConsultorasProgramadaAPendienteRegion" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_PROCE_CONSU_PROGR_PENDI(?, ?, ?, ?, ?, ?)}
+    </procedure>
+
+    <update id="updateCerrarCursosVigentes" parameterClass="java.util.Map">
+		UPDATE EDU_HISTO_CURSO_DICTA_CABEC
+		SET 
+            EST_CURS_DICT = 'C',
+			USU_MODI = #usuarioLogin#,
+			FEC_MODI = SYSDATE
+		WHERE PAIS_COD_PAIS = #codigoPais# 
+          AND EMCO_COD_EMPR_COME = #codigoEmpresa# 
+		  AND EST_CURS_DICT = 'V'
+		  AND EST_REGI = '1'	
+		<iterate prepend="AND" property="regionList" open="(" close=")" conjunction="OR">
+        	  COD_REGI=#regionList[]#
+        </iterate> 
+    </update>
+
+    <parameterMap id="paramCerrarCronogramaDictado" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoProceso"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoParam"               jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuarioLogin"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+
+    <procedure id="executeCerrarCronogramaDictado" parameterMap="paramCerrarCronogramaDictado" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_CIERR_CRONO_DICTA(?, ?, ?, ?, ?, ?)}
+    </procedure>
+
+
+    <parameterMap id="paramExecuteListaStatusConsultora" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoProceso"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoParam"               jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+
+    <procedure id="executeListaStatusConsultora" parameterMap="paramExecuteListaStatusConsultora" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_LISTA_STATU_CONSU(?, ?, ?, ?, ?)}
+    </procedure>
+
+	
+   <parameterMap id="paramActualizarParametrosCurso" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuarioLogin"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+
+    <procedure id="executeActualizarParametrosCurso" parameterMap="paramActualizarParametrosCurso" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_PROCE_CIERR_CAMPA(?, ?, ?, ? )}
+    </procedure>
+
+   <parameterMap id="paramExecuteBloqueoConsultoraCampanna" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuarioLogin"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+
+    <procedure id="executeBloqueoConsultoraCampanna" parameterMap="paramExecuteBloqueoConsultoraCampanna" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_PROCE_BLOQU_CONSU_CAMPA(?, ?, ?, ? )}
+    </procedure>
+
+
+    <resultMap id="parametroProcesoResult" class="parametroProceso">
+		<result property="codigoProceso"               column = "COD_PROC"/>           		
+		<result property="codigoParametro"             column = "COD_PARA"/>        	
+		<result property="valorCadenaParametro"        column = "VAL_PARA_VARC"/>        	
+		<result property="valorNumericoParametro"      column = "VAL_PARA_NUMB"/>        	
+	</resultMap>
+
+    <insert id="insertParametroProceso" parameterClass="parametroProceso">
+	    INSERT INTO EDU_GTT_PARAM_PROCE
+			(
+			COD_PROC,
+			COD_PARA,
+			VAL_PARA_VARC,
+			VAL_PARA_NUMB
+			)
+		VALUES
+			(
+			#codigoProceso#,                     
+			#codigoParametro#,                     	
+			#valorCadenaParametro#,                     	
+			#valorNumericoParametro#                     	
+			)
+	</insert>
+
+	<select id="getParametroProceso" parameterClass="parametroProceso" resultMap="parametroProcesoResult">
+		SELECT
+			COD_PROC,
+			COD_PARA,
+			VAL_PARA_VARC,
+			VAL_PARA_NUMB
+		FROM EDU_GTT_PARAM_PROCE
+		WHERE COD_PROC = #codigoProceso#
+		<isNotEmpty prepend="AND" property="codigoParametro">
+			COD_PARA =#codigoParametro#
+		</isNotEmpty>		
+	</select>
+
+    <parameterMap id="paramGenerarPlanillaProgramacion" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuario.login"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="tipoProceso"               jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoProceso"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoParametro"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="mensajeError"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+
+    <procedure id="executeGenerarPlanillaProgramacion" parameterMap="paramGenerarPlanillaProgramacion" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_GENER_PLANI_PROGR(?, ?, ?, ?, ?, ?, ?)}
+    </procedure>
+
+ 	<resultMap id="calificacionAptasDemandaCursoResult" class="calificacionAptasDemandaCurso">
+		<result property="codigoPais"                  column = "PAIS_COD_PAIS"/>           		
+		<result property="codigoEmpresa"               column = "EMCO_COD_EMPR_COME"/>        	
+		<result property="nombreEmpresa"               column = "DES_EMPR_COME"/>        	
+		<result property="codigoCurso"                 column = "COD_CURS_CAPA"/>        	
+		<result property="nombreCurso"                 column = "NOM_CURS_CAPA"/>		
+		<result property="estadoCurso"                 column = "EST_CURS_CAPA"/>
+		<result property="cantidadCampanha"            column = "COUNT_CAMPANHA"/>        	
+		<result property="cantidadCliente"             column = "COUNT_CLIENTE"/>        	
+		<result property="cantidadRegion"              column = "COUNT_REGION"/>        	
+		<result property="cantidadZona"                column = "COUNT_ZONA"/>        	
+	</resultMap>
+
+	<select id="getCalificacionAptasDemandaCurso" parameterClass="calificacionAptasDemandaCurso" resultMap="calificacionAptasDemandaCursoResult">
+		SELECT
+			A.PAIS_COD_PAIS,
+			A.EMCO_COD_EMPR_COME,        	
+			B.DES_EMPR_COME,			
+			A.COD_CURS_CAPA,    
+			A.NOM_CURS_CAPA,    	
+			A.EST_CURS_CAPA,
+            (SELECT COUNT(1) AS REG_CAMPANHA        
+             FROM EDU_PARAM_CURSO_DEMAN_CAMPA X
+             WHERE A.COD_CURS_CAPA = X.CCAP_COD_CURS_CAPA       
+             AND   A.PAIS_COD_PAIS = X.PAIS_COD_PAIS       
+             AND   A.EMCO_COD_EMPR_COME = X.EMCO_COD_EMPR_COME      
+			 AND   X.COD_CAMP_PROC     = #campanhaCalificacion#       
+            )AS COUNT_CAMPANHA,
+            (
+              SELECT COUNT(1) AS REG_CAMPANHA        
+              FROM EDU_PARAM_CURSO_DEMAN_CLIEN X
+              WHERE A.COD_CURS_CAPA = X.CCAP_COD_CURS_CAPA       
+              AND   A.PAIS_COD_PAIS = X.PAIS_COD_PAIS       
+              AND   A.EMCO_COD_EMPR_COME = X.EMCO_COD_EMPR_COME       
+			  AND   X.COD_CAMP_PROC     = #campanhaCalificacion#
+             ) AS COUNT_CLIENTE,
+             (                     
+                SELECT COUNT(1) AS REG_CAMPANHA        
+                FROM EDU_PARAM_CURSO_DEMAN_REGIO X
+                WHERE A.COD_CURS_CAPA = X.CCAP_COD_CURS_CAPA       
+                AND   A.PAIS_COD_PAIS = X.PAIS_COD_PAIS       
+                AND   A.EMCO_COD_EMPR_COME = X.EMCO_COD_EMPR_COME       
+				AND   X.COD_CAMP_PROC     = #campanhaCalificacion#
+               ) AS COUNT_REGION,
+               (
+                SELECT COUNT(1) AS REG_CAMPANHA        
+                FROM EDU_PARAM_CURSO_DEMAN_ZONA X
+                WHERE A.COD_CURS_CAPA = X.CCAP_COD_CURS_CAPA       
+                AND   A.PAIS_COD_PAIS = X.PAIS_COD_PAIS       
+                AND   A.EMCO_COD_EMPR_COME = X.EMCO_COD_EMPR_COME       
+				AND   X.COD_CAMP_PROC     = #campanhaCalificacion#
+               ) AS COUNT_ZONA
+
+		FROM  EDU_EMPRE_COMER B,
+		      EDU_PARAM_CURSO_CAPAC A
+		WHERE A.PAIS_COD_PAIS		 = #codigoPais#
+		AND   A.EMCO_COD_EMPR_COME   = B.COD_EMPR_COME
+		AND	  A.IND_DICT_EXMA 		 = 'S'
+		<isNotEmpty prepend="AND" property="estadoRegistro">
+			A.EST_REGI = #estadoRegistro#
+		</isNotEmpty>		
+		<isNotEmpty prepend="AND" property="codigoCurso">
+			A.COD_CURS_CAPA = #codigoCurso#
+		</isNotEmpty>		
+		<isNotEmpty prepend="AND" property="codigoEmpresa">
+			A.EMCO_COD_EMPR_COME= #codigoEmpresa#       	
+		</isNotEmpty>		
+		ORDER BY
+			A.PAIS_COD_PAIS      ,		
+			A.EMCO_COD_EMPR_COME ,    
+		    TO_NUMBER(A.COD_CURS_CAPA) ASC
+	</select>
+
+ 	<resultMap id="calificacionAptaDemandaCampanhaResult" class="calificacionAptaDemandaCampanha">
+		<result property="codigoPais"                  column = "PAIS_COD_PAIS"/>           		
+		<result property="codigoEmpresa"               column = "EMCO_COD_EMPR_COME"/>        	
+		<result property="nombreEmpresa"               column = "DES_EMPR_COME"/>        			
+		<result property="codigoCurso"                 column = "COD_CURS_CAPA"/>        	
+		<result property="nombreCurso"                 column = "NOM_CURS_CAPA"/>				
+		<result property="campanhaIngreso"             column = "COD_CAMP_INGR"/>        	
+		<result property="campanhaCalificacion"        column = "COD_CAMP_PROC"/>        	
+	</resultMap>
+
+	<select id="getCalificacionAptaDemandaCampanha" parameterClass="calificacionAptaDemandaCampanha" resultMap="calificacionAptaDemandaCampanhaResult">
+		SELECT
+			A.PAIS_COD_PAIS,
+			A.EMCO_COD_EMPR_COME,        	
+			B.DES_EMPR_COME,			
+			C.COD_CURS_CAPA,    
+			C.NOM_CURS_CAPA,    	
+			A.COD_CAMP_PROC,
+			A.COD_CAMP_INGR
+		FROM EDU_PARAM_CURSO_DEMAN_CAMPA A,
+			 EDU_EMPRE_COMER B,
+			 EDU_PARAM_CURSO_CAPAC C
+		WHERE A.PAIS_COD_PAIS       = #codigoPais#
+		AND	A.EMCO_COD_EMPR_COME    = #codigoEmpresa#
+		AND A.CCAP_COD_CURS_CAPA	= #codigoCurso#
+		AND C.PAIS_COD_PAIS         = A.PAIS_COD_PAIS
+		AND C.EMCO_COD_EMPR_COME    = A.EMCO_COD_EMPR_COME
+		AND C.COD_CURS_CAPA         = A.CCAP_COD_CURS_CAPA
+		AND B.COD_EMPR_COME         = A.EMCO_COD_EMPR_COME      
+		AND B.PAIS_COD_PAIS         = A.PAIS_COD_PAIS         
+		<isNotEmpty prepend="AND" property="campanhaCalificacion">
+			A.COD_CAMP_PROC =#campanhaCalificacion#
+		</isNotEmpty>		
+	</select>
+
+ 	<resultMap id="calificacionAptaDemandaClienteResult" class="calificacionAptaDemandaCliente">
+		<result property="codigoPais"                  column = "PAIS_COD_PAIS"/>           		
+		<result property="codigoEmpresa"               column = "EMCO_COD_EMPR_COME"/>        	
+		<result property="nombreEmpresa"               column = "DES_EMPR_COME"/>        			
+		<result property="codigoCurso"                 column = "COD_CURS_CAPA"/>        	
+		<result property="nombreCurso"                 column = "NOM_CURS_CAPA"/>				
+		<result property="codigoCliente"               column = "CLIE_COD_CLIE"/>        	
+		<result property="campanhaCalificacion"        column = "COD_CAMP_PROC"/>        	
+		<result property="descripcionCliente"          column = "descripcionCliente"/>        	
+	</resultMap>
+
+	<select id="getCalificacionAptaDemandaCliente" parameterClass="calificacionAptaDemandaCliente" resultMap="calificacionAptaDemandaClienteResult">
+		SELECT
+	        A.PAIS_COD_PAIS,
+    	    A.EMCO_COD_EMPR_COME,        	
+        	B.DES_EMPR_COME,			
+	        C.COD_CURS_CAPA,    
+    	    C.NOM_CURS_CAPA,    	
+        	A.COD_CAMP_PROC,
+	        A.CLIE_COD_CLIE,
+			NVL(D.PRI_NOMB,'') || ' ' || NVL(D.SEG_NOMB,'')||' '||NVL(D.APE_PATE,'')||' '||NVL(D.APE_MATE,'') AS descripcionCliente
+		FROM EDU_PARAM_CURSO_DEMAN_CLIEN A,
+        	EDU_EMPRE_COMER B,
+	        EDU_PARAM_CURSO_CAPAC C,
+			EDU_MAEST_CLIEN	D
+		WHERE A.PAIS_COD_PAIS       = #codigoPais#
+		AND	A.EMCO_COD_EMPR_COME    = #codigoEmpresa#
+		AND A.CCAP_COD_CURS_CAPA	= #codigoCurso#
+		AND C.PAIS_COD_PAIS         = A.PAIS_COD_PAIS
+		AND C.EMCO_COD_EMPR_COME    = A.EMCO_COD_EMPR_COME
+		AND C.COD_CURS_CAPA         = A.CCAP_COD_CURS_CAPA
+		AND B.COD_EMPR_COME         = A.EMCO_COD_EMPR_COME      
+		AND B.PAIS_COD_PAIS         = A.PAIS_COD_PAIS         
+		AND D.COD_CLIE			    = A.CLIE_COD_CLIE
+		<isNotEmpty prepend="AND" property="campanhaCalificacion">
+			A.COD_CAMP_PROC =#campanhaCalificacion#
+		</isNotEmpty>		
+	</select>
+
+ 	<resultMap id="calificacionAptaDemandaRegionResult" class="calificacionAptaDemandaRegion">
+		<result property="codigoPais"                  column = "PAIS_COD_PAIS"/>           		
+		<result property="codigoEmpresa"               column = "EMCO_COD_EMPR_COME"/>        	
+		<result property="nombreEmpresa"               column = "DES_EMPR_COME"/>        			
+		<result property="codigoCurso"                 column = "COD_CURS_CAPA"/>        	
+		<result property="nombreCurso"                 column = "NOM_CURS_CAPA"/>				
+		<result property="codigoRegion"                column = "REGI_COD_REGI"/>        	
+		<result property="campanhaCalificacion"        column = "COD_CAMP_PROC"/>        	
+		<result property="descripcionRegion"           column = "DES_REGI"/>   
+	</resultMap>
+
+	<select id="getCalificacionAptaDemandaRegion" parameterClass="calificacionAptaDemandaRegion" resultMap="calificacionAptaDemandaRegionResult">
+		SELECT
+	        A.PAIS_COD_PAIS,
+    	    A.EMCO_COD_EMPR_COME,        	
+        	B.DES_EMPR_COME,			
+	        C.COD_CURS_CAPA,    
+    	    C.NOM_CURS_CAPA,    	
+        	A.COD_CAMP_PROC,
+	        A.REGI_COD_REGI,
+			D.DES_REGI
+		FROM EDU_PARAM_CURSO_DEMAN_REGIO A,
+        	EDU_EMPRE_COMER B,
+	        EDU_PARAM_CURSO_CAPAC C,
+			EDU_REGIO D
+		WHERE A.PAIS_COD_PAIS       = #codigoPais#
+		AND	A.EMCO_COD_EMPR_COME    = #codigoEmpresa#
+		AND A.CCAP_COD_CURS_CAPA	= #codigoCurso#
+		AND C.PAIS_COD_PAIS         = A.PAIS_COD_PAIS
+		AND C.EMCO_COD_EMPR_COME    = A.EMCO_COD_EMPR_COME
+		AND C.COD_CURS_CAPA         = A.CCAP_COD_CURS_CAPA
+		AND B.COD_EMPR_COME         = A.EMCO_COD_EMPR_COME      
+		AND B.PAIS_COD_PAIS         = A.PAIS_COD_PAIS   
+		AND D.PAIS_COD_PAIS			= A.PAIS_COD_PAIS
+		AND D.EMCO_COD_EMPR_COME	= A.EMCO_COD_EMPR_COME
+		AND D.COD_REGI				= A.REGI_COD_REGI    
+		<isNotEmpty prepend="AND" property="campanhaCalificacion">
+			A.COD_CAMP_PROC =#campanhaCalificacion#
+		</isNotEmpty>		
+	</select>
+
+ 	<resultMap id="calificacionAptaDemandaZonaResult" class="calificacionAptaDemandaZona">
+		<result property="codigoPais"                  column = "PAIS_COD_PAIS"/>           		
+		<result property="codigoEmpresa"               column = "EMCO_COD_EMPR_COME"/>        	
+		<result property="nombreEmpresa"               column = "DES_EMPR_COME"/>        			
+		<result property="codigoCurso"                 column = "COD_CURS_CAPA"/>        	
+		<result property="nombreCurso"                 column = "NOM_CURS_CAPA"/>				
+		<result property="codigoRegion"                column = "REGI_COD_REGI"/>        	
+		<result property="codigoZona"                  column = "ZONA_COD_ZONA"/>        	
+		<result property="campanhaCalificacion"        column = "COD_CAMP_PROC"/>        	
+		<result property="descripcionZona"         	   column = "DES_ZONA"/>        	
+		<result property="descripcionRegion"           column = "DES_REGI"/>        	
+	</resultMap>
+
+	<select id="getCalificacionAptaDemandaZona" parameterClass="calificacionAptaDemandaZona" resultMap="calificacionAptaDemandaZonaResult">
+		SELECT
+	        A.PAIS_COD_PAIS,
+    	    A.EMCO_COD_EMPR_COME,        	
+        	B.DES_EMPR_COME,			
+	        C.COD_CURS_CAPA,    
+    	    C.NOM_CURS_CAPA,    	
+        	A.COD_CAMP_PROC,
+	        A.REGI_COD_REGI,
+          	A.ZONA_COD_ZONA,
+			D.DES_REGI,
+			E.DES_ZONA
+		FROM EDU_PARAM_CURSO_DEMAN_ZONA A,
+        	EDU_EMPRE_COMER B,
+	        EDU_PARAM_CURSO_CAPAC C,
+			EDU_REGIO D,
+			EDU_ZONA E
+		WHERE A.PAIS_COD_PAIS       = #codigoPais#
+		AND	A.EMCO_COD_EMPR_COME    = #codigoEmpresa#
+		AND A.CCAP_COD_CURS_CAPA	= #codigoCurso#
+		AND C.PAIS_COD_PAIS         = A.PAIS_COD_PAIS
+		AND C.EMCO_COD_EMPR_COME    = A.EMCO_COD_EMPR_COME
+		AND C.COD_CURS_CAPA         = A.CCAP_COD_CURS_CAPA
+		AND B.COD_EMPR_COME         = A.EMCO_COD_EMPR_COME      
+		AND B.PAIS_COD_PAIS         = A.PAIS_COD_PAIS  
+		AND D.PAIS_COD_PAIS			= A.PAIS_COD_PAIS  
+		AND D.EMCO_COD_EMPR_COME	= A.EMCO_COD_EMPR_COME             
+		AND D.COD_REGI				= A.REGI_COD_REGI
+		AND E.PAIS_COD_PAIS			= D.PAIS_COD_PAIS
+		AND E.EMCO_COD_EMPR_COME	= D.EMCO_COD_EMPR_COME
+		AND E.REGI_COD_REGI			= D.COD_REGI
+		AND E.COD_ZONA				= A.ZONA_COD_ZONA
+		<isNotEmpty prepend="AND" property="campanhaCalificacion">
+			A.COD_CAMP_PROC =#campanhaCalificacion#
+		</isNotEmpty>		
+	</select>
+
+    <insert id="insertCalificacionAptaDemandaCampanha" parameterClass="calificacionAptaDemandaCampanha">
+		INSERT INTO EDU_PARAM_CURSO_DEMAN_CAMPA
+		 (
+		  	PAIS_COD_PAIS      ,
+		  	EMCO_COD_EMPR_COME ,
+		  	CCAP_COD_CURS_CAPA ,
+		  	COD_CAMP_PROC      ,
+		  	COD_CAMP_INGR      ,
+		  	EST_REGI           ,
+		  	USU_DIGI           ,
+		  	FEC_DIGI           
+		  )
+		VALUES
+		 (
+			#codigoPais#,                  
+			#codigoEmpresa#,               
+			#codigoCurso#,            
+			#campanhaCalificacion#,     
+			#campanhaIngreso#	,
+			'1',
+        	#auditInfo.createdBy#, 
+        	#auditInfo.created#
+	    )
+	</insert>
+
+	<delete id="removeCalificacionAptaDemandaCampanha" parameterClass="calificacionAptaDemandaCampanha">
+		DELETE FROM EDU_PARAM_CURSO_DEMAN_CAMPA
+		WHERE PAIS_COD_PAIS   	 =	#codigoPais#                  
+		AND   EMCO_COD_EMPR_COME =	#codigoEmpresa#               
+		<isNotEmpty prepend="AND" property="codigoCurso">
+			CCAP_COD_CURS_CAPA   =  #codigoCurso#
+		</isNotEmpty>		
+		<isNotEmpty prepend="AND" property="campanhaCalificacion">
+			COD_CAMP_PROC		 =  #campanhaCalificacion#
+		</isNotEmpty>		
+		<isNotEmpty prepend="AND" property="campanhaIngreso">
+			COD_CAMP_INGR		 =  #campanhaIngreso#
+		</isNotEmpty>		
+	</delete>
+
+    <insert id="insertCalificacionAptaDemandaCliente" parameterClass="calificacionAptaDemandaCliente">
+		INSERT INTO EDU_PARAM_CURSO_DEMAN_CLIEN
+		 (
+		  	PAIS_COD_PAIS      ,
+		  	EMCO_COD_EMPR_COME ,
+		  	CCAP_COD_CURS_CAPA ,
+		  	COD_CAMP_PROC      ,
+		  	CLIE_COD_CLIE		 ,
+		  	EST_REGI           ,
+		  	USU_DIGI           ,
+		  	FEC_DIGI           
+		  )
+		VALUES
+		 (
+			#codigoPais#,                  
+			#codigoEmpresa#,               
+			#codigoCurso#,            
+			#campanhaCalificacion#,     
+			#codigoCliente#		 ,
+			'1',
+        	#auditInfo.createdBy#, 
+        	#auditInfo.created#
+	    )
+	</insert>
+
+	<delete id="removeCalificacionAptaDemandaCliente" parameterClass="calificacionAptaDemandaCliente">
+		DELETE FROM EDU_PARAM_CURSO_DEMAN_CLIEN
+		WHERE PAIS_COD_PAIS   	 =	#codigoPais#                  
+		AND   EMCO_COD_EMPR_COME =	#codigoEmpresa#               
+		<isNotEmpty prepend="AND" property="codigoCurso">
+			CCAP_COD_CURS_CAPA   =  #codigoCurso#
+		</isNotEmpty>		
+		<isNotEmpty prepend="AND" property="campanhaCalificacion">
+			COD_CAMP_PROC		 =  #campanhaCalificacion#
+		</isNotEmpty>		
+		<isNotEmpty prepend="AND" property="codigoCliente">
+			CLIE_COD_CLIE		 =  #codigoCliente#
+		</isNotEmpty>		
+	</delete>
+
+    <insert id="insertCalificacionAptaDemandaRegion" parameterClass="calificacionAptaDemandaRegion">
+		INSERT INTO EDU_PARAM_CURSO_DEMAN_REGIO
+		 (
+		  	PAIS_COD_PAIS      ,
+		  	EMCO_COD_EMPR_COME ,
+		  	CCAP_COD_CURS_CAPA ,
+		  	COD_CAMP_PROC      ,
+		  	REGI_COD_REGI	   ,
+		  	EST_REGI           ,
+		  	USU_DIGI           ,
+		  	FEC_DIGI           
+		  )
+		VALUES
+		 (
+			#codigoPais#,                  
+			#codigoEmpresa#,               
+			#codigoCurso#,            
+			#campanhaCalificacion#,     
+			#codigoRegion#		 ,
+			'1',
+        	#auditInfo.createdBy#, 
+        	#auditInfo.created#
+	    )
+	</insert>
+
+	<delete id="removeCalificacionAptaDemandaRegion" parameterClass="calificacionAptaDemandaRegion">
+		DELETE FROM EDU_PARAM_CURSO_DEMAN_REGIO
+		WHERE PAIS_COD_PAIS   	 =	#codigoPais#                  
+		AND   EMCO_COD_EMPR_COME =	#codigoEmpresa#               
+		<isNotEmpty prepend="AND" property="codigoCurso">
+			CCAP_COD_CURS_CAPA   =  #codigoCurso#
+		</isNotEmpty>		
+		<isNotEmpty prepend="AND" property="campanhaCalificacion">
+			COD_CAMP_PROC		 =  #campanhaCalificacion#
+		</isNotEmpty>		
+		<isNotEmpty prepend="AND" property="codigoRegion">
+			REGI_COD_REGI		 =  #codigoRegion#
+		</isNotEmpty>		
+	</delete>
+
+    <insert id="insertCalificacionAptaDemandaZona" parameterClass="calificacionAptaDemandaZona">
+		INSERT INTO EDU_PARAM_CURSO_DEMAN_ZONA
+		 (
+		  	PAIS_COD_PAIS      ,
+		  	EMCO_COD_EMPR_COME ,
+		  	CCAP_COD_CURS_CAPA ,
+		  	COD_CAMP_PROC      ,
+		  	REGI_COD_REGI	   ,
+		  	ZONA_COD_ZONA	   ,
+		  	EST_REGI           ,
+		  	USU_DIGI           ,
+		  	FEC_DIGI           
+		  )
+		VALUES
+		 (
+			#codigoPais#,                  
+			#codigoEmpresa#,               
+			#codigoCurso#,            
+			#campanhaCalificacion#,     
+			#codigoRegion#		 ,
+			#codigoZona#		 ,
+			'1',
+        	#auditInfo.createdBy#, 
+        	#auditInfo.created#
+	    )
+	</insert>
+
+	<delete id="removeCalificacionAptaDemandaZona" parameterClass="calificacionAptaDemandaZona">
+		DELETE FROM EDU_PARAM_CURSO_DEMAN_ZONA
+		WHERE PAIS_COD_PAIS   	 =	#codigoPais#                  
+		AND   EMCO_COD_EMPR_COME =	#codigoEmpresa#               
+		<isNotEmpty prepend="AND" property="codigoCurso">
+			CCAP_COD_CURS_CAPA   =  #codigoCurso#
+		</isNotEmpty>		
+		<isNotEmpty prepend="AND" property="campanhaCalificacion">
+			COD_CAMP_PROC		 =  #campanhaCalificacion#
+		</isNotEmpty>		
+		<isNotEmpty prepend="AND" property="codigoRegion">
+			REGI_COD_REGI		 =  #codigoRegion#
+		</isNotEmpty>		
+		<isNotEmpty prepend="AND" property="codigoZona">
+			ZONA_COD_ZONA		 =  #codigoZona#
+		</isNotEmpty>		
+	</delete>
+
+<!-- sb proceso recodificacion cliente 05/11/2007 -->
+
+  <parameterMap id="paramRecodificacionCliente" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuarioLogin"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoConsultora"          jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoConsultoraRecod"     jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="mensajeError"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+
+   <procedure id="executeRecodificacionConsultora" parameterMap="paramRecodificacionCliente" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_RECOD_CONSU(?, ?, ?, ?, ? ,?) }
+   </procedure>
+
+   <parameterMap id="paramGenerarReporteCronogramaDictado" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="campanhaProceso"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoRegion"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoZona"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+   </parameterMap>
+
+   <procedure id="executeGenerarReporteCronogramaDictado" parameterMap="paramGenerarReporteCronogramaDictado" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_GENER_REPOR_CRONO_DICTA(?, ?, ?, ?,?, ?)}
+   </procedure>
+
+
+
+<!-- sb proceso de regularizacon de asistencia de un cliente 27/11/2007 -->
+
+   <parameterMap id="paramRegularizacion" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCurso"               jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPlanilla"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCliente"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuarioLogin"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="mensajeError"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+   </parameterMap>
+
+   <procedure id="confirmarRegularizacion" parameterMap="paramRegularizacion" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_CONFI_ASIST( ?,?,?,?,?,?,?) }
+    </procedure>
+
+   <procedure id="eliminarAsistencia" parameterMap="paramRegularizacion" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_ELIMI_ASIST ( ?,?,?,?,?,?,?) }
+    </procedure>
+
+<!-- sb proceso de auditoria 15/01/2008 -->
+
+   <parameterMap id="paramAuditoria" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="campanha"                  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuarioLogin"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="mensajeError"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+   </parameterMap>
+
+	<procedure id="executeAuditoria" parameterMap="paramAuditoria" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_PROC_QUERY ( ?,?,?,?,?) }
+    </procedure>
+
+   <resultMap id="auditoriaResult" class="auditoria">
+		<result property="codigoPais"                  column = "PAIS_COD_PAIS"/>           		
+		<result property="codigoEmpresa"               column = "EMCO_COD_EMPR_COME"/> 
+	    <result property="nombreEmpresa"               column = "DES_EMPR_COME"/>            	
+		<result property="codigoQuery"                 column = "AUQU_COD_AUDI_QUER"/>        			
+		<result property="nombreQuery"                 column = "DES_AUDI_QUER"/>        	
+		<result property="numRegProcesados"            column = "NUM_REGI_PROC"/>        	
+		<result property="numRegCorrectos"             column = "NUM_REGI_CORR"/>        	
+		<result property="numRegErroneos"              column = "NUM_REGI_ERRO"/>        	
+		<result property="estadoProceso"               column = "EST_PROC"/>        	
+		<result property="obsProceso"                  column = "OBS_PROC"/>        	
+		<result property="descripcionQuery"            column = "OBS_SENT_QUER"/>     
+   	
+		
+	</resultMap>
+
+	<select id="getListAuditoria" parameterClass="auditoria" resultMap="auditoriaResult">
+	
+		SELECT A.PAIS_COD_PAIS,
+	   		A.EMCO_COD_EMPR_COME,
+		   	C.DES_EMPR_COME,
+		   	A.AUQU_COD_AUDI_QUER,
+	   		B.DES_AUDI_QUER,
+		   	A.NUM_REGI_PROC,
+	   		A.NUM_REGI_CORR,
+		   	A.NUM_REGI_ERRO,
+		   	A.EST_PROC,
+	   		A.OBS_PROC,
+			B.OBS_SENT_QUER
+		FROM EDU_AUDIT_CABEC A,
+    	 EDU_AUDIT_QUERY B,
+		 EDU_EMPRE_COMER C
+		WHERE A.PAIS_COD_PAIS=C.PAIS_COD_PAIS
+    	  AND A.EMCO_COD_EMPR_COME=C.COD_EMPR_COME
+	      AND A.AUQU_COD_AUDI_QUER=B.COD_AUDI_QUER
+		  AND A.EST_REGI=B.EST_REGI
+		  AND A.PAIS_COD_PAIS=#codigoPais#
+		  AND A.EMCO_COD_EMPR_COME=#codigoEmpresa#
+		  AND A.EST_REGI='1'
+		ORDER BY 4
+	</select>	
+
+
+
+   <resultMap id="detalleAuditoriaResult" class="detalleAuditoria">
+		<result property="codigoPais"                  column = "PAIS_COD_PAIS"/>           		
+		<result property="codigoEmpresa"               column = "EMCO_COD_EMPR_COME"/>        	
+		<result property="codigoQuery"                 column = "AUQU_COD_AUDI_QUER"/>        			
+		<result property="campanha"                	   column = "CAM_PROC"/>        	
+		<result property="numItem"                     column = "NUM_ITEM"/>				
+		<result property="codigoCliente"               column = "COD_CLIE"/>        	
+		<result property="codigoCurso"                 column = "COD_CURS_CAPA"/>        	
+		<result property="estadoProceso"               column = "EST_REGI_PROC"/>        	
+		<result property="estadoCapacitacion"          column = "EST_CAPA"/>        	
+		<result property="ultimaCampanhaProg"          column = "ULT_CAMP_PROG_DICT"/>        	
+		<result property="codigoPlanilla"          column = "COD_PLAN_PROG"/>        	
+
+		
+	</resultMap>
+
+	<select id="getListDetalleAuditoria" parameterClass="auditoria" resultMap="detalleAuditoriaResult">
+	   SELECT 
+		 A.PAIS_COD_PAIS,
+	     A.EMCO_COD_EMPR_COME,
+	     A.AUQU_COD_AUDI_QUER,
+	     B.CAM_PROC,
+	     B.NUM_ITEM,
+	     B.COD_CLIE, 
+	     B.COD_CURS_CAPA,
+	     B.EST_REGI_PROC,
+	     B.EST_CAPA,
+	     B.ULT_CAMP_PROG_DICT,
+		 B.COD_PLAN_PROG
+      FROM  EDU_AUDIT_CABEC A,
+    	    EDU_AUDIT_DETAL B
+	   WHERE A.PAIS_COD_PAIS=B.PAIS_COD_PAIS
+    	  AND A.EMCO_COD_EMPR_COME=B.EMCO_COD_EMPR_COME
+	      AND A.AUQU_COD_AUDI_QUER=B.AUQU_COD_AUDI_QUER
+	      AND A.PAIS_COD_PAIS=#codigoPais#
+	      AND A.EMCO_COD_EMPR_COME=#codigoEmpresa#
+		  AND A.AUQU_COD_AUDI_QUER=#codigoQuery#
+	      AND A.EST_REGI='1'
+		  AND B.EST_REGI_PROC='0'
+		ORDER BY 3,4,5
+	</select>	
+	
+
+   <parameterMap id="paramGenerarResumenProgramasPlanilla" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="campanhaProceso"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoRegion"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoZona"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+
+    <procedure id="executeGenerarResumenProgramadasPlanilla" parameterMap="paramGenerarResumenProgramasPlanilla" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_GENER_RESUM_PROGR_PLANI (?, ?, ?, ? , ?)}
+    </procedure>
+
+    <!--Proceso Inicio Diarios-->
+	<parameterMap id="paramRegistrarPlanillasNoProcesadas" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoRegion"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuario.login"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="mensajeError"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+
+    <procedure id="executeRegistrarPlanillasNoProcesadas" parameterMap="paramRegistrarPlanillasNoProcesadas" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_REGIS_PLANI_NPROG(?, ?, ?, ?, ? ,?)}
+    </procedure>
+
+	<parameterMap id="paramProcesoConsultoraRezagadas" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoRegion"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuario.login"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="mensajeError"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+
+    <procedure id="executeProcesoConsultoraRezagadas" parameterMap="paramProcesoConsultoraRezagadas" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_REGIS_CONSU_PEDID_EXTEM(?, ?, ?, ?, ? ,?)}
+    </procedure>
+    
+	<parameterMap id="paramProcesosPostCalificacionEnvioAptasAutomatica" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuario.login"                   jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="mensajeError"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+
+<!-- se cambio EDU_PR_PROCE_AFTER_CALIF_ENVAP por EDU_PR_REGIS_CONSU_PEDID_EXTEM , debido que ahora solo se quire q se efectue ese proceso -->
+    <procedure id="executeProcesosPostCalificacionEnvioAptasAutomatica" parameterMap="paramProcesoConsultoraRezagadas" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_REGIS_CONSU_PEDID_EXTEM(?, ?, ?, ?, ?,?)}
+    </procedure>
+
+
+
+	<parameterMap id="paramPlanillaNoProcesada" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoProceso"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoParam"               jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuario.login"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="mensajeError"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+
+    <procedure id="executePlanillaNoProcesadas" parameterMap="paramPlanillaNoProcesada" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_REGIS_PLANI_NPROC(?, ?, ?, ?, ? ,? , ?)}
+    </procedure>
+
+	<!-- do proceso de exoneracion de asistencia de un cliente 25/09/2008 -->
+
+    <parameterMap id="paramExoneracion" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCliente"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoCurso"               jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuarioLogin"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="mensajeError"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+
+	<procedure id="confirmarExoneracion" parameterMap="paramExoneracion" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_EXONE_ASIST( ?,?,?,?,?,?) }
+    </procedure>
+
+  <parameterMap id="paramExecuteActualizacionStatusConsultora" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoProceso"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoParam"               jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuarioLogin"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+
+    <procedure id="executeActualizacionStatusConsultora" parameterMap="paramExecuteActualizacionStatusConsultora" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_PROCE_ACTUA_STATU_CONSU(?, ?, ?, ?, ?, ?)}
+    </procedure>
+    
+    
+    <insert id="insertTemporalExoneradas" parameterClass="java.util.Map">													
+		INSERT INTO EDU_TMP_RECEP_CLIEN_ESTAB(												
+				COD_PAIS, 										
+				COD_EMPR_COME, 										
+				COD_CLIE, 										
+				USU_DIGI, 										
+				FEC_DIGI,										
+				EST_REGI,										
+			    IND_CLIE_TOP											
+		)												
+		VALUES (												
+        #codigoPais#, 														
+        #codigoEmpresa#, 														
+        #codigoCliente#,														
+		#login#,												
+		SYSDATE,												
+		'1',												
+		'N')												
+	</insert>	
+	
+	 <delete id="deleteTemporalExoneradas" parameterClass="java.util.Map">													
+		DELETE FROM EDU_TMP_RECEP_CLIEN_ESTAB
+		WHERE COD_PAIS = #codigoPais# 										
+			AND COD_EMPR_COME = #codigoEmpresa# 																						        												
+	</delete>			
+	
+		<!-- sb proceso de exoneracion masiva de asistencia 14/04/2010 -->
+
+    <parameterMap id="paramExoneracionMasiva" class="java.util.Map" >
+		<parameter property="codigoPais"                jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoEmpresa"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoCurso"               jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="usuarioLogin"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="mensajeError"              jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+
+	<procedure id="confirmarExoneracionMasiva" parameterMap="paramExoneracionMasiva" >
+		{call EDU_PKG_PROCE_GENER.EDU_PR_EXONE_ASIST_MASIV( ?,?,?,?,?) }
+    </procedure>
+</sqlMap>

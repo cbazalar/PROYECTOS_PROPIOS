@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.sessionexperte.ProductoPeriodoSQL">
+	<typeAlias alias="productoPeriodo" 		type="biz.belcorp.ssicc.dao.spusicc.sessionexperte.model.ProductoPeriodo"/>
+
+	<resultMap id="baseResult"          class="baseGenerico">
+		<result property="codigo" 		column="CODIGO" 	/>
+		<result property="descripcion" 	column="DESCRIPCION"/>
+	</resultMap>
+
+	<resultMap id="productosPeriodoResult" class="productoPeriodo">                     
+		<result property="codigoPais"			column="COD_PAIS"	/>
+		<result property="codigoPrograma"		column="COD_PROG"	/>
+		<result property="codigoPeriodo"		column="COD_PERI"	/>
+		<result property="codigoProducto"		column="COD_PROD"	/>              
+		<result property="codigoVenta"			column="COD_VENTA"	/>
+		<result property="descripcionProducto"	column="DES_PROD"	/>
+		<result property="precioProducto"		column="VAL_PREC"	/>
+		<result property="estadoRegistro"		column="EST_REGI"	/>
+    	<result property="codigoAnho"    		column="COD_ANHO"	/>
+	</resultMap>
+
+    <!-- OBTIENE PRODUCTOS DE LOS PERIODOS DE PROGRAMAS SESSION EXPERTE SEGUN CRITERIOS  -->
+	<select id="getBaseProductosPeriodosByCriteria" parameterClass="productoPeriodo" 
+		resultMap="baseResult">
+		SELECT 	prod.COD_PROD AS CODIGO,
+				prod.DES_PROD AS DESCRIPCION
+		FROM SSE_EQUIV_MATR prod
+		WHERE	prod.COD_PAIS = #codigoPais#
+			AND	prod.COD_PROG = #codigoPrograma#
+			AND	prod.COD_PERI = #codigoPeriodo#
+		ORDER BY
+			prod.COD_PROD
+	</select>
+
+    <!-- OBTIENE PRODUCTOS DE LOS PERIODOS DE PROGRAMAS SESSION EXPERTE SEGUN CRITERIOS  -->
+	<select id="getProductosPeriodosByCriteria" parameterClass="productoPeriodo" 
+		resultMap="productosPeriodoResult">
+		SELECT                                 
+				prod.COD_PAIS || '|' || prod.COD_PROG || '|' || prod.COD_PERI || '|' ||prod.COD_PROD  "ID"	,      
+				prod.COD_PAIS	,
+				prod.COD_PROG	,
+				prod.COD_PERI	,
+				prod.COD_PROD	,
+				prod.COD_VENTA	,
+				prod.DES_PROD	,
+				prod.VAL_PREC	,
+				prod.EST_REGI	,
+				prod.COD_ANHO
+		FROM SSE_EQUIV_MATR prod
+		<dynamic prepend="where">
+			<isNotEmpty prepend="AND" property="codigoPais">
+				prod.COD_PAIS = #codigoPais#
+	    	</isNotEmpty>
+			<isNotEmpty prepend="AND" property="codigoPrograma">
+				prod.COD_PROG = #codigoPrograma#
+	    	</isNotEmpty>
+			<isNotEmpty prepend="AND" property="codigoPeriodo">
+				prod.COD_PERI = #codigoPeriodo#
+	    	</isNotEmpty>
+			<isNotEmpty prepend="AND" property="codigoProducto">
+				prod.COD_PROD = #codigoProducto#
+	    	</isNotEmpty>
+		</dynamic>
+		ORDER BY
+			prod.COD_PROG, prod.COD_PERI, prod.COD_PROD
+	</select>
+
+    <!-- OBTIENE CODIGOS DE PRODUCTOS DE LOS PERIODOS DE PROGRAMAS SESSION EXPERTE SEGUN CRITERIOS  -->
+	<select id="getCodigoProductosPeriodosByCriteria" parameterClass="periodoPrograma" 
+		resultClass="string">
+		SELECT	prod.COD_PROD AS COD_PROD
+		FROM SSE_EQUIV_MATR prod
+		WHERE	prod.COD_PAIS = #codigoPais# AND
+				prod.COD_PROG = #codigoPrograma# AND
+				prod.COD_PERI = #codigoPeriodo#
+	</select>
+
+	<!-- INSERTA UN NUEVO PRODUCTO DEL PERIODO -->
+    <insert id="insertProductoPeriodo" parameterClass="productoPeriodo">
+	INSERT INTO SSE_EQUIV_MATR
+    	(	cod_pais, cod_prog, cod_peri, cod_prod, cod_venta, des_prod, val_prec, est_regi,cod_anho, 
+			usu_digi, fec_digi)
+	VALUES
+		(	#codigoPais#		,
+			#codigoPrograma#	,
+			#codigoPeriodo#		,    
+			#codigoProducto#	,      
+			#codigoVenta#		,
+			#descripcionProducto#,
+			#precioProducto#    ,
+			#estadoRegistro#    ,
+			#codigoAnho#	    ,
+			#auditInfo.createdBy#,
+			#auditInfo.created#
+		)
+	</insert>
+	<!-- ACTUALIZA UN PRODUCTO DEL PERIODO -->
+	<update id="updateProductoPeriodo" parameterClass="productoPeriodo">
+		UPDATE SSE_EQUIV_MATR
+		SET cod_venta 	= #codigoVenta#	,
+			des_prod	= #descripcionProducto#	,
+			val_prec	= TO_NUMBER(#precioProducto#,'999999999.99'),
+			est_regi	= #estadoRegistro#	,
+			usu_modi	= #auditInfo.updatedBy#		,
+			fec_modi	= #auditInfo.lastUpdated#
+		WHERE cod_pais = #codigoPais#
+			AND cod_prog = #codigoPrograma#
+			AND cod_peri = #codigoPeriodo#
+			AND cod_prod = #codigoProducto#
+	</update>
+
+	<delete id="deleteListaProductosNoAsignadosPeriodo" parameterClass="periodoPrograma">
+          delete FROM SSE_EQUIV_MATR                           		
+           where cod_pais = #codigoPais#
+             and cod_prog = #codigoPrograma#
+			 and cod_peri = #codigoPeriodo#
+			 <iterate prepend="AND" property="productosNoAsignados" open="(" close=")" conjunction="OR">
+			 cod_prod = #productosNoAsignados[]#
+			</iterate>
+	</delete>
+
+    <!-- OBTIENE EL CODIGO DE VENTA DE UN PRODUCTO PARA UN PERIODO -->
+	<select id="getCodigoVentaProductoByCriteria" parameterClass="productoPeriodo" 
+		resultClass="productoPeriodo">
+
+    select  
+            DET.VAL_CODI_VENT AS codigoVenta ,
+            OCR_SOLIC_PEDIDOS.GEN_FN_CODSAP_PROD(DET.PROD_OID_PROD) AS codigoProducto ,
+            OCR_SOLIC_PEDIDOS.GEN_FN_DESC_PROD(DET.PROD_OID_PROD) AS descripcionProducto ,
+            DET.IMP_PREC_CATA AS precioProducto
+
+    from  pre_matri_factu matriz  , pre_ofert_detal det 
+    where  matriz.ofde_oid_deta_ofer = det.oid_deta_ofer and
+           det.val_codi_vent  = #codigoVenta# and
+           exists (SELECT cab.oid_cabe
+                        FROM   pre_Matri_Factu_Cabec cab
+                        WHERE exists ( SELECT null
+                                       FROM cra_perio a , seg_perio_corpo b
+                                       WHERE a.peri_oid_peri = b.oid_peri and
+                                             b.cod_peri = #codigoPeriodo#  and
+                                             cab.perd_oid_peri = a.oid_peri  ) and
+                                             matriz.mfca_oid_cabe = cab.oid_cabe  ) 
+          and exists (select null from mae_produ pr where 
+                                 pr.oid_prod = det.prod_oid_prod and
+                                 pr.cod_sap = #codigoProducto# )                                                                                          
+          and exists (select null from pre_ofert ofer ,
+                              pre_venta_exclu ven,
+                              MAE_TIPO_CLASI_CLIEN tcl 
+                    where det.ofer_oid_ofer = ofer.oid_ofer and
+                          ven.ofer_oid_ofer = ofer.oid_ofer and
+                          ven.tccl_oid_tipo_clas = tcl.OID_TIPO_CLAS and
+                          tcl.cod_tipo_clas = '31'
+          )                                             
+
+	</select>
+
+
+    <parameterMap id="executeProcesoSSEProcesaCierreConsultoraSessionExperte_Params" class="map" >
+		<parameter property="codigoPais"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="periodo"	         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="usuario"	             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    <procedure id="executeProcesoSSEProcesaCierreConsultoraSessionExperte" 
+   			  parameterMap="executeProcesoSSEProcesaCierreConsultoraSessionExperte_Params" >
+		{call SSE_PKG_PROCE_PEDID.SSE_PR_PROCESA_CIERR_CONSU_SSE(?,?,?)}
+    </procedure>  
+
+</sqlMap>

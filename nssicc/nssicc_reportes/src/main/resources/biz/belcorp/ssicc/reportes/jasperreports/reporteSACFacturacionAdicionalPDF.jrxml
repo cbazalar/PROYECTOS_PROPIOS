@@ -1,0 +1,441 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteSACFacturacionAdicionalPDF"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Portrait"
+		 pageWidth="1360"
+		 pageHeight="1417"
+		 columnWidth="1360"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 whenResourceMissingType="Empty"
+		 isIgnorePagination="true">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="oidPeriodo" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("oidPeriodo")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaInicial" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaInicio")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaFin" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaFin")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="condicion" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicion")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[SELECT ROW_NUMBER() OVER(PARTITION BY ped.clie_oid_clie ORDER BY ped.clie_oid_clie)                              NUM_PEDI,
+       zz.cod_zona                                                                                               COD_ZONA,
+       mae.cod_clie                                                                                              COD_CLIE,
+       TRIM(mae.val_nom1) || ' ' || TRIM(mae.val_nom2) || ' ' || TRIM(mae.val_ape1) || ' ' || TRIM(mae.val_ape2) VAL_NOMB_CLIE,
+       ped.fec_fact                                                                                              FEC_FACT,
+       ped.val_tota_paga_loca                                                                                    VAL_MONT_FACT
+  FROM ped_solic_cabec ped,
+       mae_clien mae,
+       mae_clien_unida_admin cua,
+       zon_terri_admin zta,
+       zon_secci zs,
+       zon_zona zz,
+       zon_regio zr,
+       (SELECT a.clie_oid_clie
+          FROM ped_solic_cabec a
+         WHERE a.grpr_oid_grup_proc = 5
+           AND a.tspa_oid_tipo_soli_pais = (SELECT tsp.oid_tipo_soli_pais      
+                                             FROM ped_tipo_solic_pais tsp,
+                                                  ped_tipo_solic      ts
+                                            WHERE ts.oid_tipo_soli = tsp.tsol_oid_tipo_soli
+                                              AND ts.cod_tipo_soli = 'SOC')
+           AND a.perd_oid_peri = $P{oidPeriodo}
+           AND a.esso_oid_esta_soli = 1
+         GROUP BY a.clie_oid_clie
+        HAVING COUNT(1) > 1) primerped
+ WHERE zta.oid_terr_admi = cua.ztad_oid_terr_admi
+   AND zs.oid_secc = zta.zscc_oid_secc
+   AND zz.oid_zona = zs.zzon_oid_zona
+   AND zr.oid_regi = zz.zorg_oid_regi
+   AND mae.oid_clie = cua.clie_oid_clie
+   AND cua.ind_acti = '1'
+   AND ped.clie_oid_clie = primerped.clie_oid_clie
+   AND ped.clie_oid_clie = mae.oid_clie
+   AND ped.grpr_oid_grup_proc = 5
+   and sto_pkg_proce_valid_occ.sto_fn_valid_fad($P{oidPeriodo},mae.oid_clie) > 0
+   AND ped.tspa_oid_tipo_soli_pais = (SELECT tsp.oid_tipo_soli_pais      
+                                        FROM ped_tipo_solic_pais tsp,
+                                             ped_tipo_solic      ts
+                                       WHERE ts.oid_tipo_soli = tsp.tsol_oid_tipo_soli
+                                        AND ts.cod_tipo_soli = 'SOC')
+   AND ped.perd_oid_peri = $P{oidPeriodo}
+   AND ped.esso_oid_esta_soli = 1
+   AND ped.fec_fact >= Decode ($P{fechaInicial},null, ped.fec_fact, '', ped.fec_fact,TO_DATE($P{fechaInicial},'dd/mm/yyyy') )
+   AND ped.fec_fact <= Decode ($P{fechaFin},null, ped.fec_fact, '', ped.fec_fact,TO_DATE($P{fechaFin},'dd/mm/yyyy') )
+   $P!{condicion}
+ORDER BY ped.clie_oid_clie,
+         ped.fec_fact]]></queryString>
+
+	<field name="NUM_PEDI" class="java.lang.String"/>
+	<field name="COD_ZONA" class="java.lang.String"/>
+	<field name="COD_CLIE" class="java.lang.String"/>
+	<field name="VAL_NOMB_CLIE" class="java.lang.String"/>
+	<field name="FEC_FACT" class="java.util.Date"/>
+	<field name="VAL_MONT_FACT" class="java.math.BigDecimal"/>
+
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="36"  isSplitAllowed="true" >
+				<crosstab >
+					<reportElement
+						x="0"
+						y="1"
+						width="1355"
+						height="35"
+						key="crosstab-1"/>
+					<crosstabHeaderCell>						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="41"
+						height="36"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="1.0" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSACFacturacionAdicionalForm.codigoZona}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="41"
+						y="0"
+						width="59"
+						height="36"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="1.0" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSACFacturacionAdicionalForm.codigoCliente}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="100"
+						y="0"
+						width="188"
+						height="36"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="1.0" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSACFacturacionAdicionalForm.nombreCliente}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+					</crosstabHeaderCell>					<rowGroup name="COD_ZONA" width="41">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{COD_ZONA}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="41"
+						height="16"
+						key="textField"/>
+					<box>					<leftPen lineWidth="1.0" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{COD_ZONA}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="COD_CLIE" width="59">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{COD_CLIE}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="59"
+						height="16"
+						key="textField"/>
+					<box>					<leftPen lineWidth="1.0" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{COD_CLIE}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="VAL_NOMB_CLIE" width="188">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{VAL_NOMB_CLIE}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="188"
+						height="16"
+						key="textField"/>
+					<box>					<leftPen lineWidth="1.0" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+</box>
+					<textElement verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{VAL_NOMB_CLIE}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<columnGroup name="NUM_PEDI" height="36" headerPosition="Center">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{NUM_PEDI}]]></bucketExpression>
+						</bucket>
+						<crosstabColumnHeader>
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="10"
+						width="116"
+						height="11"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Top">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{NUM_PEDI}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="21"
+						width="60"
+						height="15"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="1.0" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSACFacturacionAdicionalForm.fecha}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="60"
+						y="21"
+						width="56"
+						height="15"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="1.0" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSACFacturacionAdicionalForm.monto}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="116"
+						height="10"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="textField-1"/>
+					<box>					<topPen lineWidth="1.0" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteSACFacturacionAdicionalForm.pedido}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabColumnHeader>
+					</columnGroup>
+
+					<measure name="FEC_FACT_Nothing" class="java.util.Date">
+						<measureExpression><![CDATA[$F{FEC_FACT}]]></measureExpression>
+					</measure>
+					<measure name="MONTO" class="java.math.BigDecimal">
+						<measureExpression><![CDATA[$F{VAL_MONT_FACT}]]></measureExpression>
+					</measure>
+					<crosstabCell width="116" height="16">
+						<cellContents mode="Transparent">
+					<box></box>
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="60"
+						y="0"
+						width="56"
+						height="16"
+						key="textField"/>
+					<box>					<leftPen lineWidth="1.0" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{MONTO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="dd/MM/yyyy" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="60"
+						height="16"
+						key="textField"/>
+					<box>					<leftPen lineWidth="1.0" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.util.Date"><![CDATA[$V{FEC_FACT_Nothing}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="16" columnTotalGroup="NUM_PEDI">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="116" height="0" rowTotalGroup="COD_ZONA">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="COD_ZONA" columnTotalGroup="NUM_PEDI">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="116" height="0" rowTotalGroup="COD_CLIE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="COD_CLIE" columnTotalGroup="NUM_PEDI">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="116" height="0" rowTotalGroup="VAL_NOMB_CLIE">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="0" height="0" rowTotalGroup="VAL_NOMB_CLIE" columnTotalGroup="NUM_PEDI">
+						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</crosstabCell>
+					<whenNoDataCell>						<cellContents mode="Transparent">
+					<box></box>
+						</cellContents>
+					</whenNoDataCell>					</crosstab>
+			</band>
+		</summary>
+</jasperReport>

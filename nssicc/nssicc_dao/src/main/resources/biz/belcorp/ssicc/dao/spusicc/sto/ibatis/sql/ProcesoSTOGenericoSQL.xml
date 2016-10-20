@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.ProcesoSTOGenericoSQL">
+	
+	<typeAlias alias="tipoDocumentoDigitadoPK" type="biz.belcorp.ssicc.dao.spusicc.sto.model.TipoDocumentoDigitadoPK"/>
+	<typeAlias alias="tipoDocumentoDigitado" type="biz.belcorp.ssicc.dao.spusicc.sto.model.TipoDocumentoDigitado"/>
+	<typeAlias alias="documentoDigitadoPK" type="biz.belcorp.ssicc.dao.spusicc.sto.model.DocumentoDigitadoPK"/>
+	<typeAlias alias="accionTipoDocumento" type="biz.belcorp.ssicc.dao.spusicc.sto.model.AccionTipoDocumento"/>
+	<typeAlias alias="historicoTipoDocumento" type="biz.belcorp.ssicc.dao.spusicc.sto.model.HistoricoTipoDocumento"/>
+	
+	<select id="getTipoDocumentoDigitado" parameterClass="tipoDocumentoDigitadoPK" resultClass="tipoDocumentoDigitado" >
+	  SELECT COD_PAIS			codPais,						           
+	         COD_TIPO_DOCU		codTipoDocu,				           
+	         DES_TIPO_DOCU		desTipoDocu,				           
+	         IND_CABE			indCabe,						           
+	         VAL_NOMB_ENTI		valNombEnti,				           
+	         COD_TIPO_DOCU_CABE	codTipoDocuCabe,	             
+	         SIST_COD_SIST		sistCodSist,				           
+	         INTE_COD_INTE		inteCodInte,				           
+	         NUM_LOTE			numLote,						           
+	         FEC_DIGI			fecDigi,						           
+	         USU_DIGI			usuDigi,						           
+	         FEC_MODI			fecModi,						           
+	         USU_MODI			usuModi,      
+	         EXE_PROC_ENVI		exeProcEnvi,     
+	         EXE_PROC_HIST		exeProcHist,
+	         IND_STO_ACTI       indSTOActivo,
+	         IND_VISU_ERRO      indVisualErrores,
+	         COD_PROC_BATC      codigoProcesoBatch,
+	         IND_VALI_AUTO      indValiAuto,
+	         EXE_PROC_RECH      exeProcRech,
+	         IND_VALI_MULT_HILO indValiMultHilo,
+	         VAL_NASP           namespace,
+	         NUM_MAXI_HILO      numMaxiHilo
+	    FROM STO_TIPO_DOCUM_DIGIT
+	   WHERE COD_PAIS =#codPais#
+	     AND COD_TIPO_DOCU =#codTipoDocu#
+	</select>
+	
+	<resultMap id="validacionesTipoDocumentoResult" class="validacionDocumento">                                      
+    	<result property="codigoPais"                column="COD_PAIS" />                    
+    	<result property="codigoTipo"                column="COD_TIPO_DOCU" />              
+    	<result property="codValidacion"             column="COD_VALI" />     
+    	<result property="codValidacionAnterior"     column="COD_VALI_ANTE" />
+		<result property="executeProcedure"          column="EXE_PROC" /> 
+	</resultMap>   
+	
+	<select id="getValidacionesProceso" parameterClass="historicoTipoDocumento" resultMap="validacionesTipoDocumentoResult">
+		SELECT COD_PAIS,
+		       COD_TIPO_DOCU,
+		       COD_VALI,
+		       (SELECT COD_VALI
+		          FROM STO_HISTO_VALID H1
+		         WHERE H1.NUM_SECU = TEMP.NUM_SECU_ANTE
+		           AND H1.COD_TIPO_DOCU = TEMP.COD_TIPO_DOCU
+		           AND H1.NUM_PROC = TEMP.NUM_PROC) COD_VALI_ANTE,		       
+		       EXE_PROC
+		  FROM (SELECT HV.NUM_SECU,
+		               HV.NUM_PROC,
+		               HV.COD_PAIS,
+		               HV.COD_TIPO_DOCU,
+		               HV.COD_VALI,
+		               <![CDATA[
+		               (SELECT MAX(H2.NUM_SECU)
+		                  FROM STO_HISTO_VALID H2
+		                 WHERE HV.COD_TIPO_DOCU = H2.COD_TIPO_DOCU
+		                   AND H2.NUM_SECU < HV.NUM_SECU		                   
+                           AND H2.NUM_PROC = HV.NUM_PROC) NUM_SECU_ANTE,
+		               ]]>
+		               HV.IND_GEST,
+		               HV.EXE_PROC
+		          FROM STO_HISTO_VALID      HV,
+		               STO_TIPO_DOCUM_DIGIT T
+		         WHERE HV.COD_TIPO_DOCU = T.COD_TIPO_DOCU
+		           AND HV.COD_PAIS = T.COD_PAIS
+		           AND (T.COD_TIPO_DOCU = #codTipoDocu# OR T.COD_TIPO_DOCU_CABE = #codTipoDocu#)
+		           AND HV.NUM_PROC = #numeroProceso#) TEMP
+		 ORDER BY NUM_SECU
+	</select>
+	
+	<parameterMap id="inicializeRegistrosProcesadosParams" class="map" >
+		<parameter property="tipoDocumento.codPais"     jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="tipoDocumento.codTipoDocu"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="usuario.login"	            jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="historico.numeroProceso"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>  		
+	</parameterMap>
+	<procedure id="inicializeRegistrosProcesados" parameterMap="inicializeRegistrosProcesadosParams">
+	  {call STO_PKG_GENER.STO_PR_INICI_VALID_MASIV(?,?,?,?)}     	
+	</procedure>	
+	
+	<parameterMap id="updateDocumentoForValidateParams" class="map" >
+		<parameter property="tipoDocumento.codPais"     jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="tipoDocumento.codTipoDocu"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="historico.numeroProceso"	            jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="updateDocumentoForValidate" parameterMap="updateDocumentoForValidateParams">
+	  {call STO_PKG_GENER.STO_PR_INICI_VALID_NOMAS(?,?,?)}    	
+	</procedure>
+	<parameterMap id="updateDocumentoForProcessParams" class="map" >
+		<parameter property="tipoDocumento.codPais"     jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="tipoDocumento.codTipoDocu"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="historico.numeroProceso"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="updateDocumentoForProcess" parameterMap="updateDocumentoForProcessParams">
+	  {call STO_PKG_GENER.STO_PR_UPDAT_DOCUM_PROCE(?,?,?)}    	
+	</procedure>
+	<select id="getParametroSTO" parameterClass="java.util.Map" resultClass="java.lang.String">
+     	SELECT STO_PKG_GENER.STO_FN_OBTEN_PARAM_OCR(#codigoPais#,#codigoParametro#) FROM DUAL	 
+	</select>
+	
+	<update id="updateAprobarDocumentosSTO" parameterClass="java.util.Map">
+        UPDATE STO_DETAL_DOCUM_EXCEP E
+			   SET E.IND_APRO = '1',
+			       E.USU_MODI = #usuario.login#,
+                   E.FEC_MODI = SYSDATE,
+                   E.USU_APRO = #usuario.login#,
+                   E.FEC_APRO = SYSDATE
+			 WHERE E.COD_PAIS = #gestionDocumento.codigoPais#
+			   AND E.COD_TIPO_DOCU = #gestionDocumento.documento#
+			   AND E.COD_VALI = #gestionDocumento.validacion#
+			   AND E.NUM_LOTE = #gestionDocumento.lote#
+			   AND E.SEC_NUME_DOCU=#gestionDocumento.numeroDocumento#
+			   AND EXISTS (SELECT 1
+                            FROM STO_DOCUM_DIGIT D
+                           WHERE D.IND_ENVI = '0'
+                             AND D.IND_RECH = '0'
+                             AND D.COD_PAIS = E.COD_PAIS
+                             AND D.COD_TIPO_DOCU = E.COD_TIPO_DOCU
+                             AND D.NUM_LOTE = E.NUM_LOTE
+                             AND D.SEC_NUME_DOCU = E.SEC_NUME_DOCU)
+  	</update>
+	
+   <update id="updateDesaprobarDocumentosSTO" parameterClass="java.util.Map">
+        UPDATE STO_DETAL_DOCUM_EXCEP E
+			   SET E.IND_APRO = '0',
+			       E.USU_MODI = #usuario.login#,
+                   E.FEC_MODI = SYSDATE,
+                   E.USU_APRO = NULL,
+                   E.FEC_APRO = NULL
+			 WHERE E.COD_PAIS = #gestionDocumento.codigoPais#
+			   AND E.COD_TIPO_DOCU = #gestionDocumento.documento#
+			   AND E.COD_VALI = #gestionDocumento.validacion#
+			   AND E.NUM_LOTE = #gestionDocumento.lote#
+			   AND E.SEC_NUME_DOCU=#gestionDocumento.numeroDocumento#
+			   AND EXISTS (SELECT 1
+                            FROM STO_DOCUM_DIGIT D
+                           WHERE D.IND_ENVI = '0'
+                             AND D.IND_RECH = '0'
+                             AND D.COD_PAIS = E.COD_PAIS
+                             AND D.COD_TIPO_DOCU = E.COD_TIPO_DOCU
+                             AND D.NUM_LOTE = E.NUM_LOTE
+                             AND D.SEC_NUME_DOCU = E.SEC_NUME_DOCU)
+  	</update>
+
+	 <parameterMap id="updateRechazarDocumentosSTOParams" class="map" >
+		<parameter property="gestionDocumento.codigoPais"       jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="gestionDocumento.documento"	    jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="gestionDocumento.lote"			    jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="gestionDocumento.numeroDocumento"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="historico.numeroProceso"	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="usuario.login"	                    jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="gestionDocumento.motivoRechazo"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="gestionDocumento.observaciones"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	
+	<procedure id="updateRechazarDocumentosSTO" parameterMap="updateRechazarDocumentosSTOParams">
+		{call STO_PKG_GENER.STO_PR_GENER_RECHA(?,?,?,?,?,?,?,?)}
+    </procedure>
+    
+    <parameterMap id="executeAuditoriaProcesoSTOParams" class="map" >
+		<parameter property="historico.codigoPais"				jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="historico.codTipoDocu"				jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="historico.numeroProceso"			jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="historico.codigoAccionEjecutada"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	
+	<procedure id="executeAuditoriaProcesoSTO" parameterMap="executeAuditoriaProcesoSTOParams">
+		{call STO_PKG_GENER.STO_PR_GENER_AUDI_PROCE(?,?,?,?)}
+    </procedure>
+    
+    <parameterMap id="executeRecoverRejectDocumentoSTOParams" class="map" >
+		<parameter property="documentoDigitadoPK.codPais"       jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="documentoDigitadoPK.codTipoDocu"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="documentoDigitadoPK.numLote"		jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="documentoDigitadoPK.secNumeDocu"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="historico.numeroProceso"	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="usuario.login"	                    jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	
+	<procedure id="executeRecoverRejectDocumentoSTO" parameterMap="executeRecoverRejectDocumentoSTOParams">
+		{call STO_PKG_GENER.STO_PR_GENER_RECUP_RECHA(?,?,?,?,?,?)}
+    </procedure>
+	
+	<resultMap id="baseResult"          class="baseGenerico">
+    	<result property="codigo" 		column="CODIGO" 	/>
+    	<result property="descripcion" 	column="DESCRIPCION"/>
+    </resultMap>
+    
+	<select id="getOrigenSTOByTipoDocumento" parameterClass="java.util.Map" resultMap="baseResult">
+       SELECT O.COD_ORIG CODIGO,
+	          O.DES_ORIG DESCRIPCION
+	     FROM STO_ORIGE_DOCUM O
+	    WHERE O.COD_PAIS = #codigoPais#
+	      AND O.COD_TIPO_DOCU = #tipoDocumento#
+	</select>
+	
+	
+	<resultMap id="documentoDigitadoPKResult" class="documentoDigitadoPK">                                      
+    	<result property="codPais"         column="COD_PAIS" />                    
+    	<result property="codTipoDocu"     column="COD_TIPO_DOCU" />              
+    	<result property="numLote"         column="NUM_LOTE" />     
+    	<result property="secNumeDocu"     column="SEC_NUME_DOCU" />                  
+	</resultMap>   
+	
+	<select id="getDocumentoDigitadoPKByLote" parameterClass="java.util.Map" resultMap="documentoDigitadoPKResult">
+	    SELECT COD_PAIS,
+               COD_TIPO_DOCU,
+               NUM_LOTE,
+               SEC_NUME_DOCU
+          FROM STO_DOCUM_DIGIT
+         WHERE COD_PAIS = #codPais#           
+	       AND COD_TIPO_DOCU = #codTipoDocu#
+	     <isNotEmpty property="numLote">
+	       AND NUM_LOTE = #numLote#
+         </isNotEmpty>
+         <isNotEmpty property="codClie">
+	       AND COD_CLIE = #codClie#
+         </isNotEmpty>
+         <isNotEmpty property="codPeri">
+	       AND COD_PERI = #codPeri#
+         </isNotEmpty>
+	</select>
+	
+	<select id="getDocumentoDigitadoPKByProceso" parameterClass="java.util.Map" resultMap="documentoDigitadoPKResult">
+	    SELECT COD_PAIS,
+               COD_TIPO_DOCU,
+               NUM_LOTE,
+               SEC_NUME_DOCU
+          FROM STO_DOCUM_DIGIT
+         WHERE COD_TIPO_DOCU in (SELECT COD_TIPO_DOCU
+                                   FROM STO_TIPO_DOCUM_DIGIT
+                                  WHERE COD_TIPO_DOCU = #codTipoDocu#
+                                     OR COD_TIPO_DOCU_CABE = #codTipoDocu#) 
+	     <isNotEmpty property="numProc">
+	       AND NUM_PROC = #numProc#
+         </isNotEmpty>
+         
+	</select>
+	
+	<delete id="deleteTemporalDocumentoSTO">
+        DELETE  STO_TMP_GESTIO_DOCUM_DIGIT
+    </delete>
+    
+    <insert id="insertTemporalDocumentoSTO" parameterClass="documentoDigitadoPK">
+       INSERT INTO STO_TMP_GESTIO_DOCUM_DIGIT
+         (COD_PAIS,
+          COD_TIPO_DOCU,
+          NUM_LOTE,
+          SEC_NUME_DOCU)
+		VALUES
+  		(#codPais#,
+         #codTipoDocu#,
+         #numLote#,
+         #secNumeDocu#)
+	</insert>
+	
+	<select id="getIndicadorModificacionCodigoCliente" parameterClass="java.util.Map" resultClass="java.lang.String"  >
+		SELECT IND_MODI_CODI_CLIE
+		  FROM STO_PARAM_VALID
+		 WHERE COD_VALI = #codigoValidacion#
+		   AND COD_TIPO_DOCU = #codigoTipoDocumento#
+		   AND COD_PAIS = #codigoPais#
+	</select>
+
+	<select id="getZonaArriboSTOByTipoDocumento" parameterClass="java.util.Map" resultMap="baseResult">
+		SELECT DISTINCT DD.COD_ZONA_ARRI CODIGO,
+		                DD.COD_ZONA_ARRI DESCRIPCION
+		  FROM STO_DOCUM_DIGIT DD
+		 WHERE DD.IND_ENVI = '0'
+		   AND DD.IND_RECH = '0'
+		   AND DD.COD_TIPO_DOCU = #tipoDocumento#
+		   AND DD.COD_PAIS =  #codigoPais#
+		   AND DD.COD_ZONA_ARRI IS NOT NULL
+		   AND EXISTS (SELECT 1
+		          FROM STO_DETAL_DOCUM_EXCEP DE
+		         WHERE DE.SEC_NUME_DOCU = DD.SEC_NUME_DOCU
+		           AND DE.NUM_LOTE = DD.NUM_LOTE
+		           AND DE.COD_TIPO_DOCU = DD.COD_TIPO_DOCU
+		           AND DE.COD_PAIS = DD.COD_PAIS
+		           AND DE.COD_TIPO_DOCU = #tipoDocumento#
+		           AND DE.COD_PAIS = #codigoPais#)
+		 ORDER BY DD.COD_ZONA_ARRI
+	</select>
+
+	<resultMap id="getCargaEjecucionByDocumentoResult"   class="map">
+    	<result property="minutos" 		column="NUM_MINU" 	/>
+    	<result property="usuario" 	column="usu_proc"/>
+    </resultMap>
+
+	<select id="getCargaEjecucionByDocumento" parameterClass="java.util.Map" resultMap="getCargaEjecucionByDocumentoResult">
+	   select ROUND((SYSDATE - ba.fec_inic_proc)*24*60) NUM_MINU,
+       		  ba.usu_proc 
+	     from bas_proce_batch_actua ba
+		where ba.pais_cod_pais = #codigoPais#
+		  and ba.sist_cod_sist = #codTipoDocu#
+		  and ba.prba_cod_proc_batc = '00'
+		  and ba.ind_ejec = 'S'
+		  and ba.fec_inic_proc is null
+	</select>
+	
+	
+	<select id="getSecuenciaConsultaDocumento" parameterClass="java.util.Map" resultClass="java.lang.String"  >
+		SELECT STO_ELDO_SEQ.NEXTVAL
+		  FROM DUAL
+	</select>
+	
+	<resultMap id="getMensajesRechazoResult" class="java.util.HashMap">
+    	<result property="mensajeRechazo"         column="val_mens_rech" />
+	</resultMap>
+	<select id="getMensajesRechazo" parameterClass="java.util.Map" resultMap="getMensajesRechazoResult">
+	    SELECT (SELECT a.val_mens_rech
+		  FROM sto_param_valid a
+		 WHERE a.cod_pais = e.cod_pais
+   		   AND a.cod_tipo_docu = e.cod_tipo_docu
+   		   AND a.cod_vali = e.cod_vali) val_mens_rech
+          FROM sto_detal_docum_excep e
+         WHERE e.cod_pais = #codPais#
+	       AND e.cod_tipo_docu = #tipoDocumento#
+	       AND e.num_lote = #numeroLote#
+	       AND e.sec_nume_docu = #numeDocumento#
+	       AND e.cod_vali IN (SELECT pv.cod_vali
+                              FROM sto_param_valid pv
+                             WHERE pv.cod_tipo_docu = e.cod_tipo_docu
+                       		   AND pv.val_mens_rech IS NOT NULL)
+	</select>
+	
+	<parameterMap id="updateLoteSTOParams" class="java.util.Map" >
+		<parameter property="codPais"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codTipoDocu"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroLoteSTO"       jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>
+    </parameterMap>
+	<procedure id="updateLoteSTO" parameterMap="updateLoteSTOParams">
+		{call STO_PKG_GENER.STO_PR_DEVUE_LOTE(?,?,?)}
+    </procedure>
+    <parameterMap id="updateDocumentoForDeleteParams" class="map" >
+		<parameter property="tipoDocumento.codPais"     jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="tipoDocumento.codTipoDocu"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="documento.numLote"			jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="documento.secNumeDocu"		jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="historico.numeroProceso"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="updateDocumentoForDelete" parameterMap="updateDocumentoForDeleteParams">
+		{call STO_PKG_GENER.STO_PR_UPDAT_DELET(?,?,?,?,?)}
+    </procedure>
+    
+	<parameterMap id="executeDeleteErroresParams" class="map" >
+		<parameter property="tipoDocumento.codPais"     jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="tipoDocumento.codTipoDocu"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>  		
+  		<parameter property="historico.numeroProceso"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>  		
+	</parameterMap>
+	<procedure id="executeDeleteErrores" parameterMap="executeDeleteErroresParams">
+	  {call STO_PKG_GENER.STO_PR_DELET_EXCEP(?,?,?)}     	
+	</procedure>
+  	
+	<!-- EJECUCION DE VALIDACIONES-->  
+    <parameterMap id="executeBeforeValidationParams" class="map" >
+		<parameter property="tipoDocumento.codPais"            jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="validacionDocumento.codigoTipo"	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="validacionDocumento.codValidacion"	    jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="validacionDocumento.codValidacionAnterior"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		  
+  		<parameter property="usuario.login"	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="historico.numeroProceso"	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>  
+	</parameterMap>
+    <procedure id="executeBeforeValidation" parameterMap="executeBeforeValidationParams" >
+		{call sto_pkg_gener.sto_pr_gener_befor_exval(?,?,?,?,?,?)}
+    </procedure> 
+    
+    <!-- EJECUCION DE VALIDACIONES-->  
+    <parameterMap id="executeAfterValidationParams" class="map" >
+		<parameter property="tipoDocumento.codPais"            jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="validacionDocumento.codigoTipo"	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="validacionDocumento.codValidacion"	    jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="validacionDocumento.codValidacionAnterior"	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		  
+  		<parameter property="usuario.login"	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="historico.numeroProceso"	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>  
+	</parameterMap>
+    <procedure id="executeAfterValidation" parameterMap="executeAfterValidationParams" >
+		{call sto_pkg_gener.sto_pr_gener_after_exval(?,?,?,?,?,?)}
+    </procedure>
+    
+    <update id="updateValidRecord" parameterClass="java.util.Map">
+        UPDATE sto_docum_digit occ
+             SET occ.cod_ulti_vali_ejec = #validacionDocumento.codValidacion#,
+                 occ.cod_ulti_vali_exit = #validacionDocumento.codValidacion#,
+                 occ.fec_modi           = SYSDATE                
+           WHERE occ.num_lote = #num_lote#
+             AND occ.sec_nume_docu = #sec_nume_docu#
+             AND occ.cod_tipo_docu      = #validacionDocumento.codigoTipo#
+             AND occ.cod_pais = #validacionDocumento.codigoPais#
+  	</update> 	
+</sqlMap>

@@ -1,0 +1,552 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.let.ProcesosLETSQL">
+	<typeAlias alias="baseGenerico" type="biz.belcorp.ssicc.dao.sisicc.model.Base"/>
+	
+	<resultMap id="baseResult"          class="baseGenerico">
+    	<result property="codigo" 		column="CODIGO" 	/>
+    	<result property="descripcion" 	column="DESCRIPCION"/>
+    </resultMap>
+    
+    <parameterMap id="executeProcesoLETGenerarRecomendacionesLiderParams" class="map">
+		<parameter property="codigoPais"    jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoUsuario" jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeProcesoLETGenerarRecomendacionesLider" parameterMap="executeProcesoLETGenerarRecomendacionesLiderParams">
+		{call LET_PKG_PROCE.LET_PR_PROCE_GENER_RECOM_LIDER(?,?,?)}
+	</procedure>
+
+	<parameterMap id="executeProcesoLETResultadoLideresAcumuladoConcuCierreRegionParams" class="map" >
+		<parameter property="codigoPais"              	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoPeriodo"	   			jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="codigoRegion"	            jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="codigoUsuario"	            jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  	</parameterMap>
+	
+	<procedure id="executeProcesoLETResultadoLideresAcumuladoConcuCierreRegion" parameterMap="executeProcesoLETResultadoLideresAcumuladoConcuCierreRegionParams">
+		{call LET_PKG_PROCE.LET_PR_RESUL_LIDER_CONCU_REGIO(?,?,?,?)}
+	</procedure>
+	
+	<parameterMap id="executeProcesoLETResultadoLideresAcumuladoConcuCierreCampParams" class="map" >
+		<parameter property="codigoPais"              	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoPeriodo"	   			jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="codigoUsuario"	            jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  	</parameterMap>
+	
+	<procedure id="executeProcesoLETResultadoLideresAcumuladoConcuCierreCamp" parameterMap="executeProcesoLETResultadoLideresAcumuladoConcuCierreCampParams">
+		{call LET_PKG_PROCE.LET_PR_RESUL_LIDER_CONCU_CAMPA(?,?,?)}
+	</procedure>
+	
+	<parameterMap id="executeProcesoLETEntregaPremiosConcursoCierreCampanaParams" class="map" >
+		<parameter property="codigoPais"              	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	    <parameter property="codigoPeriodo"	   			jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="codigoMarca"	            jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  		<parameter property="codigoCanal"	            jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+  	</parameterMap>
+	
+	<procedure id="executeProcesoLETEntregaPremiosConcursoCierreCampana" parameterMap="executeProcesoLETEntregaPremiosConcursoCierreCampanaParams">
+		{call LET_PKG_PROCE.LET_PR_ENTRE_PREMI_CONCU_CIERR(?,?,?,?)}
+	</procedure>
+	
+	<select id="getExisteZona" parameterClass="java.util.Map" resultClass="integer">
+		SELECT COUNT(1)
+		FROM  ZON_REGIO r,
+		      ZON_ZONA z
+		WHERE r.oid_regi = z.zorg_oid_regi
+		AND   r.cod_regi = #codigoRegion#
+		AND   z.COD_ZONA = #codigoZona#
+		AND   z.IND_ACTI = 1
+	</select>
+	
+	<select id="getExisteSeccionByZona" parameterClass="java.util.Map" resultClass="integer"> 
+		SELECT COUNT(1) 
+		FROM  ZON_SECCI se,
+		      ZON_ZONA zo
+		WHERE zo.oid_zona = se.zzon_oid_zona
+		AND   zo.cod_zona = #codigoZona#
+		AND   se.COD_SECC = #codigoSeccion#
+		AND   se.IND_ACTI = 1
+	</select>
+	
+	<select id="validaRegionCerrada" parameterClass="java.util.Map" resultClass="integer">
+		SELECT COUNT(1)
+		FROM ZON_REGIO RE,
+		     FAC_CONTR_CIERR CI
+		WHERE RE.COD_REGI = #codigoRegion#
+		AND RE.OID_REGI = CI.ZORG_OID_REGI
+		AND CI.PERD_OID_PERI = GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO(#codigoPeriodo#,         
+		                                                                  GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA('T'),
+		                                                                  GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CANAL('VD'))
+		AND CI.TCIE_OID_TIPO_CIER = 1
+	</select>
+	
+	<resultMap id="getPedidosObjetivosAllResult" class="java.util.HashMap">
+		<result property="codigoPais" column="PAIS_COD_PAIS"/>
+		<result property="codigoConcurso" column="CONC_COD_CONC"/>
+		<result property="campanaProceso" column="CAM_PROC"/>
+		<result property="codigoRegion" column="COD_REGI"/>
+		<result property="codigoZona" column="COD_ZONA"/>
+		<result property="codigoSeccion" column="COD_SECC"/>
+		<result property="objetivoPedido" column="OBJ_PEDI"/>
+		<result property="pesoSeccion" column="PES_SECC"/>
+		<result property="activasFinales" column="ACT_FINA"/>
+	</resultMap>
+	
+	<select id="getPedidosObjetivosAll" resultMap="getPedidosObjetivosAllResult">
+		SELECT PAIS_COD_PAIS,CONC_COD_CONC,CAM_PROC,COD_REGI,COD_ZONA,COD_SECC,OBJ_PEDI,PES_SECC,ACT_FINA
+		FROM LET_OBJET_PEDID_SECCI
+	</select>
+	
+	<select id="getCodigoConcursoByPeriodo" parameterClass="java.util.Map" resultClass="string">
+		<![CDATA[
+		SELECT COD_CONC
+        FROM LET_PARAM_CONCU_LIDER
+        WHERE PAIS_COD_PAIS = #codigoPais#
+        AND #codigoPeriodo# >=  CAM_INIC
+        AND #codigoPeriodo# <= CAM_FINA
+        AND EST_REGI = '1'
+        ]]>
+	</select>
+	
+	<insert id="insertPedidoObjetivo" parameterClass="java.util.Map">
+		INSERT INTO LET_OBJET_PEDID_SECCI(
+		 PAIS_COD_PAIS,
+		 CONC_COD_CONC,
+		 CAM_PROC,
+		 COD_REGI,
+		 COD_ZONA,
+		 COD_SECC,
+		 OBJ_PEDI,
+		 PES_SECC,
+		 ACT_FINA,
+		 USU_MODI,
+		 FEC_MODI,
+		 EST_REGI)
+		VALUES(
+		 #codigoPais#,
+		 #codigoConcurso#,
+		 #codigoPeriodo#,
+		 #codigoRegion#,
+		 #codigoZona#,
+		 #codigoSeccion#,
+		 #numeroPeridosObjetivos#,
+		 0,
+		 0,
+		 #codigoUsuario#,
+		 sysdate,
+		 1)
+	</insert>
+	
+	<update id="updatePedidoObjetivo" parameterClass="java.util.Map">
+		UPDATE LET_OBJET_PEDID_SECCI
+		SET    OBJ_PEDI = #numeroPeridosObjetivos#,
+		       USU_MODI = #codigoUsuario#,
+		       FEC_MODI = sysdate
+		WHERE PAIS_COD_PAIS =  #codigoPais#
+		AND CONC_COD_CONC = #codigoConcurso#
+		AND CAM_PROC = #codigoPeriodo#
+		AND COD_REGI = #codigoRegion#
+		AND COD_ZONA = #codigoZona#
+		AND COD_SECC = #codigoSeccion#
+	</update>
+	
+    <parameterMap id="executeProcesoLETCalculoPedidoObjetivoSeccionCampaniaParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoRegion" 		jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeProcesoLETCalculoPedidoObjetivoSeccionCampania" parameterMap="executeProcesoLETCalculoPedidoObjetivoSeccionCampaniaParams">
+		{call LET_PKG_PROCE.LET_PR_CALCU_PEDID_OBJEC_SECAM(?,?,?,?,?,?)}
+	</procedure>
+
+    <parameterMap id="executeProcesoLETCalculoAcumuladoMetaPedidoParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeProcesoLETCalculoAcumuladoMetaPedido" parameterMap="executeProcesoLETCalculoAcumuladoMetaPedidoParams">
+		{call LET_PKG_PROCE.LET_PR_CALCU_METAS_LIDER_CONCU(?,?,?)}
+	</procedure>
+
+    <parameterMap id="executeProcesoLETResultadoSeccionesCampaniaCieCamParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeProcesoLETResultadoSeccionesCampaniaCieCam" parameterMap="executeProcesoLETResultadoSeccionesCampaniaCieCamParams">
+		{call LET_PKG_PROCE.LET_PR_RESUL_SECCI_CAMPA_CIECA(?,?,?,?,?)}
+	</procedure>
+	
+	<select id="getValidaProcesoCierreRegionLET" parameterClass="java.util.Map" resultClass="java.lang.String">
+		SELECT    COUNT(1)
+		FROM      LET_RESUL_SECCI_CAMPA
+		WHERE     PAIS_COD_PAIS = #codigoPais#
+		  AND     LIDE_CAM_LIDE = #codigoPeriodo#
+		  AND     COD_REGI = #codigoRegion#	
+	</select>
+
+    <parameterMap id="executeProcesoLETEntregaPremioCampaniaCierreCampaniaParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeProcesoLETEntregaPremioCampaniaCierreCampania" parameterMap="executeProcesoLETEntregaPremioCampaniaCierreCampaniaParams">
+		{call LET_PKG_PROCE.LET_PR_ENTRE_PREMI_CAMPA_CIERR(?,?,?,?)}
+	</procedure>
+	
+	<parameterMap id="executeCalculoMetasLideresCampanaParams" class="map">
+		<parameter property="codigoPais"    	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoConcurso"  	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoRegion"  	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoZona" 	            jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoSeccion" 	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroPeridosObjetivos" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" 	        jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeCalculoMetasLideresCampana" parameterMap="executeCalculoMetasLideresCampanaParams">
+		{call LET_PKG_PROCE.LET_PR_CALCU_METAS_LIDER_CAMPA(?,?,?,?,?,?,?,?)}
+	</procedure>
+
+    <parameterMap id="executeProcesoLETEvaluacionProductividadCierreRegionCampaniaParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeProcesoLETEvaluacionProductividadCierreRegionCampania" parameterMap="executeProcesoLETEvaluacionProductividadCierreRegionCampaniaParams">
+		{call LET_PKG_PROCE.LET_PR_EVALU_PRODU_REGIO_CAMPA(?,?,?,?,?)}
+	</procedure>
+	
+	<parameterMap id="executeDesvinculacionAutomaticaLideresParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoRegion" 	    jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeDesvinculacionAutomaticaLideres" parameterMap="executeDesvinculacionAutomaticaLideresParams">
+		{call LET_PKG_PROCE.LET_PR_DESVI_AUTOM_LIDER(?,?,?,?)}
+	</procedure>
+	
+	<select id="getRegionesActivasCerradasByPeriodo" parameterClass="java.util.Map" resultMap="baseResult">
+		SELECT distinct(RE.COD_REGI) AS CODIGO,RE.DES_REGI AS DESCRIPCION
+		FROM ZON_REGIO RE,
+		     FAC_CONTR_CIERR CI
+		WHERE RE.OID_REGI = CI.ZORG_OID_REGI
+		AND CI.PERD_OID_PERI = GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO(#codigoPeriodo#,GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA(#codigoMarca#),GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CANAL(#codigoCanal#))
+		AND CI.TCIE_OID_TIPO_CIER = 1
+	</select>
+	
+	<parameterMap id="executeGenerarReporteResultadoLiderParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoConcurso"  	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeGenerarReporteResultadoLider" parameterMap="executeGenerarReporteResultadoLiderParams">
+		{call LET_PKG_PROCE.LET_PR_GENER_REPOR_RESUL_LIDER(?,?,?,?)}
+	</procedure>
+	
+	<select id="getZonaNuevaRezonificada" parameterClass="java.util.Map" resultClass="integer">
+		SELECT COUNT(1)
+		FROM  ZON_ZONA z
+		WHERE z.COD_ZONA = #codigoZona#
+		AND   ((z.PERD_OID_PERI_INIC = GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO(#codigoPeriodo#,
+		                                                             GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA(#codigoMarca#),
+		                                                             GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CANAL(#codigoCanal#)) ) 
+		           OR (((SELECT COUNT(1)
+		                FROM ZON_HISTO_VALID_UNADM
+		                WHERE COD_PAIS = #codigoPais#
+				        AND (COD_ZONA = #codigoZona# OR COD_ZONA_ANTE = #codigoZona#) 
+				        AND COD_PERI = #codigoPeriodo#
+				        AND COD_OPER = 'T') > 0)
+				        OR
+		                (SELECT COUNT(1)
+		                 FROM ZON_HISTO_TERRI_CONSU
+		                 WHERE COD_PAIS = #codigoPais#
+		                 AND (COD_ZONA_DEST = #codigoZona# OR COD_ZONA_ORIG = #codigoZona#)
+		                 AND COD_PERI = #codigoPeriodo#) > 0)
+				  )
+	</select>
+	
+	<select id="getSeccioNueva" parameterClass="java.util.Map" resultClass="integer">
+		SELECT COUNT(1) 
+		FROM  ZON_SECCI se,
+		      ZON_ZONA zo
+		WHERE zo.oid_zona = se.zzon_oid_zona
+		AND   zo.cod_zona = #codigoZona#
+		AND   se.COD_SECC = #codigoSeccion#
+		AND   se.PERD_OID_PERI_INIC = GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO(#codigoPeriodo#,
+                                                                                 GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA(#codigoMarca#),
+		                                                                         GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CANAL(#codigoCanal#)) 
+	</select>
+
+    <parameterMap id="executeActualizarLETLiderPendienteParams" class="map">
+		<parameter property="codigoPais"    			jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 			jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoPeriodoValAsiLid" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoUnidadAdm" 			jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoCliente" 			jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoUsuario" 			jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"	 			jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal" 				jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeActualizarLETLiderPendiente" parameterMap="executeActualizarLETLiderPendienteParams">
+		{call LET_PKG_PROCE.LET_PR_ACTUA_LIDER_PENDI(?,?,?,?,?,?,?,?)}
+	</procedure>
+
+   <parameterMap id="executeAsignarDesvincularLiderParams" class="map">
+		<parameter property="codigoPais"    			jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 			jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="usuario.login"             jdbcType="VARCHAR"  javaType="java.lang.String"  mode="IN"/>	
+	</parameterMap>
+	<procedure id="executeAsignarDesvincularLider" parameterMap="executeAsignarDesvincularLiderParams">
+		{call LET_PKG_PROCE.LET_PR_ASIGN_DESAS_LIDER(?,?,?)}
+	</procedure>
+	
+	<select id="getCampanaFinConcursoByCodigoConcurso" parameterClass="string" resultClass="string">
+		select cam_fina
+		from LET_PARAM_CONCU_LIDER
+		where cod_conc = #value#
+	</select>
+	
+	<select id="getValidaExisteConcursoByCodigoPeriodo" parameterClass="java.util.Map" resultClass="integer">
+		<![CDATA[
+			SELECT COUNT(1)
+			FROM LET_PARAM_CONCU_LIDER
+			WHERE PAIS_COD_PAIS = #codigoPais#
+			AND ( (CAM_INIC = Per_Pkg_Repor_Perce.PER_FN_OBTIE_PERIO(#codigoPeriodo#,#oidPais#,#oidMarca#,#oidCanal#,1)) OR 
+			      (CAM_INIC = Per_Pkg_Repor_Perce.PER_FN_OBTIE_PERIO(#codigoPeriodo#,#oidPais#,#oidMarca#,#oidCanal#,2)) OR
+			      (#codigoPeriodo# >= CAM_INIC AND #codigoPeriodo# <= CAM_FINA)
+			    )
+		]]>
+	</select>
+	
+	<select id="getZonasRezonificacion" parameterClass="java.util.Map" resultMap="baseResult">
+  		SELECT COD_ZONA AS CODIGO,
+		       COD_ZONA AS DESCRIPCION
+		FROM(select cod_zona
+		     from zon_histo_valid_unadm
+		     where cod_pais = #codigoPais#
+		     and cod_peri = #codigoPeriodo#
+		     and cod_oper in ('A','T','B')
+		     UNION
+		     select cod_zona_ante
+		     from zon_histo_valid_unadm
+		     where cod_pais = #codigoPais#
+		     and cod_peri = #codigoPeriodo#
+		     and cod_oper in ('A','T','B')
+		     UNION
+		     select cod_zona_dest
+		     from zon_histo_terri_consu
+		     where cod_pais = #codigoPais#
+		     and cod_peri = #codigoPeriodo#
+		     union
+		     select cod_zona_orig
+		     from zon_histo_terri_consu
+		     where cod_pais = #codigoPais#
+		     and cod_peri = #codigoPeriodo#)
+		WHERE COD_ZONA IS NOT NULL
+		ORDER BY cod_zona asc
+    </select>
+    
+    <select id="getRegionCerradaByCodigoZona" parameterClass="java.util.Map" resultClass="string">
+    	select DISTINCT re.des_regi
+		from ZON_REGIO re,
+		     FAC_CONTR_CIERR ci
+		where re.pais_oid_pais = ci.pais_oid_pais
+		and re.pais_oid_pais = #oidPais#
+		and ci.zorg_oid_regi = re.oid_regi
+		and re.oid_regi = (select zo.zorg_oid_regi
+		                   from ZON_ZONA zo
+		                   where zo.PAIS_OID_PAIS = #oidPais#
+		                   and zo.cod_zona = #codigoZona#)
+		and ci.PERD_OID_PERI = GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO2(#codigoPeriodo#)
+		and ci.tcie_oid_tipo_cier = 1
+    </select>
+    
+    <insert id="insertZonasRezonificadasGTT" parameterClass="java.util.Map">
+    	INSERT INTO LET_GTT_ZONAS_REZON(COD_PAIS,COD_ZONA) VALUES(#codigoPais#,#codigoZona#)
+    </insert>
+    
+    <parameterMap id="executeCargaPedidosObjetivosRezonificacionParams" class="map">
+    	<parameter property="codigoPais"    jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoPeriodo" jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoUsuario" jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+    <procedure id="executeCargaPedidosObjetivosRezonificacion" parameterMap="executeCargaPedidosObjetivosRezonificacionParams">
+    	{call LET_PKG_PROCE.LET_PR_CALCU_PEDID_OBJET_REZON(?,?,?)}
+    </procedure>
+    
+    <select id="getZonaNueva" parameterClass="java.util.Map" resultClass="integer">
+		SELECT COUNT(1) 
+		FROM  ZON_ZONA zo
+		WHERE zo.cod_zona = #codigoZona#
+		AND   zo.PERD_OID_PERI_INIC = GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO(#codigoPeriodo#,
+                                                                                 GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA(#codigoMarca#),
+		                                                                         GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CANAL(#codigoCanal#)) 
+	</select>
+	
+	<parameterMap id="executeProcesoLETActualizacionClasificacionLideresParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="tipoTransaccion" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="tipoOperacion" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCliente" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN" />
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeProcesoLETActualizacionClasificacionLideres" parameterMap="executeProcesoLETActualizacionClasificacionLideresParams">
+		{call LET_PKG_PROCE.LET_PR_ACTUA_CLASI_LIDER(?,?,?,?,?,?)}
+	</procedure>
+	
+	<parameterMap id="executeGenerarReporteLideresParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"   	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeGenerarReporteLideres" parameterMap="executeGenerarReporteLideresParams">
+		{call LET_PKG_PROCE.LET_PR_GENER_REPOR_LIDER(?,?,?,?)}
+	</procedure>
+	
+	<parameterMap id="executeProcesoLETCalculoPedidosObjetivosSeccionCampaniaParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	
+	<procedure id="executeProcesoLETCalculoPedidosObjetivosSeccionCampania" parameterMap="executeProcesoLETCalculoPedidosObjetivosSeccionCampaniaParams">
+		{call LET_PKG_PROCE.LET_PR_CALCU_OBJET_PEDID_LIDER(?,?,?,?,?)}
+	</procedure>
+	
+	<parameterMap id="executeProcesoLETCalculoObjetivoIngresoEfectivoLiderParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoRegion"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+                <parameter property="tipoProceso" 		jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>				
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+
+	<parameterMap id="executeProcesoLETActualizacionClasificacionLiderMasivoParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoRegion"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+		
+	<procedure id="executeProcesoLETCalculoObjetivoIngresoEfectivoLider" parameterMap="executeProcesoLETCalculoObjetivoIngresoEfectivoLiderParams">
+		{call LET_PKG_PROCE.LET_PR_CALCU_OBJET_RET22_LIDER(?,?,?,?,?,?,?)}
+	</procedure>
+	
+	<procedure id="executeProcesoLETCalculoObjetivoRetencion33Seccion" parameterMap="executeProcesoLETCalculoObjetivoIngresoEfectivoLiderParams">
+		{call LET_PKG_PROCE.LET_PR_CALCU_OBJET_RET33_LIDER(?,?,?,?,?,?,?)}
+	</procedure>
+	
+	<procedure id="executeProcesoLETCalculoObjetivoRetencion44Seccion" parameterMap="executeProcesoLETCalculoObjetivoIngresoEfectivoLiderParams">
+		{call LET_PKG_PROCE.LET_PR_CALCU_OBJET_RET44_LIDER(?,?,?,?,?,?,?)}
+	</procedure>
+	
+	<procedure id="executeProcesoLETCalculoObjetivosRetenciones" parameterMap="executeProcesoLETCalculoObjetivoIngresoEfectivoLiderParams">
+		{call LET_PKG_PROCE.LET_PR_CALCU_OBJET_RETEN(?,?,?,?,?,?,?)}
+	</procedure>
+	
+	<parameterMap id="executeProcesoLETCalculoResultadosLiderParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoRegion"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="tipoProceso" 		jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeProcesoLETCalculoResultadosLider" parameterMap="executeProcesoLETCalculoResultadosLiderParams">
+		{call LET_PKG_PROCE.LET_PR_CALCU_RESUL_LIDER(?,?,?,?,?,?,?)}
+	</procedure>
+	
+	<procedure id="executeProcesoLETActualizacionClasificacionLiderMasivo" parameterMap="executeProcesoLETActualizacionClasificacionLiderMasivoParams">
+		{call LET_PKG_PROCE.LET_PR_ACTUA_CLASI_CORPO(?,?,?,?,?,?)}
+	</procedure>
+	
+	<parameterMap id="executeProcesoLETProcesarClasificacionLideresParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"	 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"	 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="tipoEvaluacion" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCliente" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN" />
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeProcesoLETProcesarClasificacionLideres" parameterMap="executeProcesoLETProcesarClasificacionLideresParams">
+		{call LET_PKG_PROCE.LET_PR_PROCE_CLASI_LIDER(?,?,?,?,?,?,?)}
+	</procedure>
+	
+	<parameterMap id="executeProcesoLETCalculoNivelExitoLiderMasivoParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoRegion"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="tipoProceso" 		jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeProcesoLETCalculoNivelExitoLiderMasivo" parameterMap="executeProcesoLETCalculoNivelExitoLiderMasivoParams">
+		{call LET_PKG_PROCE.LET_PR_CALCU_NIVEL_EXITO(?,?,?,?,?,?,?)}
+	</procedure>
+	
+	<parameterMap id="executeProcesoLETCalculoGananciaMasivoParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoRegion"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="tipoProceso" 		jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeProcesoLETCalculoGananciaMasivo" parameterMap="executeProcesoLETCalculoGananciaMasivoParams">
+		{call LET_PKG_PROCE.LET_PR_CALCU_GANAN_CORPO(?,?,?,?,?,?,?)}
+	</procedure>
+	
+	<parameterMap id="executeProcesoLETDespachoPremiosParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeProcesoLETDespachoPremios" parameterMap="executeProcesoLETDespachoPremiosParams">
+		{call LET_PKG_PROCE.LET_PR_DESPA_PREMI(?,?,?,?,?)}
+	</procedure>
+	
+	<parameterMap id="executeProcesoLETCalculoBajaAutomaticaLiderParams" class="map">
+		<parameter property="codigoPais"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoRegion"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>		
+		<parameter property="tipoProceso" 		jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	
+	<procedure id="executeProcesoLETCalculoBajaAutomaticaLider" parameterMap="executeProcesoLETCalculoBajaAutomaticaLiderParams">
+		   { call LET_PKG_PROCE.LET_PR_CALCU_BAJA_LIDER(?,?,?,?,?,?,?) }
+	</procedure>
+	
+</sqlMap>

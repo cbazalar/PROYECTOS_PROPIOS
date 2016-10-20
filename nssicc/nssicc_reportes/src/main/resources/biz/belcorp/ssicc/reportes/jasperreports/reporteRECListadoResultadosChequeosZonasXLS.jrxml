@@ -1,0 +1,555 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteRECListadoResultadosChequeosZonasXLS"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Portrait"
+		 pageWidth="782"
+		 pageHeight="436118"
+		 columnWidth="782"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="AllSectionsNoDetail"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources"
+		 whenResourceMissingType="Empty">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="condicion1" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("condicion1")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaInicio" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaInicio")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaFin" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaFin")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoConsultora" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoConsultora")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoSubgerencia" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoSubgerencia")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="numeroSolicitud" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("numeroSolicitud")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[SELECT  sgv.oid_subg_vent, sgv.des_subg_vent, r.oid_regi, r.des_regi, zon.oid_zona, zon.des_zona, ped.cod_indi_revi, COUNT(soc.oid_soli_cabe) as cant_ped_cheq,
+          ( SELECT   count(soc1.OID_SOLI_CABE) 
+            FROM     ped_solic_cabec soc1,
+                     rec_resul_chequ rec1,
+                     zon_zona zon1,
+                     zon_regio r1,
+                     zon_sub_geren_venta sgv1
+            WHERE (    (soc1.recq_oid_resu_cheq = rec1.oid_resu_cheq)
+              
+                    AND (zon1.oid_zona = soc1.zzon_oid_zona)
+                    AND (r1.oid_regi = zon1.zorg_oid_regi)
+                    AND (sgv1.oid_subg_vent = r1.zsgv_oid_subg_vent)
+                    AND r.oid_regi =r1.oid_regi  
+                    AND zon.oid_zona = zon1.oid_zona
+                    AND sgv.oid_subg_vent = sgv1.oid_subg_vent  
+                    AND sgv1.cod_subg_vent = Decode($P{codigoSubgerencia}, NULL, sgv1.cod_subg_vent , '',  sgv1.cod_subg_vent , $P{codigoSubgerencia})           
+                    AND soc1.clie_oid_clie = Decode($P{codigoConsultora}, NULL,soc1.clie_oid_clie, '',soc1.clie_oid_clie, gen_pkg_gener.GEN_FN_DEVUELVE_ID_CLIENTE($P{codigoConsultora}))
+                    AND (soc1.fec_fact >= TO_DATE($P{fechaInicio},'dd/mm/yyyy'))
+                    AND (soc1.fec_fact <= TO_DATE($P{fechaFin},'dd/mm/yyyy'))
+	            AND soc1.val_nume_soli = Decode($P{numeroSolicitud}, NULL, soc1.val_nume_soli , '',  soc1.val_nume_soli , to_number($P{numeroSolicitud}))                     
+                    $P!{condicion1}
+                   )) cant_soli_chek
+    FROM ped_indic_revis ped,
+         ped_solic_cabec soc,
+         zon_zona zon,
+         zon_regio r,
+         zon_sub_geren_venta sgv        
+   WHERE (   
+            (ped.oid_indi_revi =soc.inre_oid_indi_revi )
+            AND (zon.oid_zona = soc.zzon_oid_zona)
+            AND (r.oid_regi = zon.zorg_oid_regi)
+            AND (sgv.oid_subg_vent = r.zsgv_oid_subg_vent)
+            AND  sgv.cod_subg_vent = Decode($P{codigoSubgerencia}, NULL, sgv.cod_subg_vent , '',  sgv.cod_subg_vent , $P{codigoSubgerencia})           
+            AND  soc.clie_oid_clie = Decode($P{codigoConsultora}, NULL,soc.clie_oid_clie, '',soc.clie_oid_clie, gen_pkg_gener.GEN_FN_DEVUELVE_ID_CLIENTE($P{codigoConsultora}))
+            AND (soc.fec_fact >= TO_DATE($P{fechaInicio},'dd/mm/yyyy'))
+            AND (soc.fec_fact <= TO_DATE($P{fechaFin},'dd/mm/yyyy'))
+            AND soc.val_nume_soli = Decode($P{numeroSolicitud}, NULL, soc.val_nume_soli , '',  soc.val_nume_soli , to_number($P{numeroSolicitud}))           
+            $P!{condicion1}
+         )
+GROUP BY sgv.oid_subg_vent, sgv.des_subg_vent, r.oid_regi, r.des_regi, zon.oid_zona, zon.des_zona, ped.cod_indi_revi
+ORDER BY sgv.oid_subg_vent ASC,
+         r.oid_regi ASC,
+         zon.oid_zona ASC,
+         ped.cod_indi_revi ASC]]></queryString>
+
+	<field name="OID_SUBG_VENT" class="java.math.BigDecimal"/>
+	<field name="DES_SUBG_VENT" class="java.lang.String"/>
+	<field name="OID_REGI" class="java.math.BigDecimal"/>
+	<field name="DES_REGI" class="java.lang.String"/>
+	<field name="OID_ZONA" class="java.math.BigDecimal"/>
+	<field name="DES_ZONA" class="java.lang.String"/>
+	<field name="COD_INDI_REVI" class="java.lang.String"/>
+	<field name="CANT_PED_CHEQ" class="java.math.BigDecimal"/>
+	<field name="CANT_SOLI_CHEK" class="java.math.BigDecimal"/>
+
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="94"  isSplitAllowed="true" >
+				<crosstab >
+					<reportElement
+						x="0"
+						y="0"
+						width="673"
+						height="94"
+						key="crosstab-1"/>
+					<crosstabHeaderCell>						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="100"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-1"
+						stretchType="RelativeToBandHeight"/>
+					<box>					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporte.generico.subgerencia}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="100"
+						y="0"
+						width="100"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-1"
+						stretchType="RelativeToBandHeight"/>
+					<box>					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporte.generico.region}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="200"
+						y="0"
+						width="100"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-1"
+						stretchType="RelativeToBandHeight"/>
+					<box>					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporte.generico.zona}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="300"
+						y="0"
+						width="100"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField-1"
+						stretchType="RelativeToBandHeight"/>
+					<box>					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECValidacionSolicitudesRecForm.numeroPedidosChequeados}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+					</crosstabHeaderCell>					<rowGroup name="DES_SUBG_VENT" width="100" totalPosition="End">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{DES_SUBG_VENT}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="100"
+						height="12"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{DES_SUBG_VENT}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="DES_REGI" width="100" totalPosition="End">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{DES_REGI}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="100"
+						height="12"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{DES_REGI}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="DES_ZONA" width="100">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{DES_ZONA}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="100"
+						height="12"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{DES_ZONA}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<rowGroup name="PER_CHEQ" width="100">
+						<bucket>
+							<bucketExpression class="java.math.BigDecimal"><![CDATA[$F{CANT_SOLI_CHEK}]]></bucketExpression>
+						</bucket>
+						<crosstabRowHeader>
+						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="100"
+						height="12"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{PER_CHEQ}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabRowHeader>
+					</rowGroup>
+					<columnGroup name="COD_INDI_REVI" height="25" totalPosition="End" headerPosition="Center">
+						<bucket>
+							<bucketExpression class="java.lang.String"><![CDATA[$F{COD_INDI_REVI}]]></bucketExpression>
+						</bucket>
+						<crosstabColumnHeader>
+						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="50"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField"
+						stretchType="RelativeToBandHeight"/>
+					<box>					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$V{COD_INDI_REVI}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabColumnHeader>
+						<crosstabTotalColumnHeader>
+						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+				<textField isStretchWithOverflow="true" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="0"
+						y="0"
+						width="50"
+						height="25"
+						backcolor="#CCCCCC"
+						key="textField"
+						stretchType="RelativeToBandHeight"/>
+					<box>					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteRECValidacionSolicitudesRecForm.porcentajeAvance}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+						</crosstabTotalColumnHeader>
+					</columnGroup>
+
+					<measure name="CANT_PED_CHEQ_Count" class="java.math.BigDecimal" calculation="Sum">
+						<measureExpression><![CDATA[$F{CANT_PED_CHEQ}]]></measureExpression>
+					</measure>
+					<crosstabCell width="50" height="12">
+						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="50"
+						height="12"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{CANT_PED_CHEQ_Count}]]></textFieldExpression>
+				</textField>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="50" height="12" columnTotalGroup="COD_INDI_REVI">
+						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+				<textField isStretchWithOverflow="true" pattern="#,##0.00 %" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="0"
+						y="0"
+						width="50"
+						height="12"
+						key="textField"/>
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font size="8"/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{CANT_PED_CHEQ_Count}.doubleValue()!=0
+?
+new BigDecimal(($V{PER_CHEQ}.doubleValue() / $V{CANT_PED_CHEQ_Count}.doubleValue())) 
+: 
+new BigDecimal(0.0)]]></textFieldExpression>
+				</textField>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="50" height="0" rowTotalGroup="DES_REGI">
+						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="50" height="0" rowTotalGroup="DES_REGI" columnTotalGroup="COD_INDI_REVI">
+						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="50" height="0" rowTotalGroup="DES_SUBG_VENT">
+						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="50" height="0" rowTotalGroup="DES_SUBG_VENT" columnTotalGroup="COD_INDI_REVI">
+						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="50" height="0" rowTotalGroup="DES_ZONA">
+						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="50" height="0" rowTotalGroup="DES_ZONA" columnTotalGroup="COD_INDI_REVI">
+						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="50" height="0" rowTotalGroup="PER_CHEQ">
+						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+						</cellContents>
+					</crosstabCell>
+					<crosstabCell width="50" height="0" rowTotalGroup="PER_CHEQ" columnTotalGroup="COD_INDI_REVI">
+						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+						</cellContents>
+					</crosstabCell>
+					<whenNoDataCell>						<cellContents mode="Transparent">
+					<box>					<topPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<leftPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+					<bottomPen lineWidth="0.0" lineColor="#000000"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+						</cellContents>
+					</whenNoDataCell>					</crosstab>
+			</band>
+		</summary>
+</jasperReport>

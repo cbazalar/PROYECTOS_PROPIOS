@@ -1,0 +1,496 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:h="http://java.sun.com/jsf/html"
+	xmlns:f="http://java.sun.com/jsf/core"
+	xmlns:c="http://java.sun.com/jsp/jstl/core"
+	xmlns:ui="http://java.sun.com/jsf/facelets"
+	xmlns:p="http://primefaces.org/ui"
+	xmlns:ssicc="http://java.sun.com/jsf/composite/componentes/ssicc">
+
+<body>
+	<ui:composition template="/templates/templateMantenimientoForm.xhtml">
+		<ui:param name="mAlias" value="#{mantenimientoSGRPolizaSearchAction}" />
+
+		<ui:define name="titulo_Pantalla">
+			<h:outputText value="#{i18n['mantenimientoSGRPolizaForm.title']}"
+				styleClass="clsEncabezadoPantalla" />
+		</ui:define>
+
+		<ui:define name="body_toolbar_adicionales">
+			<p:commandLink title="#{msg['botonSave.tooltip']}"
+				rendered="#{mAlias.accion!='CONSULTAR'}"
+				actionListener="#{mantenimientoSGRPolizaSearchAction.validarGrabar}"
+				
+			 	update=":principalForm:idCriterioMante :principalForm:idTabSGRPoliza:idTableKit :principalForm:idTabSGRPoliza:idTableCampaniaGratuita :principalForm:mensajesGrowl"
+				process=":principalForm:idCriterioMante, @this">
+				<p:graphicImage value="#{resource['images:saveForm.png']}"
+                     width="34"
+                     height="34"
+					style="vertical-align:middle" />
+			</p:commandLink>
+
+			<ssicc:confirmDialogConfirmar id="idConfirmDialogSaveSGRPoliza"
+				manage="#{mAlias}"
+				accion="#{mantenimientoSGRPolizaSearchAction.save}"
+				update=":principalForm:idCriterioMante :principalForm:panelPrecios1 :principalForm:panelPrecios2 :principalForm:idTabSGRPoliza:idTableKit :principalForm:idTabSGRPoliza:idTableCampaniaGratuita :principalForm:mensajesGrowl" />
+
+		</ui:define>
+
+		<ui:define name="body_criterio_mantenimiento">
+			<h:panelGrid id="idCriterioMante" columns="2">
+
+				<ssicc:label key="#{i18n['mantenimientoSGRPolizaForm.codigoPais']}"
+					required="true" />
+				<ssicc:label
+					value="#{mPantallaPrincipalBean.currentUser.pais.descripcion}" />
+				
+				<!-- **************** POLIZA ******************* -->
+				<ssicc:label
+					key="#{i18n['mantenimientoSGRPolizaForm.codigoPoliza']}"
+					required="true" />
+				<ssicc:inputText value="#{mAlias.formMantenimiento.codigoPoliza}"
+					size="6" maxlength="5" required="true"
+					deshabilitado="#{(mAlias.accion=='CONSULTAR' || mAlias.accion=='MODIFICAR') ? true : false}" />
+
+				<!-- **************** DESCRIPCION ******************* -->
+				<ssicc:label
+					key="#{i18n['mantenimientoSGRPolizaForm.descripcionPoliza']}"
+					required="true" />
+				<c:choose>
+					<c:when test="#{mAlias.accion=='CONSULTAR'}">
+						<ssicc:inputText
+							value="#{mAlias.formMantenimiento.descripcionPoliza}" size="50"
+							deshabilitado="true" />
+					</c:when>
+					<c:when test="#{mAlias.accion=='NUEVO'}">
+						<ssicc:inputText
+							value="#{mAlias.formMantenimiento.descripcionPoliza}" size="40"
+							maxlength="100" required="true" />
+					</c:when>
+					<c:otherwise>
+						<ssicc:inputText
+							value="#{mAlias.formMantenimiento.descripcionPoliza}" size="40"
+							maxlength="100"
+							deshabilitado="#{(mAlias.formMantenimiento.indicadorActivo == NUMERO_CERO) ? false : true}"
+							required="true" />
+					</c:otherwise>
+				</c:choose>
+
+				<!-- **************** PRECIO ******************* -->
+				<ssicc:label
+					key="#{i18n['mantenimientoSGRPolizaForm.precioPoliza']}"
+					required="true" />
+
+				<h:panelGroup id="panelPrecios1" rendered="#{!mAlias.ocultarPrecios}">					
+					<p:inputText value="#{mAlias.formMantenimiento.precioPoliza}" 
+						size="9" maxlength="10" required="true"
+						onkeypress="return jsEsNumeroDecimal(event);"
+						onchange="formatearNumeroWithTope(this,2,900000);"
+						rendered="#{mAlias.formMantenimiento.indicadorActivo == NUMERO_UNO}"
+						disabled = "#{!mAlias.indicadorHabilitaPrecio and !mAlias.formMantenimiento.editable or mAlias.accion=='CONSULTAR'}"/>
+					
+					<p:inputText value="#{mAlias.formMantenimiento.precioPoliza}" 
+						size="9" maxlength="10" required="true"
+						onkeypress="return jsEsNumeroDecimal(event);"
+						onchange="formatearNumeroWithTope(this,2,900000);"
+						rendered="#{mAlias.formMantenimiento.indicadorActivo != NUMERO_UNO}"
+						disabled = "#{!mAlias.formMantenimiento.editable or mAlias.accion=='CONSULTAR'}"/>
+						
+				</h:panelGroup>
+				<h:panelGroup id="panelPrecios2" rendered="#{mAlias.ocultarPrecios}">					
+					<p:inputText value="#{mAlias.formMantenimiento.precioPoliza}" 
+						size="9" maxlength="10" required="true"
+						onkeypress="return jsEsNumeroDecimal(event);"
+						onchange="formatearNumeroWithTope(this,2,900000);"
+						disabled = "#{(mAlias.formMantenimiento.indicadorActivo == NUMERO_CERO) ? false : true}"/>
+				</h:panelGroup>
+				
+				<!-- **************** EDAD MINIMA ******************* -->
+				<ssicc:label key="#{i18n['mantenimientoSGRPolizaForm.edadMinima']}"
+					required="true" />
+				<c:choose>
+					<c:when test="#{mAlias.accion=='CONSULTAR'}">
+						<ssicc:inputText value="#{mAlias.formMantenimiento.edadMinima}"
+							size="4" deshabilitado="true" />
+					</c:when>
+					<c:when test="#{mAlias.accion=='NUEVO'}">
+						<ssicc:inputText value="#{mAlias.formMantenimiento.edadMinima}"
+							size="4" esNumerico="true" maxlength="3" required="true" />
+					</c:when>
+					<c:otherwise>
+						<ssicc:inputText value="#{mAlias.formMantenimiento.edadMinima}"
+							size="4" esNumerico="true" maxlength="3"
+							deshabilitado="#{(mAlias.formMantenimiento.indicadorActivo == NUMERO_CERO) ? false : true}"
+							required="true" />
+					</c:otherwise>
+				</c:choose>
+
+				<!-- **************** EDAD MAXIMA ******************* -->
+				<ssicc:label key="#{i18n['mantenimientoSGRPolizaForm.edadMaxima']}"
+					required="true" />
+				<c:choose>
+					<c:when test="#{mAlias.accion=='CONSULTAR'}">
+						<ssicc:inputText value="#{mAlias.formMantenimiento.edadMaxima}"
+							size="4" deshabilitado="true" />
+					</c:when>
+					<c:when test="#{mAlias.accion=='NUEVO'}">
+						<ssicc:inputText value="#{mAlias.formMantenimiento.edadMaxima}"
+							size="4" esNumerico="true" maxlength="3" required="true" />
+					</c:when>
+					<c:otherwise>
+						<ssicc:inputText value="#{mAlias.formMantenimiento.edadMaxima}"
+							size="4" esNumerico="true" maxlength="3"
+							deshabilitado="#{(mAlias.formMantenimiento.indicadorActivo == NUMERO_CERO) ? false : true}"
+							required="true" />
+					</c:otherwise>
+				</c:choose>
+
+				<!-- **************** NUM DIAS FACT ******************* -->
+				<ssicc:label
+					key="#{i18n['mantenimientoSGRPolizaForm.numDiasFacturacion']}"
+					required="true" />
+				<ssicc:inputText
+					value="#{mAlias.formMantenimiento.numDiasFacturacion}" size="4"
+					esNumerico="true" maxlength="2" deshabilitado="true"
+					required="true" />
+
+				<!-- **************** ESTADO ******************* -->
+				<ssicc:label
+					key="#{i18n['mantenimientoSGRPolizaForm.indicadorActivo']}" />
+				<ssicc:selectOneRadio
+					value="#{mAlias.formMantenimiento.indicadorActivo}"
+					disabled="#{mAlias.accion=='CONSULTAR' ? true : false}">
+					<f:selectItem
+						itemLabel="#{i18n['mantenimientoSGRPolizaForm.activo']}"
+						itemValue="1" />
+					<f:selectItem
+						itemLabel="#{i18n['mantenimientoSGRPolizaForm.noactivo']}"
+						itemValue="0" />
+				</ssicc:selectOneRadio>
+
+				<!-- **************** COBERTURA PEGS ******************* -->
+				<ssicc:label
+					key="#{i18n['mantenimientoSGRPolizaForm.coberturaPEGS']}" />
+				<ssicc:selectOneRadio
+					value="#{mAlias.formMantenimiento.coberturaPEGS}"
+					disabled="#{mAlias.accion=='CONSULTAR' ? true : false}">
+					<f:selectItem
+						itemLabel="#{i18n['mantenimientoSGRPolizaForm.coberturaPEGS.si']}"
+						itemValue="1" />
+					<f:selectItem
+						itemLabel="#{i18n['mantenimientoSGRPolizaForm.coberturaPEGS.no']}"
+						itemValue="0" />
+				</ssicc:selectOneRadio>
+
+			</h:panelGrid>
+
+		</ui:define>
+
+		<ui:define name="body_adicional_mantenimiento">
+			<p:tabView id="idTabSGRPoliza" activeIndex="0">
+				<!-- **************** TAB KITS ******************* -->
+				<p:tab title="#{i18n['mantenimientoSGRPolizaForm.leyendaKits']}">
+					<h:panelGrid id="idPanelCabeceraKit" style="margin-bottom: 20px;"
+						columns="2">
+						<ssicc:label
+							key="#{i18n['mantenimientoSGRPolizaForm.campanhaProceso']}"
+							required="true" />
+						<ssicc:campaignCalendar2 id="campanhaProceso"
+							value="#{mAlias.formMantenimiento.campanhaProceso}"
+							deshabilitado="#{mAlias.accion=='CONSULTAR' ? true : false}"
+							required="true" manage="#{mAlias}"></ssicc:campaignCalendar2>
+
+						<ssicc:label
+							key="#{i18n['mantenimientoSGRPolizaForm.codigoVenta']}"
+							required="true" />
+						<ssicc:inputText value="#{mAlias.formMantenimiento.codigoVenta}"
+							required="true" esNumerico="true"
+							deshabilitado="#{mAlias.accion=='CONSULTAR' ? true : false}"
+							maxlength="6" size="6"></ssicc:inputText>
+
+					</h:panelGrid>
+					<h:panelGrid id="idPanelDetalleKit" columns="1">
+						<c:if test="#{mAlias.accion!='CONSULTAR'}">
+							<h:panelGroup>
+								<p:commandLink title="#{i18n['button.insert']}"
+									actionListener="#{mantenimientoSGRPolizaSearchAction.insertarRegistroKit}"
+									update=":principalForm:idTabSGRPoliza:idPanelDetalleKit :principalForm:idTabSGRPoliza:idPanelCabeceraKit :principalForm:mensajesGrowl"
+									process=":principalForm:idTabSGRPoliza:idPanelCabeceraKit, @this">
+									<p:graphicImage value="#{resource['images:nuevoForm2.png']}"
+										width="30"
+										height="30"
+										style="vertical-align:middle" />
+								</p:commandLink>
+								<p:commandLink title="#{i18n['button.delete']}"
+									actionListener="#{mantenimientoSGRPolizaSearchAction.eliminarRegistroKit}"
+									update=":principalForm:idTabSGRPoliza:idPanelDetalleKit :principalForm:idTabSGRPoliza:idPanelCabeceraKit :principalForm:mensajesGrowl"
+									process="@this">
+									<p:graphicImage value="/resources/images/delete24_s.gif"
+										style="vertical-align:middle" width="22" height="22" />
+								</p:commandLink>
+							</h:panelGroup>
+						</c:if>
+						<p:dataTable id="idTableKit" value="#{mAlias.dataModelKit}"
+							var="lista" selection="#{mAlias.beanRegistroSeleccionadoKit}"
+							selectionMode="single" scrollable="true" scrollHeight="150"
+							emptyMessage="#{msg['dataTable.noExistenRegistrosFiltro']}">
+							<p:ajax event="rowSelect"
+								listener="#{mantenimientoSGRPolizaSearchAction.onRowSelect}" />
+							<p:ajax event="rowUnselect"
+								listener="#{mantenimientoSGRPolizaSearchAction.onRowUnselect}" />
+
+							<p:column width="40" rendered="#{lista.indicadorAccion !='2'}">
+								<f:facet name="header">
+									<h:outputText
+										value="#{i18n['sgrPolizaKitList.campanhaProceso']}" />
+								</f:facet>								
+								<h:outputText value="#{lista.campanhaProceso}" />																
+							</p:column>
+														
+							<p:column width="40" rendered="#{lista.indicadorAccion !='2'}">
+								<f:facet name="header">
+									<h:outputText value="#{i18n['sgrPolizaKitList.codigoVenta']}" />
+								</f:facet>								
+								<h:outputText value="#{lista.codigoVenta}" />														
+							</p:column>
+
+							<p:column width="100" rendered="#{lista.indicadorAccion !='2'}">
+								<f:facet name="header">
+									<h:outputText
+										value="#{i18n['sgrPolizaKitList.descripcionProducto']}" />
+								</f:facet>								
+								<h:outputText value="#{lista.descripcionProducto}" />								
+							</p:column>
+						</p:dataTable>
+					</h:panelGrid>
+				</p:tab>
+				<!-- **************** TAB ESTATUS ANULACION ******************* -->
+				<p:tab title="#{i18n['mantenimientoSGRPolizaForm.leyendaEstatus']}">
+					<h:panelGrid id="idPanelCabeceraEstatus"
+						style="margin-bottom: 20px;" columns="2">
+						<ssicc:label
+							key="#{i18n['mantenimientoSGRPolizaForm.codigoEstatus']}" />
+
+						<ssicc:selectMenu id="codigoEstatus"
+							value="#{mAlias.formMantenimiento.codigoEstatus}" disabled="true"
+							style="width:200px;">
+							<f:selectItem itemLabel="" itemValue="" />
+							<!-- <f:selectItems value="#{mAlias.sgrEstatusList}" var="lista" 
+	       					  	   itemLabel="#{lista.valI18n}" itemValue="#{lista.oidEstatus}" />
+	  			 -->
+						</ssicc:selectMenu>
+					</h:panelGrid>
+
+					<h:panelGrid id="idPanelDetalleEstatus" columns="1">
+						<p:dataTable id="idEstatusKit" value="#{mAlias.dataModelEstatus}"
+							var="lista1"
+							selection="#{mAlias.beanRegistroSeleccionadoEstatus}"
+							selectionMode="single" scrollable="true" scrollHeight="150"
+							style="width:350px;"
+							emptyMessage="#{msg['dataTable.noExistenRegistrosFiltro']}">
+							<p:column width="50" >
+								<f:facet name="header">
+									<h:outputText
+										value="#{i18n['sgrPolizaEstatusList.descripcionEstatus']}" />
+								</f:facet>
+								<h:outputText value="#{lista1.descripcionEstatus}" />
+							</p:column>
+						</p:dataTable>
+
+					</h:panelGrid>
+
+				</p:tab>
+				
+				<!-- **************** TAB CAMPANHAS GRATUITAS ******************* -->
+				<p:tab
+					title="#{i18n['mantenimientoSGRPolizaForm.leyendaCampaniasGratuitas']}">
+
+					<h:panelGrid id="idPanelCabeceraCampGrat"
+						style="margin-bottom: 20px;" columns="10">
+						<ssicc:label
+							key="#{i18n['mantenimientoSGRPolizaForm.campInicialCampGratuitas']}"
+							required="true" />
+						<ssicc:campaignCalendar2 id="campInicialCampGratuitas"
+							value="#{mAlias.formMantenimiento.campInicialCampGratuitas}"
+							deshabilitado="#{mAlias.accion=='CONSULTAR' ? true : false}"
+							required="true" manage="#{mAlias}"></ssicc:campaignCalendar2>
+
+						<ssicc:label
+							key="#{i18n['mantenimientoSGRPolizaForm.campFinalCampGratuitas']}"
+							required="true" />
+						<ssicc:campaignCalendar2 id="campFinalCampGratuitas"
+							value="#{mAlias.formMantenimiento.campFinalCampGratuitas}"
+							deshabilitado="#{mAlias.accion=='CONSULTAR' ? true : false}"
+							required="true" manage="#{mAlias}"></ssicc:campaignCalendar2>
+
+						<ssicc:label
+							key="#{i18n['mantenimientoSGRPolizaForm.codigoBeneficiario']}" />
+						<ssicc:selectMenu id="codigoBeneficiario"
+							value="#{mAlias.formMantenimiento.codigoBeneficiario}"
+							disabled="#{mAlias.accion=='CONSULTAR' ? true : false}"
+							style="width:80px;" onchange="cambiarBeneficiario();">
+							<f:selectItem itemLabel="Todos" itemValue="T" />
+							<f:selectItem itemLabel="Lideres" itemValue="L" />
+							<f:selectItem itemLabel="Nuevas" itemValue="N" />
+							<f:selectItem itemLabel="Migración Póliza" itemValue="P" />
+						</ssicc:selectMenu>
+						<ssicc:label
+							key="#{i18n['mantenimientoSGRPolizaForm.numeroPeriodosEvaluar']}" />
+						<ssicc:inputText id="numeroPeriodosEvaluar"
+							value="#{mAlias.formMantenimiento.numeroPeriodosEvaluar}"
+							esNumerico="true"
+							deshabilitado="#{mAlias.accion=='CONSULTAR' ? true : false}"
+							maxlength="5" size="5"></ssicc:inputText>
+
+						<ssicc:label
+							key="#{i18n['mantenimientoSGRPolizaForm.numeroMaximoDescuento']}" />
+						<ssicc:inputText id="numeroMaximoDescuento"
+							value="#{mAlias.formMantenimiento.numeroMaximoDescuento}"
+							esNumerico="true"
+							deshabilitado="#{mAlias.accion=='CONSULTAR' ? true : false}"
+							maxlength="5" size="5"></ssicc:inputText>
+
+					</h:panelGrid>
+					<h:panelGrid id="idPanelDetalleCampGrat" columns="1">
+
+						<c:if test="#{mAlias.accion!='CONSULTAR'}">
+							<c:if
+								test="#{mAlias.formMantenimiento.indicadorNuevoCampaniasGratuitas=='1'}">
+								<h:panelGroup>
+									<p:commandLink id="idInsertarCampGrat"
+										title="#{i18n['button.insert']}"
+										actionListener="#{mantenimientoSGRPolizaSearchAction.insertarRegistroCampGrat}"
+										update=":principalForm:idTabSGRPoliza:idPanelDetalleCampGrat :principalForm:idTabSGRPoliza:idPanelCabeceraCampGrat :principalForm:mensajesGrowl"
+										process=":principalForm:idTabSGRPoliza:idPanelCabeceraCampGrat, @this">
+										<p:graphicImage value="#{resource['images:nuevoForm2.png']}"
+											width="30"
+											height="30"
+											style="vertical-align:middle"  />
+									</p:commandLink>
+									<p:commandLink id="idEditCampGrat"
+										title="#{i18n['button.edit']}"
+										actionListener="#{mantenimientoSGRPolizaSearchAction.editarRegistroCampGrat}"
+										update=":principalForm:idTabSGRPoliza:idPanelDetalleCampGrat :principalForm:idTabSGRPoliza:idPanelCabeceraCampGrat :principalForm:mensajesGrowl"
+										process="@this">
+										<p:graphicImage
+											value="#{resource['images:editarForm.png']}"
+											width="30"
+											height="30"
+											style="vertical-align:middle" />
+									</p:commandLink>
+									<p:commandLink id="idEliminarCampGrat"
+										title="#{i18n['button.delete']}"
+										actionListener="#{mantenimientoSGRPolizaSearchAction.eliminarRegistroCampGrat}"
+										update=":principalForm:idTabSGRPoliza:idPanelDetalleCampGrat :principalForm:mensajesGrowl"
+										process="@this">
+										<p:graphicImage value="/resources/images/delete24_s.gif"
+											style="vertical-align:middle" width="22" height="22" />
+									</p:commandLink>
+								</h:panelGroup>
+							</c:if>
+							<c:if
+								test="#{mAlias.formMantenimiento.indicadorNuevoCampaniasGratuitas=='0'}">
+								<h:panelGroup>
+									<p:commandLink id="idSaveCampGrat"
+										title="#{i18n['button.save']}"
+										actionListener="#{mantenimientoSGRPolizaSearchAction.saveCampaniasGratuitas}"
+										update=":principalForm:idTabSGRPoliza:idPanelDetalleCampGrat :principalForm:idTabSGRPoliza:idPanelCabeceraCampGrat :principalForm:mensajesGrowl"
+										process=":principalForm:idTabSGRPoliza:idPanelCabeceraCampGrat, @this">
+										<p:graphicImage value="#{resource['images:saveForm.png']}"
+                                            width="34"
+                                            height="34"
+											style="vertical-align:middle"  />
+									</p:commandLink>
+									<p:commandLink id="idDeshacerCampGrat"
+										title="#{i18n['button.regresar']}"
+										actionListener="#{mantenimientoSGRPolizaSearchAction.deshacerCampaniasGratuitas}"
+										update=":principalForm:idTabSGRPoliza:idPanelDetalleCampGrat :principalForm:idTabSGRPoliza:idPanelCabeceraCampGrat :principalForm:mensajesGrowl"
+										process="@this">
+										<p:graphicImage 
+										    value="#{resource['images:salirForm.png']}"
+                                            width="30"
+                                            height="30"
+											style="vertical-align:middle"  />
+									</p:commandLink>
+								</h:panelGroup>
+							</c:if>
+						</c:if>
+						<p:dataTable id="idTableCampaniaGratuita"
+							value="#{mAlias.dataModelCampaniaGratuita}" var="lista"
+							selection="#{mAlias.beanRegistroSeleccionadoCampGratuita}"
+							selectionMode="single" scrollable="true" scrollHeight="150"
+							disabledSelection="#{mAlias.formMantenimiento.indicadorNuevoCampaniasGratuitas=='0' ? true : false}"
+							emptyMessage="#{msg['dataTable.noExistenRegistrosFiltro']}">
+							<p:ajax event="rowSelect"
+								listener="#{mantenimientoSGRPolizaSearchAction.onRowSelect}" />
+							<p:ajax event="rowUnselect"
+								listener="#{mantenimientoSGRPolizaSearchAction.onRowUnselect}" />
+							<p:column width="50" rendered="#{lista.indicadorAccion !='2'}"> 
+								<f:facet name="header">
+									<h:outputText
+										value="#{i18n['sgrPolizaCampaniaGratuitasList.campInicialCampGratuitas']}" />
+								</f:facet>
+								<h:outputText value="#{lista.campInicialCampGratuitas}" />
+								<h:inputHidden value="#{lista.idCorrelativo}" />
+							</p:column>
+
+							<p:column width="50" rendered="#{lista.indicadorAccion !='2'}">
+								<f:facet name="header">
+									<h:outputText
+										value="#{i18n['sgrPolizaCampaniaGratuitasList.campFinalCampGratuitas']}" />
+								</f:facet>
+								<h:outputText value="#{lista.campFinalCampGratuitas}" />
+							</p:column>
+
+							<p:column width="60" rendered="#{lista.indicadorAccion !='2'}">
+								<f:facet name="header">
+									<h:outputText
+										value="#{i18n['sgrPolizaCampaniaGratuitasList.codigoBeneficiario']}" />
+								</f:facet>
+								<h:outputText value="#{lista.descripcionBeneficiario}" />
+							</p:column>
+
+							<p:column width="50" rendered="#{lista.indicadorAccion !='2'}">
+								<f:facet name="header">
+									<h:outputText
+										value="#{i18n['sgrPolizaCampaniaGratuitasList.numeroPeriodosEvaluar']}" />
+								</f:facet>
+								<h:outputText value="#{lista.numeroPeriodosEvaluar}" />
+							</p:column>
+
+							<p:column width="50" rendered="#{lista.indicadorAccion !='2'}">
+								<f:facet name="header">
+									<h:outputText
+										value="#{i18n['sgrPolizaCampaniaGratuitasList.numeroMaximoDescuento']}" />
+								</f:facet>
+								<h:outputText value="#{lista.numeroMaximoDescuento}" />
+							</p:column>
+						</p:dataTable>
+					</h:panelGrid>
+				</p:tab>
+			</p:tabView>
+			<script type="text/javascript">
+		     document.getElementById("idTabSGRPoliza:codigoBeneficiario:select_input").onchange();
+			 function cambiarBeneficiario() {
+
+				 var codigoBeneficiario = document.getElementById("idTabSGRPoliza:codigoBeneficiario:select_input");
+				 var numeroPeriodosEvaluar = document.getElementById("idTabSGRPoliza:numeroPeriodosEvaluar:input");
+				 var numeroMaximoDescuento = document.getElementById("idTabSGRPoliza:numeroMaximoDescuento:input");
+				 
+			    if(codigoBeneficiario.value == 'N') {
+			    	numeroPeriodosEvaluar.readOnly = false;
+			    	numeroMaximoDescuento.readOnly = false;
+			    } else {
+			    	numeroPeriodosEvaluar.value = '';
+			    	numeroMaximoDescuento.value = '';
+			    	numeroPeriodosEvaluar.readOnly = true;
+			    	numeroMaximoDescuento.readOnly = true;
+			    }
+	   	}			
+
+		</script>
+		</ui:define>
+
+	</ui:composition>
+</body>
+</html>

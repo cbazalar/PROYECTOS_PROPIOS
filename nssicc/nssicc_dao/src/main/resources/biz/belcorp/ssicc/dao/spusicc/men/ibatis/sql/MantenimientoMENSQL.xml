@@ -1,0 +1,2733 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+    
+<sqlMap namespace="spusicc.mensaje.MantenimientoMENSQL">
+ 
+   <typeAlias alias="baseEstadoMen" type="biz.belcorp.ssicc.dao.sisicc.model.Base"/>
+   <typeAlias alias="labelValue" type="biz.belcorp.ssicc.dao.model.LabelValue"/>
+    	
+   <resultMap id="baseResult" class="baseEstadoMen">
+      <result property="codigo" 		column="CODIGO" 	/>
+      <result property="descripcion" 	column="DESCRIPCION"/>
+   </resultMap>
+ 
+   <resultMap id="baseResult2" class="java.util.HashMap">
+      <result property="codigo" 		column="CODIGO" 	/>
+      <result property="descripcion" 	column="DESCRIPCION"/>
+      <result property="descripcion2" 	column="DESCRIPCION2"/>
+   </resultMap>
+   
+ 
+   
+   <resultMap id="mensajeGerenteZonalesResult" class="java.util.HashMap">
+      <result property="codigoPais" 			column="COD_PAIS" 	/>
+      <result property="codigoMarca" 			column="COD_MARC" 	/>
+      <result property="codigoCanal" 			column="COD_CANA" 	/>
+      <result property="campanhaProceso" 		column="CAM_PROC" 	/>
+      <result property="codigoActividad" 		column="COD_ACTI"/>
+      <result property="descripcionActividad" 	column="DES_CLAS_ACTI"/>
+      <result property="campanhaActividad" 		column="CAM_ACTI"/>
+      <result property="codigoRegion" 			column="COD_REGI"/>
+      <result property="codigoZona" 			column="COD_ZONA"/>
+      <result property="fechaActividad" 		column="FECHA_ACTI"/>
+      <result property="horaActividad" 			column="HOR_ACTI"/>
+      <result property="lugarActividad" 		column="LUG_ACTI"/>
+      <result property="fechaGeneracionBuzon" 	column="FECHA_BUZON"/>
+      <result property="indicadorEnvio" 		column="IND_ENVI_BUZO_MENS"/>
+      <result property="indicadorAnulado" 		column="IND_ANUL"/>
+      <result property="codigoMensaje"	 		column="COD_MENS"/>
+      <result property="oidActividad" 			column="OID_ACTI"/>
+   </resultMap>
+
+    <select id="getMensajeGerenteZonales"  parameterClass="java.util.Map" resultMap="mensajeGerenteZonalesResult">
+			SELECT X.*,TO_CHAR(FEC_ACTI,'dd/MM/yyyy') FECHA_ACTI,
+			TO_CHAR(FEC_GENE_BUZO_MENS,'dd/MM/yyyy') FECHA_BUZON
+			FROM MSG_MENSA_REUNI_GEREN_ZONAL X			 
+	 <dynamic prepend="WHERE">		
+  		 <isNotEmpty prepend="AND" property="campanhaProceso">			 	   
+			 	   CAM_PROC = #campanhaProceso#
+		 </isNotEmpty>				
+		  <isNotEmpty property="codigoRegion">	
+		    <iterate prepend="AND" property="codigoRegion" open=" COD_REGI IN (" close=")" conjunction=",">
+        	 	#codigoRegion[]#
+        	</iterate>    
+		  </isNotEmpty>
+		  <isNotEmpty property="codigoZona">	
+		    <iterate prepend="AND" property="codigoZona" open=" COD_ZONA IN (" close=")" conjunction=",">
+        	 	#codigoZona[]#
+        	</iterate>    
+		  </isNotEmpty>		
+		  <isNotEmpty prepend="AND" property="indicadorAnulado">			 	   
+			 	   IND_ANUL =#indicadorAnulado#
+		 </isNotEmpty>
+		  <isNotEmpty prepend="AND" property="campanhaActividad">			 	   
+			 	   CAM_ACTI =#campanhaActividad#
+		 </isNotEmpty>			 
+		  <isNotEmpty prepend="AND" property="fechaActividad">			 	   
+			 	   TO_CHAR(FEC_ACTI,'dd/MM/yyyy') =#fechaActividad#
+		 </isNotEmpty>
+		  <isNotEmpty prepend="AND" property="oidActividad">			 	   
+			 	   OID_ACTI =#oidActividad#
+		 </isNotEmpty>
+	</dynamic>	 				 			   
+			ORDER BY CAM_PROC,CAM_ACTI,FEC_ACTI,HOR_ACTI
+		
+	</select>           
+	
+	
+	 <update id="updateAnulacionMensaje" parameterClass="java.util.Map">
+				UPDATE MSG_MENSA_REUNI_GEREN_ZONAL 
+				SET    IND_ANUL = #indicadorAnulado#,
+					   FEC_ANUL = SYSDATE,
+					   USU_MODI = #login#,
+					   FEC_MODI = SYSDATE
+				WHERE  COD_PAIS = #codigoPais#
+					AND COD_MARC = #codigoMarca#
+					AND COD_CANA = #codigoCanal#
+					AND CAM_PROC = #campanhaProceso#
+					AND COD_ACTI = #codigoActividad#
+					AND CAM_ACTI = #campanhaActividad#
+					AND COD_REGI = #codigoRegion#
+					AND COD_ZONA = #codigoZona#        
+    </update>
+    
+     <insert id="insertMensajeGerenteZonales" parameterClass="java.util.Map">
+		INSERT INTO MSG_MENSA_REUNI_GEREN_ZONAL (
+		   COD_PAIS, COD_MARC, COD_CANA, 
+		   CAM_PROC, COD_ACTI, DES_CLAS_ACTI, 
+		   CAM_ACTI, COD_REGI, COD_ZONA, 
+		   FEC_ACTI, HOR_ACTI, LUG_ACTI, 
+		   USU_MODI, FEC_MODI,
+		   OID_CAMP_PROC,
+		   OID_ACTI,
+		   OID_CAMP_ACTI,
+		   MENS_OID_MENS,
+		   COD_MENS,
+		   IND_ANUL	) 
+ 		SELECT 
+ 			#codigoPais#,#codigoMarca#,#codigoCanal#,
+ 			#campanhaProceso#,CAC.COD_ACTI,CCL.DES_CLAS_ACTI,
+ 			SPC.COD_PERI CAM_ACTI,
+ 		   (SELECT X.COD_REGI FROM ZON_REGIO X WHERE X.OID_REGI =ZZ.ZORG_OID_REGI) COD_REGIO,
+      		ZZ.COD_ZONA, 
+      		NVL(TO_DATE(#fechaActividad#,'DD/MM/YYYY'),CCR.FEC_INIC) FEC_ACTI,
+      		#horaActividad#,  #lugarActividad#,#login#,SYSDATE,
+      		GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO( #campanhaProceso#,
+		     				gen_pkg_gener.gen_fn_devuelve_id_marca(#codigoMarca#),
+		     				gen_pkg_gener.gen_fn_devuelve_id_canal(#codigoCanal#)),
+		    #oidActividad#,
+		    GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO( SPC.COD_PERI,
+		     				gen_pkg_gener.gen_fn_devuelve_id_marca(#codigoMarca#),
+		     				gen_pkg_gener.gen_fn_devuelve_id_canal(#codigoCanal#)),
+		    (SELECT X.MENS_OID_MENS FROM MSG_PARAM_ACTIV X WHERE X.COD_PAIS =#codigoPais#  AND X.ACTI_OID_ACTI =#oidActividad#),
+		    (SELECT X.cOD_MENS FROM MSG_PARAM_ACTIV X WHERE X.COD_PAIS =#codigoPais#  AND X.ACTI_OID_ACTI =#oidActividad#),
+		    '0' 				 				      		
+         FROM 
+            CRA_CRONO CCR,
+            CRA_ACTIV CAC,
+            CRA_CLASE_ACTIV CCL,
+            CRA_PERIO CP,
+            SEG_PERIO_CORPO SPC,
+            ZON_ZONA ZZ
+        WHERE
+            CCR.CACT_OID_ACTI = CAC.OID_ACTI
+            AND CAC.CLAC_OID_CLAS_ACTI = CCL.OID_CLAS_ACTI
+            AND CAC.OID_ACTI IN (#oidActividad#)
+            AND CCR.PERD_OID_PERI = CP.OID_PERI
+            AND CP.PERI_OID_PERI = SPC.OID_PERI
+            AND ((#campanhaActividad# IS NOT NULL AND SPC.COD_PERI =#campanhaActividad#) 
+                    OR (#campanhaActividad# IS NULL 
+                         AND SPC.COD_PERI = PER_PKG_REPOR_PERCE.PER_FN_OBTIE_PERIO(#campanhaProceso#,
+                         													GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_PAIS(#codigoPais#),
+                         													GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA(#codigoMarca#),
+                         													GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CANAL(#codigoCanal#),1)))  
+            AND CCR.ZZON_OID_ZONA = ZZ.OID_ZONA
+           <isNotEmpty property="zonas">	
+		    <iterate prepend="AND" property="zonas" open=" ZZ.COD_ZONA IN (" close=")" conjunction=",">
+        	 	#zonas[]#
+        	</iterate>    
+		  </isNotEmpty>
+	
+    </insert>
+        
+   <resultMap id="rangoResult" class="java.util.HashMap">
+      <result property="fechaInicial" 			column="FEC_INIC" 	/>
+      <result property="fechaFinal" 			column="FEC_FINA" 	/>   
+   </resultMap>
+        
+     <select id="getRangoFechaActividad"  parameterClass="java.util.Map" resultMap="rangoResult">
+			SELECT TO_CHAR(B.FEC_INIC,'dd/MM/yyyy') FEC_INIC,
+				   TO_CHAR(B.FEC_FINA,'dd/MM/yyyy') FEC_FINA
+		    FROM SEG_PERIO_CORPO A,CRA_PERIO B
+			WHERE A.OID_PERI = B.PERI_OID_PERI
+ 				AND A.COD_PERI=#campanhaActividad#
+ 				<isNotEmpty prepend="AND" property="fechaActividad">			 	   
+			 	   TO_DATE(#fechaActividad#,'dd/MM/yyyy') BETWEEN B.FEC_INIC  AND B.FEC_FINA
+			   </isNotEmpty>
+ 							
+	</select>   
+	
+	 <select id="getVerZonasAprobadasNoProc"  parameterClass="java.util.Map" resultClass="java.lang.Integer">
+		SELECT count(*) cantidad
+        FROM fac_progr_cierr
+        WHERE cam_proc =#campanhaActividad#
+        AND fec_cier = trunc(TO_DATE(#fechaActividad#,'dd/MM/yyyy'))
+        AND est_cier = 'A'
+        AND tip_cier = 'Z'
+	</select> 
+	
+	 <select id="getZonasFromRegion"  parameterClass="java.util.Map" resultClass="string">
+			SELECT ZZ.COD_ZONA
+			FROM    ZON_ZONA ZZ, ZON_REGIO ZR
+			WHERE
+    			ZZ.IND_ACTI = 1
+    			AND ZZ.IND_BORR = 0
+    			AND ZZ.ZORG_OID_REGI = ZR.OID_REGI
+  			<isNotEmpty property="region">	
+		    	<iterate prepend="AND" property="region" open=" ZR.COD_REGI IN (" close=")" conjunction=",">
+        	 	    #region[]#
+        		</iterate>    
+		  	</isNotEmpty>    			    						
+	</select>
+	
+	 <insert id="insertMensajeGerenteZona" parameterClass="java.util.Map">
+		INSERT INTO MSG_MENSA_REUNI_GEREN_ZONAL (
+		   COD_PAIS, COD_MARC, COD_CANA, 
+		   CAM_PROC, COD_ACTI, DES_CLAS_ACTI, 
+		   CAM_ACTI, COD_REGI, COD_ZONA, 
+		   FEC_ACTI, HOR_ACTI, LUG_ACTI, 
+		   USU_MODI, FEC_MODI,
+		   OID_CAMP_PROC,
+		   OID_ACTI,
+		   OID_CAMP_ACTI,
+		   MENS_OID_MENS,
+		   COD_MENS,
+		   IND_ANUL) 
+	  VALUES ( #codigoPais#, #codigoMarca# , #codigoCanal# ,
+		     #campanhaProceso#, (SELECT Z.COD_ACTI FROM CRA_ACTIV Z WHERE Z.PAIS_OID_PAIS =gen_pkg_gener.gen_fn_devuelve_id_pais(#codigoPais#) AND Z.OID_ACTI=#oidActividad#),
+		     (select distinct ccl.DES_CLAS_ACTI
+			 from cra_activ cac,
+     			  CRA_CLASE_ACTIV ccl
+			where cac.CLAC_OID_CLAS_ACTI = ccl.OID_CLAS_ACTI
+            AND cac.OID_ACTI IN (#oidActividad#)),
+		     #campanhaActividad#,
+		     (SELECT ZR.COD_REGI
+			FROM    ZON_ZONA ZZ, ZON_REGIO ZR
+			WHERE
+    			ZZ.IND_ACTI = 1
+    			AND ZZ.IND_BORR = 0
+    			AND ZZ.ZORG_OID_REGI = ZR.OID_REGI
+                AND ZZ.COD_ZONA = #codigoZona#),
+		      #codigoZona#,
+		     TO_DATE(#fechaActividad#,'dd/MM/yyyy'),  #horaActividad#,  #lugarActividad#,
+		     #login#, SYSDATE,
+		     GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO( #campanhaProceso#,
+		     				gen_pkg_gener.gen_fn_devuelve_id_marca(#codigoMarca#),
+		     				gen_pkg_gener.gen_fn_devuelve_id_canal(#codigoCanal#)),
+		     #oidActividad#,
+		     GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO( #campanhaActividad#,
+		     				gen_pkg_gener.gen_fn_devuelve_id_marca(#codigoMarca#),
+		     				gen_pkg_gener.gen_fn_devuelve_id_canal(#codigoCanal#)),	
+		     (SELECT X.MENS_OID_MENS FROM MSG_PARAM_ACTIV X WHERE X.COD_PAIS =#codigoPais#  AND X.ACTI_OID_ACTI =#oidActividad#),
+		     (SELECT X.COD_MENS FROM MSG_PARAM_ACTIV X WHERE X.COD_PAIS =#codigoPais#  AND X.ACTI_OID_ACTI =#oidActividad#),
+		     '0'					     
+		     )			   
+    </insert>
+	
+	<delete id="deleteMensajeGerenteZonales" parameterClass="java.util.Map">
+				DELETE FROM MSG_MENSA_REUNI_GEREN_ZONAL 
+				WHERE  COD_PAIS = #codigoPais#
+					AND COD_MARC = #codigoMarca#
+					AND COD_CANA = #codigoCanal#
+					AND CAM_PROC = #campanhaProceso#
+					AND OID_ACTI = #oidActividad#
+					AND CAM_ACTI = NVL(#campanhaActividad#,
+										PER_PKG_REPOR_PERCE.PER_FN_OBTIE_PERIO(#campanhaProceso#,
+                         													GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_PAIS(#codigoPais#),
+                         													GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_MARCA(#codigoMarca#),
+                         													GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CANAL(#codigoCanal#),1))
+				  <isNotEmpty property="regions">	
+				    <iterate prepend="AND" property="regions" open=" COD_REGI IN (" close=")" conjunction=",">
+		        	 	#regions[]#
+		        	</iterate>    
+				  </isNotEmpty>                         													 
+				<isNotEmpty property="zonas">	
+		    		<iterate prepend="AND" property="zonas" open=" COD_ZONA IN (" close=")" conjunction=",">
+        	 			#zonas[]#
+        			</iterate>    
+		  		</isNotEmpty>          
+		  		<isNotEmpty prepend="AND" property="codigoZona">	
+		  		  COD_ZONA = #codigoZona#		 	   			 	  
+			   </isNotEmpty>               													       
+    </delete>
+    
+     <update id="updateMensajeGerenteZonales" parameterClass="java.util.Map">
+				UPDATE MSG_MENSA_REUNI_GEREN_ZONAL 
+				SET  HOR_ACTI=#horaActividad#,
+				     LUG_ACTI= #lugarActividad#,
+				     FEC_ACTI = TO_DATE(#fechaActividad#,'dd/MM/yyyy'),
+				     IND_ANUL = #indicadorAnulado#,
+					 USU_MODI = #login#,
+					 FEC_MODI = SYSDATE
+				WHERE  COD_PAIS = #codigoPais#
+					AND COD_MARC = #codigoMarca#
+					AND COD_CANA = #codigoCanal#
+					AND CAM_PROC = #campanhaProceso#
+					AND OID_ACTI = #oidActividad#
+					AND CAM_ACTI = #campanhaActividad#        
+					<isNotEmpty property="zonas">	
+		    		<iterate prepend="AND" property="zonas" open=" COD_ZONA IN (" close=")" conjunction=",">
+        	 			#zonas[]#
+        			</iterate>    
+		  		</isNotEmpty>       
+    </update>
+    
+    <select id="getFechaActividad"  parameterClass="java.util.Map" resultClass="string">
+		SELECT  TO_CHAR(CCR.FEC_INIC,'dd/MM/yyyy')
+		 FROM 
+			CRA_CRONO CCR,
+			CRA_ACTIV CAC,
+			CRA_CLASE_ACTIV CCL,
+			CRA_PERIO CP,
+			SEG_PERIO_CORPO SPC,
+			ZON_ZONA ZZ
+		WHERE
+			CCR.CACT_OID_ACTI = CAC.OID_ACTI
+			AND CAC.CLAC_OID_CLAS_ACTI = CCL.OID_CLAS_ACTI
+			AND CAC.OID_ACTI IN (#oidActividad#)
+			AND CCR.PERD_OID_PERI = CP.OID_PERI
+			AND CP.PERI_OID_PERI = SPC.OID_PERI
+			AND SPC.COD_PERI =#campanhaActividad#
+			AND CCR.ZZON_OID_ZONA = ZZ.OID_ZONA
+            AND ZZ.COD_ZONA=#codigoZona#			    						
+	</select>
+		
+	<select id="getCodigosMensaje"  parameterClass="java.util.Map" resultMap="baseResult">
+		    SELECT MM.OID_MENS CODIGO,
+				   MM.COD_MENS||' - '|| DES_MENS DESCRIPCION
+			FROM MSG_MENSA MM
+			WHERE
+			 PAIS_OID_PAIS = gen_pkg_gener.gen_fn_devuelve_id_pais(#codigoPais#)
+			<isNotEmpty prepend="AND" property="prefijo">	
+		  		  MM.COD_MENS LIKE #prefijo#||'%'		 	   			 	  
+			</isNotEmpty>               
+			ORDER BY MM.COD_MENS							
+	</select>   
+
+	<select id="getCodigosActividad"  parameterClass="java.util.Map" resultMap="baseResult">
+		    SELECT CAC.OID_ACTI CODIGO, 
+			  CAC.COD_ACTI ||' - '|| G18.VAL_I18N DESCRIPCION
+			FROM
+			  CRA_ACTIV CAC,
+			  GEN_I18N_SICC_COMUN G18
+			WHERE
+				CAC.OID_ACTI = G18.VAL_OID
+				AND G18.IDIO_OID_IDIO = 1
+				AND CAC.PAIS_OID_PAIS =gen_pkg_gener.gen_fn_devuelve_id_pais(#codigoPais#)  	
+			    AND G18.ATTR_ENTI ='CRA_ACTIV' 							
+	</select>   	
+	
+	
+	 <update id="updateParametrosActividadMensaje" parameterClass="java.util.Map">
+				UPDATE MSG_PARAM_ACTIV 
+				SET  IND_ACTI=#indicadorRegistro#,
+					 USU_MODI = #login#,
+					 FEC_MODI = SYSDATE
+				WHERE  COD_PAIS = #codigoPais#
+					AND MENS_OID_MENS = #oidMensaje#
+					AND ACTI_OID_ACTI = #oidActividad#
+    </update>
+    
+   <insert id="insertParametrosActividadMensaje" parameterClass="java.util.Map">
+		INSERT INTO MSG_PARAM_ACTIV (
+		   COD_PAIS, ACTI_OID_ACTI, COD_ACTI, 
+		   MENS_OID_MENS, COD_MENS, 
+		   USU_MODI, FEC_MODI,IND_ACTI) 
+	  VALUES(#codigoPais#, #oidActividad#,
+	   	 	  (SELECT COD_ACTI    
+				FROM CRA_ACTIV
+				WHERE PAIS_OID_PAIS =gen_pkg_gener.gen_fn_devuelve_id_pais(#codigoPais#)
+    				AND OID_ACTI=#oidActividad#),
+		     #oidMensaje#,
+		     (SELECT  MM.COD_MENS 
+				FROM MSG_MENSA MM
+				WHERE MM.PAIS_OID_PAIS = gen_pkg_gener.gen_fn_devuelve_id_pais(#codigoPais#) 
+ 					AND MM.OID_MENS = #oidMensaje#),
+		     #login#, SYSDATE,#indicadorRegistro#)			   
+    </insert>
+    
+  <resultMap id="parametrosActividadMensajeResult" class="java.util.HashMap">
+      <result property="codigoPais" 			column="COD_PAIS" 	/>
+      <result property="oidActividad" 			column="ACTI_OID_ACTI" 	/>
+      <result property="codigoActividad" 		column="COD_ACTI" 	/>
+      <result property="oidMensaje" 			column="MENS_OID_MENS" 	/>
+      <result property="codigoMensaje" 			column="COD_MENS"/>
+      <result property="indicadorActivo" 		column="IND_ACTI"/>
+      <result property="descripcionActividad" 	column="DES_ACTI"/>      
+   </resultMap>
+    
+    <select id="getParametrosActividadMensaje"  parameterClass="java.util.Map" resultMap="parametrosActividadMensajeResult">
+		    SELECT A.*,
+		       (SELECT  
+			  	CAC.COD_ACTI ||' - '|| G18.VAL_I18N DESCRIPCION
+				FROM
+			  	CRA_ACTIV CAC,
+			  	GEN_I18N_SICC_COMUN G18
+				WHERE
+					CAC.OID_ACTI = G18.VAL_OID
+					AND cac.oid_acti = A.ACTI_OID_ACTI
+					AND G18.IDIO_OID_IDIO = 1
+					AND CAC.PAIS_OID_PAIS =gen_pkg_gener.gen_fn_devuelve_id_pais(#codigoPais#)  	
+				    AND G18.ATTR_ENTI ='CRA_ACTIV' 									       		       
+		       ) DES_ACTI
+			FROM MSG_PARAM_ACTIV A			 
+			WHERE
+				A.COD_PAIS =#codigoPais#
+				<isNotEmpty prepend="AND" property="indicadorRegistro">	
+		  		  A.IND_ACTI=#indicadorRegistro#		 	   			 	  
+			   </isNotEmpty>      
+				<isNotEmpty prepend="AND" property="oidMensaje">	
+		  		  A.MENS_OID_MENS=#oidMensaje#		 	   			 	  
+			   </isNotEmpty>
+			   	<isNotEmpty prepend="AND" property="oidActividad">	
+		  		  A.ACTI_OID_ACTI=#oidActividad#		 	   			 	  
+			   </isNotEmpty>    
+			      AND A.EST_REGI='1'
+			ORDER BY a.ind_acti DESC,a.cod_mens						
+	</select>   	
+	
+	<delete id="deleteParametrosActividadMensaje" parameterClass="java.util.Map">
+				DELETE FROM MSG_PARAM_ACTIV
+				WHERE  COD_PAIS = #codigoPais#
+					AND MENS_OID_MENS=#oidMensaje#
+					AND ACTI_OID_ACTI=#oidActividad#																	       
+    </delete>
+    
+    <update id="updateEstadoParametrosActividadMensaje" parameterClass="java.util.Map">
+				UPDATE MSG_PARAM_ACTIV
+				SET EST_REGI=9,
+				    USU_MODI = #login#,
+				    FEC_MODI = SYSDATE
+				WHERE  COD_PAIS = #codigoPais#
+					AND MENS_OID_MENS=#oidMensaje#
+					AND ACTI_OID_ACTI=#oidActividad#																	       
+    </update>
+    
+     <delete id="deleteMensajeGerenteZonalesByParamActi" parameterClass="java.util.Map">
+				DELETE FROM MSG_MENSA_REUNI_GEREN_ZONAL 
+				WHERE  COD_PAIS = #codigoPais#
+				 AND MENS_OID_MENS = #oidMensaje#	
+	 </delete>			
+    
+	   <resultMap id="parametrosPlantillaResult" class="java.util.HashMap">
+	      <result property="codigoTipoDato" 		column="COD_TIPO_DATO" 	/>
+	      <result property="keyTipoDato" 			column="KEY_TIPO_DATO" 	/>
+	      <result property="tipoDato" 				column="TIP_DATO" 	/>
+	      <result property="valorAccion" 			column="VAL_ACCI" 	/>
+	      <result property="valorPosible" 			column="VAL_POSI"/>
+	      <result property="indicadorTabla" 		column="IND_TABL"/>
+	      <result property="indicadorCampanha" 		column="IND_CAMP"/>
+	      <result property="indicadorActivo" 		column="IND_ACTI"/>
+	      <result property="indicadorFecha" 		column="IND_FECH"/>
+	      <result property="indicadorHora" 		    column="IND_HORA"/>	  	          
+	   <result property="indicadorAlfanumerico" 	column="IND_ALFA"/>  	          
+	   </resultMap>
+
+	   <resultMap id="parametrosPlantillaDetalleResult" class="java.util.HashMap">
+	      <result property="codigoTipoDato" 		column="COD_TIPO_DATO" 	/>
+	      <result property="keyTipoDato" 			column="KEY_TIPO_DATO" 	/>
+	      <result property="tipoDato" 				column="TIP_DATO" 	/>
+	      <result property="valorAccion" 			column="VAL_ACCI" 	/>
+	      <result property="valorPosible" 			column="VAL_POSI"/>
+	      <result property="indicadorTabla" 		column="IND_TABL"/>
+	      <result property="indicadorCampanha" 		column="IND_CAMP"/>
+	      <result property="indicadorActivo" 		column="IND_ACTI"/>
+	      <result property="indicadorFecha" 		column="IND_FECH"/>
+	      <result property="indicadorHora" 		    column="IND_HORA"/>
+	      <result property="indicadorAlfanumerico" 	column="IND_ALFA"/>
+	      <result property="label"  			   column="VAL_LABE" />
+	      <result property="indicadorObligatorio"  column="IND_OBLI" />
+	      <result property="indicadorModificado"   column="IND_MODI" />	      	  	          
+	   </resultMap>
+    
+    <select id="getParametrosPlantilla" parameterClass="java.util.Map" resultMap="parametrosPlantillaResult">
+       SELECT  COD_TIPO_DATO,
+       		   KEY_TIPO_DATO,
+       		   TIP_DATO,
+       		   VAL_ACCI,
+       		   VAL_POSI,
+       		   IND_TABL,
+       		   IND_CAMP,
+       		   IND_ACTI,
+       		   IND_FECH,
+       		   IND_HORA,
+       		   IND_ALFA
+       FROM MSG_CONFI_PLANT_TIPO_DATO
+       WHERE IND_ACTI= '1'
+       ORDER BY 1
+         
+    </select>
+    
+       <resultMap id="selectPlantillaResult" class="java.util.HashMap">
+	      <result property="oid" 						column="VAL_OID" 	/>
+	      <result property="descripcion" 				column="VAL_I18N" 	/>
+	      <result property="tabla" 						column="VAL_TABL" 	/>
+	      <result property="tablaRef" 					column="VAL_TABL_REFE" 	/>
+	      <result property="oidRef" 				    column="REF_OID" 	/>	   
+	      <result property="codigo" 					column="CODIGO" 	/>
+	      <result property="indicadorSelec" 			column="IND_SELE" 	/>   
+	   </resultMap>
+    
+     <select id="getSelectPlantilla" parameterClass="java.util.Map" resultMap="selectPlantillaResult">
+        SELECT X.VAL_OID  , 
+               X.VAL_I18N ,
+               X.VAL_TABL ,
+			   X.VAL_TABL_REFE,
+			   X.REF_OID,
+			   X.CODIGO,
+			   '1' IND_SELE
+       FROM MSG_PLANT_TABLE X
+       <dynamic prepend="WHERE">
+			<isNotEmpty prepend="AND" property="valorPosible" >
+				 X.VAL_TABL=#valorPosible#
+			</isNotEmpty>	
+			<isNotEmpty prepend="AND" property="indicadorRef">
+				 X.IND_REFE=#indicadorRef#
+			</isNotEmpty>	
+			<isNotEmpty prepend="AND" property="codigo">
+				 X.CODIGO=#codigo#
+			</isNotEmpty>	
+			<isNotEmpty prepend="AND" property="descripcion">
+				 X.VAL_I18N=#descripcion#
+			</isNotEmpty>
+			<isNotEmpty prepend="AND" property="oid">
+				 X.VAL_OID=#oid#
+			</isNotEmpty>							
+		</dynamic>	        
+       ORDER BY 3,1        
+    </select>
+    
+   <insert id="insertPlantilla" parameterClass="java.util.Map">
+		INSERT INTO MSG_CONFI_PLANT_CABEC (
+		   COD_PLAN,	
+		   DES_PLAN,
+		   VAL_OBSE,
+		   IND_ACTI,
+		   IND_GEST_USUA, 
+		   USU_MODI, 
+		   FEC_MODI) 
+	  VALUES(#codigoPlantilla#, 
+	  		 #descripcionPlantilla#,
+	  		 #observacion#,
+	   	 	 #estadoActivo#,
+		     #indicadorGestionUsuario#,
+		     #login#, 
+		     SYSDATE)			   
+    </insert>    
+    
+       <insert id="insertPlantillaDetalle" parameterClass="java.util.Map">
+		INSERT INTO MSG_CONFI_PLANT_DETAL (
+		   PLAN_COD_PLAN,	
+		   COD_TIPO_DATO,
+		   NUM_CORR,
+		   NUM_ORDE,
+		   VAL_LABE,
+		   IND_VISI,
+		   IND_OBLI,
+		   IND_MODI,
+		   VAL_DEFE, 
+		   USU_MODI, 
+		   FEC_MODI,
+		   VAL_LIST_TABL) 
+	  VALUES(#codigoPlantilla#, 
+	  		 #codigoTipoDato#,
+	  		 #numeroCorrelativo#,
+	   	 	 #ordenPresentacion#,
+		     #label#,
+		     #indicadorVisible#,
+		     #indicadorModificable#,
+		     #indicadorObligatorio#,
+		     #valoresDefecto#,
+		     #login#, 
+		     SYSDATE,
+		     #valorTabla#)			   
+    </insert>    
+
+      <resultMap id="plantillaCabeceraResult" class="java.util.HashMap">
+	      <result property="codigoPlantilla" 		  column="COD_PLAN" />
+	      <result property="descripcion" 	          column="DES_PLAN" />
+	      <result property="observaciones" 			  column="VAL_OBSE"  />
+	      <result property="indicadorActivo" 		  column="IND_ACTI"  />
+	      <result property="indicadorGestionUsuario"  column="IND_GEST_USUA" />	      	      
+	   </resultMap>
+	       
+     <select id="getPlantillaCabecera" parameterClass="java.util.Map" resultMap="plantillaCabeceraResult">
+        SELECT X.COD_PLAN,
+               X.DES_PLAN ,
+			   X.VAL_OBSE,
+			   X.IND_ACTI,
+			   X.IND_GEST_USUA
+       FROM MSG_CONFI_PLANT_CABEC X
+       WHERE X.EST_REGI = '1'
+			<isNotEmpty prepend="AND" property="codigoPlantilla" >
+				 X.COD_PLAN=#codigoPlantilla#
+			</isNotEmpty>	
+			<isNotEmpty prepend="AND" property="descripcion">
+				 X.DES_PLAN=#descripcion#
+			</isNotEmpty>	
+			<isNotEmpty prepend="AND" property="observaciones">
+				 X.VAL_OBSE=#observaciones#
+			</isNotEmpty>	
+			<isNotEmpty prepend="AND" property="indicadorActivo">
+				 X.IND_ACTI=#indicadorActivo#
+			</isNotEmpty>
+		   <isNotEmpty prepend="AND" property="indicadorGestionUsuario">
+				 X.IND_GEST_USUA=#indicadorGestionUsuario#
+			</isNotEmpty>										 		         
+       ORDER BY 1        
+    </select>
+    
+    <delete id="deletePlantillaCabec" parameterClass="java.util.Map">
+				DELETE FROM MSG_CONFI_PLANT_CABEC
+				WHERE  COD_PLAN = #codigoPlantilla#																       
+    </delete>
+    
+    <delete id="deletePlantillaDetalle" parameterClass="java.util.Map">
+				DELETE FROM MSG_CONFI_PLANT_DETAL
+				WHERE  PLAN_COD_PLAN = #codigoPlantilla#																       
+    </delete>
+    
+      <update id="updateEstadoPlantillaCabec" parameterClass="java.util.Map">
+				UPDATE MSG_CONFI_PLANT_CABEC
+				SET EST_REGI= 9,
+				    USU_MODI = #login#,
+				    FEC_MODI = SYSDATE
+				WHERE  PLAN_COD_PLAN = #codigoPlantilla#													       
+    </update>
+    
+    <update id="updateEstadoPlantillaDetalle" parameterClass="java.util.Map">
+				UPDATE MSG_CONFI_PLANT_DETAL
+				SET EST_REGI= 9,
+				    USU_MODI = #login#,
+				    FEC_MODI = SYSDATE
+				WHERE  PLAN_COD_PLAN = #codigoPlantilla#													       
+    </update>
+    
+    
+      <resultMap id="plantillaDetalleResult" class="java.util.HashMap">
+	      <result property="codigoPlantilla" 	  column="PLAN_COD_PLAN" />
+	      <result property="codigoTipoDato" 	   column="COD_TIPO_DATO" />
+	      <result property="indicadorTabla"  	   column="IND_TABL" />
+	      <result property="numCorrelativo" 	   column="NUM_CORR"  />
+	      <result property="numOrden" 		  	   column="NUM_ORDE"  />
+	      <result property="label"  			   column="VAL_LABE" />
+	      <result property="indicadorVisible"  	   column="IND_VISI" />
+	      <result property="indicadorObligatorio"  column="IND_OBLI" />
+	      <result property="indicadorModificado"   column="IND_MODI" />
+	      <result property="valorDefecto"  		   column="VAL_DEFE" />
+	      <result property="valorListaTabla"       column="VAL_LIST_TABL" />
+	      <result property="indMultiple"       	   column="IND_MULT" />	
+	       <result property="valorSeleccionado"     column="VAL_SELE" />	      	      	      
+	   </resultMap>
+	       
+     <select id="getPlantillaDetalle" parameterClass="java.util.Map" resultMap="plantillaDetalleResult">
+        SELECT X.PLAN_COD_PLAN,
+               X.COD_TIPO_DATO,
+               A.IND_TABL,
+			   X.NUM_CORR,
+			   X.NUM_ORDE,
+			   X.VAL_LABE,
+			   X.IND_VISI,
+			   X.IND_OBLI,
+			   X.IND_MODI,
+			   X.VAL_DEFE,
+			   X.VAL_LIST_TABL,
+			   (SELECT COUNT(1)
+                FROM MSG_CONFI_PLANT_DETAL Z
+                WHERE Z.PLAN_COD_PLAN = X.PLAN_COD_PLAN
+                 AND Z.COD_TIPO_DATO = X.COD_TIPO_DATO) IND_MULT,
+ 			 (SELECT VAL_SELE
+                FROM MSG_CONFI_PROCE_DETAL Z
+                WHERE Z.PLAN_COD_PLAN = X.PLAN_COD_PLAN
+                 AND Z.TIDA_COD_TIPO_DATO = X.COD_TIPO_DATO
+                 AND Z.NUM_CORR=X.NUM_CORR
+                 AND Z.PROC_COD_PROC=#codigoProceso#) VAL_SELE                   
+       FROM MSG_CONFI_PLANT_DETAL X,
+            MSG_CONFI_PLANT_TIPO_DATO A
+       WHERE A.COD_TIPO_DATO = X.COD_TIPO_DATO
+			<isNotEmpty prepend="AND" property="codigoPlantilla" >
+				 X.PLAN_COD_PLAN=#codigoPlantilla#
+			</isNotEmpty>	
+		       ORDER BY 1,2,3        
+    </select>
+    
+    
+     <update id="updatePlantilla" parameterClass="java.util.Map">
+        UPDATE MSG_CONFI_PLANT_CABEC
+        SET DES_PLAN=#descripcionPlantilla#,
+        	VAL_OBSE=#observacion#,
+        	IND_ACTI=#estadoActivo#,
+        	IND_GEST_USUA=#indicadorGestionUsuario#,
+        	USU_MODI =#login#,
+        	FEC_MODI = SYSDATE
+        WHERE COD_PLAN=#codigoPlantilla# 			   
+    </update>   
+    
+
+      <resultMap id="procesoResult" class="java.util.HashMap">
+	      <result property="codigoProceso" 		  		column="COD_PROC" />
+	      <result property="nombreProceso" 	          	column="NOM_PROC" />
+	      <result property="nombreProgramaEjecutar" 	column="NOM_PROG_EJEC"  />
+	      <result property="indicadorDisponible" 		column="IND_DISP"  />
+	      <result property="indicadorActivo"  			column="IND_ACTI" />	      	      
+	   </resultMap>
+	       
+     <select id="getProcesos" parameterClass="java.util.Map" resultMap="procesoResult">
+        SELECT X.COD_PROC,
+        	   X.COD_PROC || ' - '||X.NOM_PROC NOM_PROC,
+        	   X.NOM_PROG_EJEC,
+        	   X.IND_DISP,
+        	   X.IND_ACTI
+        FROM MSG_PROCE_MENSA X
+        WHERE X.IND_ACTI= '1'	
+          AND X.EST_REGI='1'
+         <isNotEmpty prepend="AND" property="codigoProceso" >
+				 X.COD_PROC=#codigoProceso#
+		</isNotEmpty>     
+		<isNotEmpty prepend="AND" property="indicadorDisponible" >
+				 X.IND_DISP=#indicadorDisponible#
+		</isNotEmpty>   
+		ORDER BY 1                    
+    </select>     
+    
+     <resultMap id="procesoConfiguradoResult" class="java.util.HashMap">
+ 		  <result property="codigoPais" 		  	  column="COD_PAIS" />     	 
+	      <result property="codigoPlantilla" 		  column="PLAN_COD_PLAN" />
+	      <result property="codigoProceso" 		  	  column="PROC_COD_PROC" />
+	      <result property="nombreProceso" 		  	  column="NOM_PROC" />
+	      <result property="nombrePrograma" 		  column="NOM_PROG" />
+	      <result property="indicadorActivo" 		  column="IND_ACTI"  />
+	      <result property="tipoProceso"  			  column="TIP_PROC" />
+	      <result property="ordenEjecucion"  		  column="ORD_EJEC" />	      	      
+	   </resultMap>
+	       
+     <select id="getProcesosConfigurados" parameterClass="java.util.Map" resultMap="procesoConfiguradoResult">
+        SELECT X.COD_PAIS,
+        	   X.PLAN_COD_PLAN,
+        	   X.PROC_COD_PROC,
+        	   (SELECT Z.COD_PROC || ' - ' ||Z.NOM_PROC
+        	    FROM MSG_PROCE_MENSA Z
+        		WHERE Z.IND_ACTI= '1'
+        		 AND Z.COD_PROC=X.PROC_COD_PROC) NOM_PROC,
+        	   (SELECT Z.NOM_PROG_EJEC
+        	    FROM MSG_PROCE_MENSA Z
+        		WHERE Z.IND_ACTI= '1'
+        		 AND Z.COD_PROC=X.PROC_COD_PROC) NOM_PROG,        		 
+        	   X.IND_ACTI,
+        	   X.TIP_PROC,			 
+			   X.ORD_EJEC
+       FROM MSG_CONFI_PROCE_CABEC X
+       WHERE X.EST_REGI='1'
+			<isNotEmpty prepend="AND" property="codigoPais" >
+				 X.COD_PAIS=#codigoPais#
+			</isNotEmpty>       
+			<isNotEmpty prepend="AND" property="codigoPlantilla" >
+				 X.PLAN_COD_PLAN=#codigoPlantilla#
+			</isNotEmpty>	
+			<isNotEmpty prepend="AND" property="codigoProceso">
+				 X.PROC_COD_PROC=#codigoProceso#
+			</isNotEmpty>	
+			<isNotEmpty prepend="AND" property="indicadorActivo">
+				 X.IND_ACTI=#indicadorActivo#
+			</isNotEmpty>
+		   <isNotEmpty prepend="AND" property="tipoProceso">
+				 X.TIP_PROC=#tipoProceso#
+			</isNotEmpty>
+		    <isNotEmpty prepend="AND" property="ordenEjecucion">
+				 X.ORD_EJEC=#ordenEjecucion#
+			</isNotEmpty>								        
+       ORDER BY 1        
+    </select>         
+    
+    
+   <select id="getParametrosPlantillaDetalleVisibles" parameterClass="java.util.Map" resultMap="parametrosPlantillaDetalleResult">
+              SELECT  DISTINCT A.COD_TIPO_DATO,
+                  A.KEY_TIPO_DATO,
+                  A.TIP_DATO,
+                  A.VAL_ACCI,
+                  A.VAL_POSI,
+                  A.IND_TABL,
+                  A.IND_CAMP,
+                  A.IND_ACTI,
+                  A.IND_FECH,
+                  A.IND_HORA,
+                  X.NUM_ORDE,
+                  X.IND_OBLI,
+                  X.IND_MODI,
+                  X.VAL_LABE,
+                  A.IND_ALFA
+		       FROM MSG_CONFI_PLANT_TIPO_DATO A, 
+		       		MSG_CONFI_PLANT_DETAL X
+		       WHERE A.IND_ACTI= '1'
+		         AND A.COD_TIPO_DATO= X.COD_TIPO_DATO
+		         AND X.PLAN_COD_PLAN = #codigoPlantilla#
+		         AND X.IND_VISI='1'
+		       ORDER BY X.NUM_ORDE                    
+    </select>
+    
+    
+    <select id="getSelectPlantillaSeleccionado" parameterClass="java.util.Map" resultMap="selectPlantillaResult">
+       SELECT X.VAL_OID , 
+              X.VAL_I18N ,
+              X.VAL_TABL ,
+			  X.VAL_TABL_REFE,
+			  X.REF_OID,
+			  X.CODIGO,
+              VAL_DEFE,
+              INSTR( ','||VAL_DEFE||',', ','||X.VAL_OID ||',') IND_SELE
+       FROM MSG_PLANT_TABLE X,MSG_CONFI_PLANT_DETAL
+       WHERE VAL_LIST_TABL = X.VAL_TABL
+         AND PLAN_COD_PLAN=#codigoPlantilla#
+         AND X.IND_REFE=#indicadorRef#
+       ORDER BY IND_SELE DESC        
+    </select>
+    
+      <insert id="insertProcesoPlantilla" parameterClass="java.util.Map">
+		     
+			INSERT INTO MSG_CONFI_PROCE_CABEC (
+			   COD_PAIS, 
+			   PLAN_COD_PLAN, 
+			   PROC_COD_PROC,  
+			   IND_ACTI, 
+			   TIP_PROC, 
+			   ORD_EJEC, 
+			   USU_MODI, 
+			   FEC_MODI) 
+			VALUES (#codigoPais# ,#codigoPlantilla# ,#codigoProceso# ,
+			    #indicadorActivo# ,#tipoProceso# ,
+			    #ordenEjecucion#,#login# ,SYSDATE)	   
+    </insert>    
+    
+     <update id="updateProcesoPlantilla" parameterClass="java.util.Map">
+		   
+		UPDATE MSG_CONFI_PROCE_CABEC
+		SET    
+		       IND_ACTI = #indicadorActivo#,
+		       TIP_PROC = #tipoProceso#,
+		       ORD_EJEC = #ordenEjecucion#,
+		       USU_MODI = #login#,
+		       FEC_MODI = SYSDATE
+		WHERE  COD_PAIS = #codigoPais#
+		AND    PLAN_COD_PLAN = #codigoPlantilla#
+		AND    PROC_COD_PROC = #codigoProceso#
+
+    </update>  
+    
+    
+    <update id="updatePlantillaDetalle" parameterClass="java.util.Map">
+		UPDATE MSG_CONFI_PLANT_DETAL
+		SET      VAL_DEFE      = #valoresDefecto#,
+		       USU_MODI      = #login#,
+		       FEC_MODI      = SYSDATE
+		WHERE  PLAN_COD_PLAN      = #codigoPlantilla#
+		AND    COD_TIPO_DATO = #codigoTipoDato#
+		AND    NUM_CORR     = #numeroCorrelativo#	     
+		     		   
+    </update>     
+    
+    
+     <insert id="insertProcesoPlantillaDetalle" parameterClass="java.util.Map">		     
+			INSERT INTO MSG_CONFI_PROCE_DETAL (
+			   COD_PAIS,
+			   PLAN_COD_PLAN, 
+			   PROC_COD_PROC,
+			   TIDA_COD_TIPO_DATO,
+			   ORD_EJEC,
+			   NUM_CORR,
+			   VAL_SELE,
+			   USU_MODI, 
+			   FEC_MODI,
+			   TIP_PROC) 
+			VALUES (#codigoPais#,#codigoPlantilla# ,#codigoProceso# ,#codigoTipoDato#,
+					#ordenEjecucion#,
+			        #numeroCorrelativo#,#valorSele#,
+			        #login# ,SYSDATE,#tipoProceso#)	   
+    </insert>    
+    
+     <update id="updateProcesoPlantillaDetalle" parameterClass="java.util.Map">
+		   
+		UPDATE MSG_CONFI_PROCE_DETAL
+		SET    VAL_SELE = #valorSele#,
+		       USU_MODI = #login#,
+		       FEC_MODI = SYSDATE
+		WHERE   PLAN_COD_PLAN = #codigoPlantilla#
+		AND    PROC_COD_PROC = #codigoProceso#
+		AND    TIDA_COD_TIPO_DATO = #codigoTipoDato#
+		AND    NUM_CORR =#numeroCorrelativo#
+
+    </update>
+    
+    <update id="deleteProcesoPlantilla" parameterClass="java.util.Map">		   
+		DELETE FROM  MSG_CONFI_PROCE_CABEC
+		WHERE  PLAN_COD_PLAN = #codigoPlantilla#
+			AND PROC_COD_PROC = #codigoProceso#
+			AND TIP_PROC=#tipoProceso#
+    </update>  
+    
+    <update id="deleteProcesoPlantillaDetalle" parameterClass="java.util.Map">		   
+		DELETE FROM  MSG_CONFI_PROCE_DETAL
+		WHERE  PLAN_COD_PLAN = #codigoPlantilla#
+			AND    PROC_COD_PROC = #codigoProceso#
+			AND TIP_PROC=#tipoProceso#
+    </update>  
+    
+      <update id="updateProceso" parameterClass="java.util.Map">
+		UPDATE MSG_PROCE_MENSA
+		SET      IND_DISP      = #indicadorActivo#,
+		       USU_MODI      = #login#,
+		       FEC_MODI      = SYSDATE
+		WHERE  COD_PROC      = #codigoProceso#
+    </update>     
+    
+
+     <resultMap id="procesoHabilitadoResult" class="java.util.HashMap">
+	      <result property="codigoProceso" 		  		column="PROC_COD_PROC" />
+	      <result property="nombreProceso" 	          	column="NOM_PROC" />
+	      <result property="indicadorProceso" 	        column="IND_PROC" />
+	   </resultMap>
+   
+    <select id="getListProcesoHabilitado" parameterClass="java.util.Map" resultMap="procesoHabilitadoResult">
+        SELECT X.PROC_COD_PROC,
+        	   Y.NOM_PROC,
+        	   X.IND_PROC
+        FROM MSG_PROCE_MENSA_HABIL X ,MSG_PROCE_MENSA Y
+        WHERE X.PROC_COD_PROC = Y.COD_PROC
+                      
+    </select>     
+    
+    
+    <insert id="insertProcesoHabilitado" parameterClass="java.util.Map">
+		
+		INSERT INTO MSG_PROCE_MENSA_HABIL (
+		    COD_PAIS,
+		    COD_MARC,
+		    COD_CANA,		    
+   			PROC_COD_PROC,
+   			IND_PROC, 
+   			USU_MODI, 
+   			FEC_MODI) 
+		VALUES (#codigoPais# ,
+			    #codigoMarca# ,
+				#codigoCanal# ,
+				#codigoProceso# ,
+				#indicadorProceso#,
+		        #codigoUsuario# , 
+		        SYSDATE)
+		
+    </insert>
+    
+     <delete id="deleteProcesoHabilitado" parameterClass="java.util.Map">		
+		DELETE FROM MSG_PROCE_MENSA_HABIL 
+		  <dynamic prepend="WHERE">
+			<isNotEmpty prepend="AND" property="codigoProceso">
+				 PROC_COD_PROC=#codigoProceso#
+			</isNotEmpty>	
+		</dynamic>	        
+    </delete>
+
+      <resultMap id="procesoResult" class="java.util.HashMap">
+	      <result property="codigoProceso" 		  		column="COD_PROC" />
+	      <result property="nombreProceso" 	          	column="NOM_PROC" />
+	      <result property="nombreProgramaEjecutar" 	column="NOM_PROG_EJEC"  />
+	      <result property="indicadorDisponible" 		column="IND_DISP"  />
+	      <result property="indicadorActivo"  			column="IND_ACTI" />	      	      
+	   </resultMap>
+	       
+     <select id="getProcesosDisponibles" parameterClass="java.util.Map" resultMap="procesoResult">
+        SELECT X.COD_PROC,
+        	   X.NOM_PROC,
+        	   X.NOM_PROG_EJEC,
+        	   X.IND_DISP,
+        	   X.IND_ACTI
+        FROM MSG_PROCE_MENSA X
+        WHERE X.IND_ACTI= '1'	
+         AND NOT EXISTS(
+		   SELECT Y.PROC_COD_PROC
+		   FROM MSG_PROCE_MENSA_HABIL Y
+		   WHERE Y.PROC_COD_PROC = X.COD_PROC)       
+         <isNotEmpty prepend="AND" property="codigoProceso" >
+				 X.COD_PROC=#codigoProceso#
+		</isNotEmpty>     
+		<isNotEmpty prepend="AND" property="indicadorDisponible" >
+				 X.IND_DISP=#indicadorDisponible#
+		</isNotEmpty>      
+	          
+    </select>             
+    
+    <update id="updateProcesoHabilitado" parameterClass="java.util.Map">
+		
+		UPDATE MSG_PROCE_MENSA_HABIL 
+		SET IND_PROC=#indicadorProceso#,
+		    USU_MODI=#codigoUsuario#,
+		    FEC_MODI=SYSDATE
+		WHERE
+		    COD_PAIS= #codigoPais# AND		   
+		    COD_MARC= #codigoMarca# AND
+		    COD_CANA= #codigoCanal# AND		    
+   			PROC_COD_PROC= #codigoProceso#
+    </update>
+    
+   <insert id="insertProcesoHistoHabilitado" parameterClass="java.util.Map">
+		
+		INSERT INTO MSG_PROCE_MENSA_HABIL_HISTO (
+		    NUM_SECU,
+		    COD_PAIS,
+		    COD_MARC,
+		    COD_CANA,		    
+   			PROC_COD_PROC_ANTE,
+   			PROC_COD_PROC_ACTU,
+   			IND_PROC, 
+   			USU_MODI, 
+   			FEC_MODI) 
+		VALUES (MSG_SEQ_PLANT.NEXTVAL,
+				#codigoPais# ,
+			    #codigoMarca# ,
+				#codigoCanal# ,
+				#codigoProcesoAnt#,
+				#codigoProcesoAct#,
+				#indicadorProceso#,
+		        #codigoUsuario#, 
+		        SYSDATE)
+		
+    </insert>
+    
+    <update id="updateProcesoHistoHabilitado" parameterClass="java.util.Map">
+		
+		UPDATE MSG_PROCE_MENSA_HABIL_HISTO 
+		SET IND_PROC=#indicadorProceso#,
+		    USU_MODI=#codigoUsuario#,
+		    PROC_COD_PROC_ANT=#codigoProcesoAnt#,
+		    FEC_MODI=SYSDATE
+		WHERE
+		    COD_PAIS= #codigoPais# AND		   
+		    COD_MARC= #codigoMarca# AND
+		    COD_CANA= #codigoCanal# AND		    
+   			PROC_COD_PROC_ACTU= #codigoProcesoAct#
+    </update>
+    
+    
+   <insert id="insertProcesoHabilitadoHistorico" parameterClass="java.util.Map">
+		
+		INSERT INTO MSG_PROCE_MENSA_HABIL_HISTO (
+		    NUM_SECU,
+		    COD_PAIS,
+		    COD_MARC,
+		    COD_CANA,		    
+   			PROC_COD_PROC_ANTE,
+   			PROC_COD_PROC_ACTU,
+   			IND_PROC, 
+   			USU_MODI, 
+   			FEC_MODI)
+		SELECT MSG_SEQ_PLANT.NEXTVAL,
+				M.COD_PAIS, 
+				M.COD_MARC, 
+				M.COD_CANA, 
+				M.PROC_COD_PROC,
+   				'', 
+   				M.IND_PROC, 
+   				#login#, 
+   				SYSDATE
+			FROM MSG_PROCE_MENSA_HABIL M   			 
+    </insert>
+   
+   
+     
+   <select id="getIndicadorProcesoActivo" parameterClass="java.util.Map" resultClass="string">
+       SELECT COUNT(1)
+       FROM MSG_PROCE_MENSA_HABIL
+       WHERE IND_PROC='1'      	          
+    </select>            
+   
+   
+       <select id="getProcesosHabilitados" parameterClass="java.util.Map" resultMap="procesoResult">
+        SELECT X.COD_PROC,
+        	   X.NOM_PROC,
+        	   X.NOM_PROG_EJEC,
+        	   X.IND_DISP,
+        	   X.IND_ACTI
+        FROM MSG_PROCE_MENSA X,
+             MSG_CONFI_PROCE_CABEC Y, 
+             MSG_PROCE_MENSA_HABIL Z
+        WHERE Y.IND_ACTI= '1'	
+         AND X.COD_PROC= Y.PROC_COD_PROC	
+         AND Z.PROC_COD_PROC= Y.PROC_COD_PROC
+		 AND Y.TIP_PROC=#tipoProceso#	          
+    </select>
+    
+     <delete id="deleteProcesoPaquete" parameterClass="java.util.Map">		
+      DELETE FROM BAS_COMPO_PAQUE 
+      WHERE PAIS_COD_PAIS=#codigoPais#
+       AND SIST_COD_SIST=#codigoSistema#
+       AND INTE_COD_INPA=#codigoInterfaz#       
+    </delete>
+    
+    <insert id="insertProcesoPaquete" parameterClass="java.util.Map">
+        INSERT INTO BAS_COMPO_PAQUE (
+            PAIS_COD_PAIS, 
+            SIST_COD_SIST, 
+            INTE_COD_INPA, 
+            INTE_COD_INTE, 
+            ORD_EJEC_MULT_HILO,
+            ORD_EJEC) 
+        SELECT  Z.COD_PAIS,#codigoSistema#,#codigoInterfaz#, X.COD_IDEN_APLI,1,ORD_EJEC
+        FROM MSG_PROCE_MENSA X,MSG_CONFI_PROCE_CABEC Y, MSG_PROCE_MENSA_HABIL Z
+        WHERE Y.IND_ACTI= '1'	
+		 AND Y.TIP_PROC=#tipoProceso#
+         AND X.COD_PROC= Y.PROC_COD_PROC	
+         AND Z.PROC_COD_PROC= Y.PROC_COD_PROC
+         ORDER BY ORD_EJEC            		 
+    </insert>  
+    
+        <insert id="insertProcesoPaqueteMultHilo" parameterClass="java.util.Map">
+        INSERT INTO BAS_COMPO_PAQUE (
+            PAIS_COD_PAIS, 
+            SIST_COD_SIST, 
+            INTE_COD_INPA, 
+            INTE_COD_INTE, 
+            ORD_EJEC_MULT_HILO,
+            ORD_EJEC) 
+        SELECT  Z.COD_PAIS,#codigoSistema#,#codigoInterfaz#, X.COD_IDEN_APLI,
+				ROWNUM,
+        		1
+        FROM MSG_PROCE_MENSA X,MSG_CONFI_PROCE_CABEC Y, MSG_PROCE_MENSA_HABIL Z
+        WHERE Y.IND_ACTI= '1'	
+		 AND Y.TIP_PROC=#tipoProceso#
+         AND X.COD_PROC= Y.PROC_COD_PROC	
+         AND Z.PROC_COD_PROC= Y.PROC_COD_PROC            		 
+    </insert> 
+    
+    <select id="getIndicadorMultiHilo" parameterClass="java.util.Map" resultClass="string">
+        SELECT X.IND_PAQU_MULT               
+        FROM BAS_INTER X           
+        WHERE X.PAIS_COD_PAIS = #codigoPais#
+          AND X.SIST_COD_SIST = #codigoSistema#
+          AND X.COD_INTE=#codigoInterfaz#     
+    </select> 
+    
+    
+      <resultMap id="escaleraGanaciaMensajeResult" class="java.util.HashMap">
+	      <result property="codigoEscalon" 		  		column="COD_ESCA" />
+	      <result property="rangoInicial" 	          	column="RAN_INIC" />
+	      <result property="rangoFinal" 				column="RAN_FINA"  />
+	      <result property="codigoMensaje" 				column="COD_MENS"  />
+	      <result property="oidMensaje" 				column="MENS_OID_MENS"  />
+	      <result property="indicadorActivo"  			column="IND_ACTI" />	      	      
+	  </resultMap>
+	       
+     <select id="getEscaleraGanaciaMensaje" parameterClass="java.util.Map" resultMap="escaleraGanaciaMensajeResult">
+        SELECT X.COD_ESCA,
+        	   X.RAN_INIC,
+        	   X.RAN_FINA,
+        	   X.COD_MENS,
+        	   X.MENS_OID_MENS,
+        	   X.IND_ACTI
+        FROM MSG_ESCAL_GANAN X           
+        WHERE X.EST_REGI = '1'	
+        <isNotEmpty prepend="AND" property="codigoEscalon">	
+           X.COD_ESCA= #codigoEscalon#		          
+         </isNotEmpty>
+    </select>
+
+   <update id="deleteEstadoGananciaMensaje" parameterClass="java.util.Map">
+       UPDATE MSG_ESCAL_GANAN
+       SET EST_REGI = '9',
+           FEC_MODI = SYSDATE,
+           USU_MODI = #login#
+       WHERE  PAIS_COD_PAIS =#codigoPais#
+        AND COD_ESCA = #codigoEscalon#      	          
+    </update>    
+        
+    <select id="getExisteMensajeRangos" parameterClass="java.util.Map" resultClass="int">
+        SELECT count(1)
+        FROM MSG_ESCAL_GANAN X           
+        WHERE X.EST_REGI = '1'	
+        <isNotEmpty prepend="AND" property="oidMensaje">	
+           X.MENS_OID_MENS= #oidMensaje#		        
+         </isNotEmpty>  
+    </select>
+    
+     <select id="getExisteRangoTraslapado" parameterClass="java.util.Map" resultClass="int">
+			WITH TMP AS
+			(
+			  SELECT min(ran_inic) mini, 
+			         max(ran_fina) maxi
+			  FROM MSG_ESCAL_GANAN
+			)
+			SELECT count(1)
+			FROM MSG_ESCAL_GANAN, tmp
+			WHERE EST_REGI = '1' 
+	        <isNotEmpty prepend="AND" property="cescalon">	
+	           COD_ESCA != #cescalon#		        
+	         </isNotEmpty>			
+			and 
+			<![CDATA[			  
+			  ( #rangoInicial# BETWEEN RAN_INIC AND RAN_FINA
+			          OR  #rangoFinal# BETWEEN RAN_INIC AND RAN_FINA)    
+			  OR ( #rangoInicial# < tmp.mini AND #rangoFinal#  > tmp.maxi) 
+			]]>           		          
+    </select>
+    
+    <insert id="insertEscaleraGananciaMensaje" parameterClass="java.util.Map">
+ 
+		INSERT INTO MSG_ESCAL_GANAN (
+		   PAIS_COD_PAIS, 
+		   COD_ESCA, 
+		   RAN_INIC, 
+		   RAN_FINA, 
+		   COD_MENS, 
+		   MENS_OID_MENS, 
+		   IND_ACTI, 
+		   USU_MODI,
+		   FEC_MODI) 
+		VALUES ( #codigoPais#,
+				 MSG_SEQ_ESGAN.NEXTVAL,
+				 #rangoInicial#,
+		    	 #rangoFinal#, 
+		    	 (select cod_mens from msg_mensa  where oid_mens=#oidMensaje#), 
+		    	 #oidMensaje#,
+		    	 #indicadorActivo#, 
+		    	 #login#,
+		    	 sysdate)    
+    </insert>      
+
+    <update id="updateEscaleraGananciaMensaje" parameterClass="java.util.Map"> 
+			UPDATE MSG_ESCAL_GANAN
+			SET    RAN_INIC      = #rangoInicial#,
+			       RAN_FINA      = #rangoFinal#,
+			       COD_MENS      = (select cod_mens from msg_mensa  where oid_mens=#oidMensaje#),
+			       MENS_OID_MENS = #oidMensaje#,
+			       IND_ACTI      = #indicadorActivo#,
+			       USU_MODI      = #login#,
+			       FEC_MODI      = sysdate
+			WHERE  PAIS_COD_PAIS = #codigoPais#
+			AND    COD_ESCA      = #codigoEscalon#
+    </update>
+
+      <resultMap id="mensajeCodigoVentaResult" class="java.util.HashMap">     
+		  <result property="correlativo" 		  	    column="COR_MENS_COVE" />
+	      <result property="campanhaProceso" 		  	column="CAM_PROC" />
+	      <result property="codigoVenta" 	          	column="COD_VENT" />
+	      <result property="codigoMensaje" 				column="COD_MENS"  />
+	      <result property="oidMensaje" 				column="MENS_OID_MENS"  />
+	      <result property="indicadorActivo"  			column="IND_ACTI" />	      	      
+	  </resultMap>
+	       
+     <select id="getMensajeCodigoVenta" parameterClass="java.util.Map" resultMap="mensajeCodigoVentaResult">
+        SELECT X.COR_MENS_COVE,
+        	   X.CAM_PROC,
+        	   X.COD_VENT,
+        	   X.COD_MENS,
+        	   X.MENS_OID_MENS,
+        	   X.IND_ACTI
+        FROM MSG_MENSA_COVEN X           
+        WHERE X.EST_REGI = '1'	
+        <isNotEmpty prepend="AND" property="campanhaProceso">	
+           X.CAM_PROC= #campanhaProceso#		          
+         </isNotEmpty>
+         <isNotEmpty prepend="AND" property="codigoVenta">	
+           X.COD_VENT= #codigoVenta#		          
+         </isNotEmpty>
+        <isNotEmpty prepend="AND" property="oidMensaje">	
+           X.MENS_OID_MENS= #oidMensaje#		          
+         </isNotEmpty>
+        <isNotEmpty prepend="AND" property="indicadorActivo">	
+           X.IND_ACTI= #indicadorActivo#		          
+         </isNotEmpty>                  
+    </select>
+
+   <update id="deleteMensajeCodigoVenta" parameterClass="java.util.Map">
+       UPDATE MSG_MENSA_COVEN
+       SET EST_REGI = '9',
+           FEC_MODI = SYSDATE,
+           USU_MODI = #login#
+       WHERE  PAIS_COD_PAIS =#codigoPais#
+        AND COR_MENS_COVE = #correlativo#      	          
+    </update> 
+
+   <update id="updateMensajeCodigoVentaMensaje" parameterClass="java.util.Map">
+       UPDATE MSG_MENSA_COVEN
+       SET  CAM_PROC = #campanhaProceso#,      
+            COD_VENT = #codigoVenta#,
+            COD_MENS = (select cod_mens from msg_mensa  where oid_mens=#oidMensaje#),
+            MENS_OID_MENS=#oidMensaje#,	  
+            IND_ACTI=#indicadorActivo#,
+            FEC_MODI = SYSDATE,
+            USU_MODI = #login#
+       WHERE  PAIS_COD_PAIS =#codigoPais#
+        AND COR_MENS_COVE = #correlativo#      	          
+    </update>              
+        
+    <insert id="insertMensajeCodigoVentaMensaje" parameterClass="java.util.Map"> 
+    
+		INSERT INTO MSG_MENSA_COVEN (
+		   COR_MENS_COVE, 
+		   PAIS_COD_PAIS, 
+		   CAM_PROC, 
+		   COD_VENT, 
+		   COD_MENS, 
+		   MENS_OID_MENS, 
+		   IND_ACTI, 
+		   USU_MODI, 
+		   FEC_MODI) 
+		VALUES ( MSG_SEQ_MENCO.NEXTVAL, 
+				#codigoPais#,
+				#campanhaProceso#,				
+		    	#codigoVenta#,
+		    	(select cod_mens from msg_mensa  where oid_mens=#oidMensaje#), 
+		    	#oidMensaje#,		    	 
+		    	 #indicadorActivo#, 
+		    	 #login#,
+		    	 sysdate)    
+    
+    </insert>      
+
+	<!-- INICIO NUEVO MODULO MENSAJE -->
+	<select id="getDocumentosMensaje"  parameterClass="java.util.Map" resultMap="baseResult">
+		    SELECT MM.COD_MENS_DOCU CODIGO,
+				   MM.DES_MENS_DOCU DESCRIPCION
+			FROM MSG_DOCUM MM
+			WHERE IND_ACTI='1'
+			<isNotEmpty prepend="AND" property="abreviatura"> 
+			    MM.ABR_DOCU like #abreviatura# || '%'
+			 </isNotEmpty> 
+		    ORDER BY MM.COD_MENS_DOCU							
+	</select>       
+
+      <resultMap id="patronMensajeResult" class="java.util.HashMap">     
+	      <result property="campanhaProceso" 		  	column="CAM_PROC" />
+	      <result property="oidPatron" 					column="OID_PATR"  />
+	      <result property="codigoPatron" 				column="COD_PATR"  />
+	      <result property="descripcionPatron"         	column="DES_PATR" />	      
+	      <result property="codigoDocumento" 			column="COD_MENS_DOCU"  />
+	      <result property="descripcionDocumento" 	    column="DES_DOCU"  />
+	      <result property="indicadorActivo"  			column="IND_ACTI" />	
+	      <result property="nombreBandejaFlyers"  		column="NOM_BAND_FLYE" />	      	      
+	  </resultMap>
+	  	
+	<select id="getPatronMensaje"  parameterClass="java.util.Map" resultMap="patronMensajeResult">
+            select ( SELECT A.COD_PERI
+                     FROM SEG_PERIO_CORPO A
+                     WHERE A.OID_PERI = y.PERI_OID_PERI) CAM_PROC,
+                 x.OID_PATR,
+                 x.cod_patr,  
+                 x.des_patr,
+                 x.MDOC_COD_MENS_DOCU COD_MENS_DOCU, 
+                 (SELECT z.DES_MENS_DOCU FROM MSG_DOCUM z where z.COD_MENS_DOCU=x.MDOC_COD_MENS_DOCU) des_docu,
+                 x.ind_acti,
+                 x.NOM_BAND_FLYE
+            from MSG_PATRO x,
+                 MSG_PATRO_PERIO y
+            where x.EST_REGI='1'
+              and y.est_regi = x.EST_REGI
+              and x.oid_patr = y.PATR_OID_PATR
+			 <isNotEmpty prepend="AND" property="campanhaProceso">
+			  	y.PERI_OID_PERI =  (SELECT A.OID_PERI
+                     				FROM SEG_PERIO_CORPO A
+                     				WHERE A.COD_PERI = #campanhaProceso#)
+			 </isNotEmpty> 
+			 <isNotEmpty prepend="AND" property="codigoPatron"> 
+			    x.cod_patr like '%'|| #codigoPatron# || '%'
+			 </isNotEmpty> 
+			 <isNotEmpty prepend="AND" property="descripcion">			 
+			  x.des_patr like '%'|| #descripcion# || '%' 
+			 </isNotEmpty> 
+			 <isNotEmpty prepend="AND" property="codigoDocumento">
+			   x.MDOC_COD_MENS_DOCU = #codigoDocumento#
+			 </isNotEmpty>  
+			 <isNotEmpty prepend="AND" property="oidPais">			 
+			   x.PAIS_OID_PAIS =#oidPais#
+			 </isNotEmpty>  
+			 <isNotEmpty prepend="AND" property="oidPatron">			 
+			   x.oid_patr =#oidPatron#
+			 </isNotEmpty>  
+			ORDER BY 1 DESC ,5 DESC 							
+	</select>
+		  
+ 	<parameterMap id="deletePatronMensajeParams" class="java.util.Map">
+	  	<parameter property="oidPatron"    			jdbcType="VARCHAR" javaType="java.math.BigDecimal"  mode="IN"/>
+	  	<parameter property="campanhaProceso"       jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+	  	<parameter property="login"       			jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>	  	
+	 </parameterMap>	  
+    
+ 	<procedure id="deletePatronMensaje" parameterMap="deletePatronMensajeParams">
+			{call MSG_PKG_PROCE_MENSA.MSG_PR_ELIMI_PATRO(TO_CHAR(?),?,?)}
+	</procedure>    
+
+	<select id="getSeccionPatron"  parameterClass="java.util.Map" resultMap="baseResult">
+			SELECT distinct COD_SECC_DOCU CODIGO,
+			       DES_SECC_DOCU DESCRIPCION
+			FROM MSG_SECCI_DOCUM
+			WHERE IND_ACTI=1
+			   AND EST_REGI='1'
+			 <isNotEmpty prepend="AND" property="codigoDocumento">
+			   	MDOC_COD_MENS_DOCU = #codigoDocumento#
+			 </isNotEmpty>			   			   
+			ORDER BY 1							
+	</select>       	
+
+	<select id="getModulos"  parameterClass="java.util.Map" resultMap="baseResult2">
+        SELECT OID_MODU CODIGO,
+        	   ABR_MODU DESCRIPCION,
+               ABR_MODU || ' - ' || pq_apl_aux.Valor_Gen_I18n_Sicc(1,OID_MODU, 'SEG_MODUL')  DESCRIPCION2
+        FROM SEG_MODUL
+ 		<dynamic prepend="WHERE">
+			<isNotEmpty prepend="AND" property="oidModulo">
+				 OID_MODU=#oidModulo#
+			</isNotEmpty>	
+		</dynamic>	                
+        ORDER BY 2							
+	</select>
+
+     <resultMap id="consideracionResult" class="java.util.HashMap">     
+	      <result property="codigoConRes"	 		  	    column="CODIGO"  />
+	      <result property="descripcionConRes" 				column="DESCRIPCION"  />
+	      <result property="abrevConRes" 				column="ABR_CONS_REST"  />	      
+	      <result property="indTipo"		 				column="IND_TIPO"  />
+	  </resultMap>
+	  	
+	<select id="getConsideracion"  parameterClass="java.util.Map" resultMap="consideracionResult">
+			SELECT COD_CONS_REST CODIGO,
+			       DES_CONS_REST  DESCRIPCION,
+			       ABR_CONS_REST,
+			       IND_TIPO      
+			FROM MSG_CONSI_RESTR
+			WHERE IND_CONS_REST='C'			
+				<isNotEmpty prepend="AND" property="codigo">
+					 COD_CONS_REST=#codigo#
+				</isNotEmpty>	
+				<isNotEmpty prepend="AND" property="tipoMensaje">
+					 (IND_TIPO_MENS = #tipoMensaje# OR IND_TIPO_MENS IS NULL)
+				</isNotEmpty>		
+			AND IND_ACTI='1'					
+	</select>
+	
+	<select id="getRestriccion"  parameterClass="java.util.Map" resultMap="consideracionResult">
+			SELECT COD_CONS_REST CODIGO,
+			       DES_CONS_REST  DESCRIPCION,
+			       ABR_CONS_REST,
+			       IND_TIPO      
+			FROM MSG_CONSI_RESTR
+			WHERE IND_CONS_REST='R'
+			    <isNotEmpty prepend="AND" property="codigo">
+					 COD_CONS_REST=#codigo#
+				</isNotEmpty>	
+				AND IND_ACTI='1'						
+	</select>		  	
+	
+	
+	  <resultMap id="mensajePatronResult" class="java.util.HashMap">     
+	      <result property="campanhaProceso" 		  	column="CAM_PROC" />
+	      <result property="codigoSeccion" 				column="COD_SECC_DOCU"  />
+	      <result property="abrevSeccion" 				column="ABR_SECC_DOCU"  />
+	      <result property="oidMensaje" 				column="OID_MENS"  />
+	      <result property="codigoMensaje" 				column="COD_MENS"  />
+	      <result property="oidPatron"	 				column="OID_PATR"  />
+	      <result property="oidModulo"	 				column="MODU_OID_MODU"  />
+	      <result property="correlativo"	 			column="NUM_ORDE_IMPR"  />
+	      <result property="descripcionMensaje"	 		column="DES_MENS"  />
+	      <result property="textoMensaje"	 			column="VAL_TEXT"  />
+	      <result property="textoHtml"	 				column="VAL_HTML"  javaType="java.lang.String" />
+	      <result property="tipoMensaje"	 			column="TMEN_OID_TIPO_MENS"  />
+	      <result property="codigoDocumento"	 		column="MDOC_COD_MENS_DOCU"  />	      
+	      <result property="indicadorEditable"	 		column="IND_EDIT"  />
+	      <result property="indicadorActivo"	 		column="IND_ACTI"  />
+	      <result property="descripcionSeccion"	 		column="DES_SECC_DOCU"  />
+	      <result property="descripcionPatron"	 		column="DES_PATR"  />	      
+	      <result property="indicadorAccion"			column="IND_ACCI"  />
+	      <result property="nombreImagenFondo"			column="NOM_IMAG_FOND"  />
+	  </resultMap>
+	
+		<select id="getMensajePatron"  parameterClass="java.util.Map" resultMap="mensajePatronResult">
+           select (SELECT A.COD_PERI
+                     FROM SEG_PERIO_CORPO A
+                     WHERE A.OID_PERI = y.PERI_OID_PERI) CAM_PROC,
+                 r.COD_SECC_DOCU,    
+                 r.ABR_SECC_DOCU,
+                 TO_CHAR(b.mens_oid_mens) oid_mens,
+                 b.COD_MENS,
+                 x.oid_patr,
+                 b.MODU_OID_MODU, 
+                 a.num_orde_impr,
+		         b.DES_MENS,
+		         b.VAL_TEXT,
+		         b.VAL_HTML,
+		         b.TMEN_OID_TIPO_MENS,
+		         r.MDOC_COD_MENS_DOCU,
+		         b.IND_ACTI,
+		         b.IND_EDIT,             
+		         r.DES_SECC_DOCU,    
+		         x.DES_PATR,
+                 '1' IND_ACCI,
+                 b.NOM_IMAG_FOND
+            from MSG_PATRO x,
+                 MSG_PATRO_PERIO y,
+                 MSG_PATRO_SECCI Z,
+                 MSG_PATRO_MENSA a,
+                 MSG_MENSA_CAMPA b,
+                 MSG_SECCI_DOCUM r                             
+            where x.EST_REGI='1'
+              and y.est_regi = x.EST_REGI
+              and z.est_regi = x.EST_REGI
+              and x.oid_patr = y.PATR_OID_PATR
+              AND z.PATR_OID_PATR = x.OID_PATR
+              AND z.OID_PATR_SECC = a.PASE_OID_PATR_SECC
+		     AND z.MDOC_COD_MENS_DOCU = r.mdoc_cod_mens_docu
+		     AND z.MSEC_COD_SECC_DOCU = r.COD_SECC_DOCU              
+              AND a.MENS_OID_MENS = b.MENS_OID_MENS
+              <isNotEmpty prepend="AND" property="codigoPais">
+              	 b.PAIS_COD_PAIS = #codigoPais#
+              </isNotEmpty>
+              AND b.CAM_PROC = #campanhaProceso#
+              AND r.MDOC_COD_MENS_DOCU = x.MDOC_COD_MENS_DOCU              
+              AND a.EST_REGI =  '1' 
+              AND a.IND_ACTI =  '1' 
+              AND b.EST_REGI =  '1'              
+			 <isNotEmpty prepend="AND" property="campanhaProceso">
+			  	y.PERI_OID_PERI =  (SELECT A.OID_PERI
+                     				FROM SEG_PERIO_CORPO A
+                     				WHERE A.COD_PERI = #campanhaProceso#)
+			 </isNotEmpty> 
+			 <isNotEmpty prepend="AND" property="descripcionPatron">			 
+			  x.des_patr like '%'|| #descripcionPatron# || '%' 
+			 </isNotEmpty> 
+			 <isNotEmpty prepend="AND" property="codigoDocumento">
+			   x.MDOC_COD_MENS_DOCU = #codigoDocumento#
+			 </isNotEmpty>  
+			 <isNotEmpty prepend="AND" property="oidPais">			 
+			   x.PAIS_OID_PAIS =#oidPais#
+			 </isNotEmpty>  
+			ORDER BY Z.NUM_ORDE_SECC, A.NUM_ORDE_IMPR   							
+	</select>
+	
+	
+     <select id="getOidPeriodoCorpo"  parameterClass="java.util.Map" resultClass="string">
+				SELECT A.OID_PERI
+                FROM SEG_PERIO_CORPO A
+                WHERE A.COD_PERI = #campanhaProceso#							
+	  </select>
+	  		  
+     <select id="getCodigoMensajeByModulo"  parameterClass="java.util.Map" resultClass="string">
+				select MAX(LPAD(SUBSTR(COD_MENS,4) + 1,2,'0')) 
+				from msg_mensa a 	 			   
+				where a.modu_oid_modu= #oidModulo#
+				  and a.COD_MENS like #abrevModulo# ||'%'           							
+	  </select>		
+
+     <select id="getCorrelativoDocumentoSecccion"  parameterClass="java.util.Map" resultClass="string">
+				select NVL(MAX(B.NUM_ORDE_IMPR)+1,1) 
+				 from MSG_PATRO_SECCI A,
+				      MSG_PATRO_MENSA B
+				 WHERE  A.MDOC_COD_MENS_DOCU =#codigoDocumento#
+				     AND  A.MSEC_COD_SECC_DOCU =#codigoSeccion#
+				     AND  A.PATR_OID_PATR = #oidPatron#
+				     AND A.OID_PATR_SECC = B.PASE_OID_PATR_SECC 
+				     AND A.IND_ACTI='1'
+				     AND A.IND_ACTI=B.IND_ACTI                							
+	  </select>	  
+
+     <parameterMap id="executaSavePatronMensajeParams" class="java.util.Map">
+    	<parameter property="codigoPais"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="campanhaProceso"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="codigoDocumento"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="descripcionPatron"     jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="tipoMensaje"        	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="codigoModulo"      	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoMensaje"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="codigoSeccion"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="correlativo"           jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="indicadorActivo"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="descripcionMensaje"    jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="textoMensaje"    		jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="textoHtml"    			jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="oidPatron"    			jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="oidPeriodoCorpo"    	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>	  	
+	  	<parameter property="login"         		jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="nombreImagenFondo"   	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="mensajeResultado"      jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+	 </parameterMap>
+
+  	<procedure id="executaSavePatronMensaje" parameterMap="executaSavePatronMensajeParams">
+			{call MSG_PKG_PROCE_MENSA.MSG_PR_VALID_MENSA(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)}
+	</procedure>	  
+	    	  	
+		
+    <insert id="saveConRestCabecera" parameterClass="java.util.Map">     
+		INSERT INTO MSG_CORES_MENSA_CABEC (
+		   PAIS_COD_PAIS,
+		   MECA_CAM_PROC, 
+		   CORE_COD_CONS_REST, 
+		   MECA_COD_MENS, 
+		   IND_CONS_REST, 
+		   IND_ACTI, 
+		   USU_CREA, 
+		   FEC_CREA, 
+		   EST_REGI, 
+		   NUM_REG) 
+		VALUES ( #codigoPais#,
+		 #campanhaProceso#, 
+		 TO_NUMBER(#codigoConsRest#,'999999999'),
+		 #codigoMensaje#,
+		 #indicadorConsideracion#, 
+		 '1', 
+		 #login#,
+		 SYSDATE, 
+		 '1', 
+		 TO_NUMBER(#numReg#,'999999999'))      
+    </insert>      
+    
+     <insert id="saveConRestDetalle" parameterClass="java.util.Map">     
+		INSERT INTO MSG_CORES_MENSA_DETAL(
+		   PAIS_COD_PAIS,
+		   MECA_CAM_PROC,
+		   COR_CONS_REST_DETA, 
+		   CORE_COD_CONS_REST, 		   
+		   MECA_COD_MENS, 
+		   IND_CONS_REST, 
+		   VAL_CON1,
+		   VAL_CON2,
+		   VAL_CON3,
+		   VAL_CON4,
+		   IND_ACTI, 
+		   USU_CREA, 
+		   FEC_CREA, 
+		   EST_REGI) 
+		VALUES (#codigoPais#,
+		 #campanhaProceso#,		
+		 NVL((SELECT MAX(X.COR_CONS_REST_DETA)+ 1 
+		      FROM MSG_CORES_MENSA_DETAL X 
+		      WHERE X.MECA_COD_MENS= #codigoMensaje# AND
+		        X.MECA_CAM_PROC =#campanhaProceso# AND
+		        X.CORE_COD_CONS_REST = #codigoConsRest#),1),
+		 TO_NUMBER(#codigoConsRest#,'999999999'),		        
+		 #codigoMensaje#,
+		 #indicadorConsideracion#, 
+		 #condicion1#,
+		 #condicion2#,
+		 #condicion3#,
+		 #condicion4#,
+		 '1', 
+		 #login#,
+		 SYSDATE, 
+		 '1')      
+    </insert>      
+
+
+    <select id="getAbrevSeccion"  parameterClass="java.util.Map" resultClass="string">
+				select A.DES_SECC_DOCU
+				 from MSG_SECCI_DOCUM A
+				 WHERE  A.MDOC_COD_MENS_DOCU =#codigoDocumento#
+				     AND  A.COD_SECC_DOCU =#codigoSeccion#				   						
+	</select>
+	
+	
+    <select id="getExisteCodigoMensaje"  parameterClass="java.util.Map" resultClass="int">
+				select COUNT(1)
+				FROM MSG_MENSA_CAMPA 
+        		WHERE COD_MENS=#codigoMensaje#
+        		    AND CAM_PROC = 	#campanhaProceso#   						
+	</select>		 
+
+	<select id="getCodigoPremio" parameterClass="java.util.Map"  resultClass="labelValue">
+		select
+		    al.cod_vent_fict as value, 
+		    DES.VAL_I18N as label
+		from  inc_concu_param_gener cpg
+		    , inc_param_gener_premi pgp
+		    , inc_param_nivel_premi pnp
+		    , inc_premi_artic pa
+		    , inc_lote_premi_artic lpa
+		    , inc_artic_lote al
+		    , mae_produ p
+		    , GEN_I18N_SICC_PAIS des
+		where
+		    cpg.oid_para_gral = pgp.copa_oid_para_gral
+		and pgp.oid_para_gene_prem = pnp.pagp_oid_para_gene_prem
+		and pnp.oid_para_nive_prem = pa.panp_oid_para_nive_prem
+		and pa.oid_prem_arti = lpa.prar_oid_prem_arti
+		and lpa.oid_lote_prem_arti = al.lopa_oid_lote_prem_arti
+		and al.prod_oid_prod = p.oid_prod 
+		AND DES.VAL_OID=al.prod_oid_prod
+		AND DES.ATTR_ENTI = 'MAE_PRODU'
+		AND al.cod_vent_fict=#codigoPremio#
+		and (pgp.perd_oid_peri = GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO2(#codigoPeriodo#)   
+		        or (pgp.perd_oid_peri is null and bcal_oid_base_calc =4 
+		       			and cpg.perd_oid_peri_desd != GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CRA_PERIO2(#codigoPeriodo#)) ) 
+
+    </select>	  
+	  
+	 
+	 <resultMap id="restConsideracionResult" class="java.util.HashMap">     
+	 	  <result property="codigoPais" 				column="PAIS_COD_PAIS"  />
+	      <result property="codigoMensaje" 				column="COD_MENS"  />
+	      <result property="campanhaProceso"		  	column="MECA_CAM_PROC"  />
+		  <result property="oidMensaje" 				column="OID_MENS"  />	      
+	      <result property="codigoConsideracion"		column="COD_CONS"  />
+		  <result property="codigoRestriccion"			column="COD_REST"  />	      
+	      <result property="indicadorTipo"				column="IND_TIPO"  />
+	      <result property="descripcion" 				column="DES_CONS_REST"  />
+	      <result property="abrev"		 				column="ABR_CONS_REST"  />
+	      <result property="oidPeriodoCorpo"			column="PERI_OID_PERI"  />	      	      
+	      <result property="oidModulo"	 				column="MODU_OID_MODU"  />
+	      <result property="condicion"	 				column="VAL_COND"  />
+	      <result property="condicion1"	 				column="VAL_CON1"  />
+	      <result property="condicion2"	 				column="VAL_CON2"  />
+ 		  <result property="indicadorAccion"			column="IND_ACCI"  />
+ 		  <result property="tipoConsideracionLista"		column="IND_LIST"  /> 		  	       		  
+	  </resultMap>
+	
+	 <select id="getRestConsideracion"  parameterClass="java.util.Map" resultMap="restConsideracionResult">
+					SELECT  X.PAIS_COD_PAIS,
+					        Y.COD_MENS,
+					        X.MECA_CAM_PROC,
+							TO_CHAR(Y.OID_MENS) OID_MENS,
+					        CASE WHEN X.IND_CONS_REST = 'C' THEN TO_CHAR(Z.COD_CONS_REST) ELSE '' END COD_CONS,
+					        CASE WHEN X.IND_CONS_REST = 'R' THEN TO_CHAR(Z.COD_CONS_REST) ELSE '' END COD_REST,					        
+					        Z.IND_TIPO,
+					        Z.DES_CONS_REST,
+					        Z.ABR_CONS_REST,
+					        (SELECT A.OID_PERI FROM SEG_PERIO_CORPO A  WHERE A.COD_PERI = #campanhaProceso#) PERI_OID_PERI,
+					        Y.MODU_OID_MODU,
+					       case
+					            when Z.IND_TIPO = 'S' then ''
+					            when Z.IND_TIPO = 'U' then 
+					                    NVL((SELECT U.VAL_CON1 
+					                            FROM MSG_CORES_MENSA_DETAL U 
+					                                WHERE U.MECA_CAM_PROC =  X.MECA_CAM_PROC 
+					                                    AND U.MECA_COD_MENS = x.MECA_COD_MENS
+					                                    AND Z.COD_CONS_REST = U.CORE_COD_CONS_REST),'')
+					            when Z.IND_TIPO = 'D' then
+					                    NVL((SELECT U.VAL_CON1 || ' - ' || U.VAL_CON2 
+					                            FROM MSG_CORES_MENSA_DETAL U 
+					                                WHERE U.MECA_CAM_PROC =  X.MECA_CAM_PROC 
+					                                    AND U.MECA_COD_MENS = x.MECA_COD_MENS
+					                                    AND Z.COD_CONS_REST = U.CORE_COD_CONS_REST),'')
+					            else                   
+					                TO_CHAR(X.NUM_REG)
+					        end VAL_COND,
+					        NVL((SELECT U.VAL_CON1  
+					                            FROM MSG_CORES_MENSA_DETAL U 
+					                                WHERE U.MECA_CAM_PROC =  X.MECA_CAM_PROC 
+					                                    AND U.MECA_COD_MENS = x.MECA_COD_MENS 
+					                                    AND Z.COD_CONS_REST = U.CORE_COD_CONS_REST
+					                                    AND Z.IND_TIPO not IN('L','E','U')),'') VAL_CON1,
+					        NVL((SELECT U.VAL_CON2  
+					                            FROM MSG_CORES_MENSA_DETAL U 
+					                                WHERE  U.MECA_CAM_PROC =  X.MECA_CAM_PROC 
+					                                    AND U.MECA_COD_MENS = x.MECA_COD_MENS 
+					                                    AND Z.COD_CONS_REST = U.CORE_COD_CONS_REST
+					                                    AND Z.IND_TIPO not IN('L','E','U')),'') VAL_CON2,					                                    					                                    					                                    
+					        '1' IND_ACCI,
+ 							case
+					            when Z.IND_TIPO = 'L' OR Z.IND_TIPO = 'E' then 'L'
+					            else                   
+					                ''
+					        end IND_LIST					        
+					FROM MSG_CORES_MENSA_CABEC X ,
+					     MSG_MENSA Y,
+					     MSG_CONSI_RESTR Z
+					WHERE 
+					  X.MECA_CAM_PROC = #campanhaProceso# 
+					 <isNotEmpty prepend="AND" property="codigoMensaje">			 
+					   x.MECA_COD_MENS =#codigoMensaje#
+					 </isNotEmpty>					  
+					 AND X.MECA_COD_MENS = Y.COD_MENS
+					 AND X.IND_CONS_REST = #tipoConsideracion#
+					 AND X.IND_ACTI ='1'
+					 AND X.EST_REGI = '1'
+					 AND Z.COD_CONS_REST = X.CORE_COD_CONS_REST  
+					 AND X.MECA_COD_MENS = Y.COD_MENS
+					 <isNotEmpty prepend="AND" property="oidMensaje">			 
+					   y.OID_MENS =#oidMensaje#
+					 </isNotEmpty> 					 
+					ORDER BY x.MECA_COD_MENS   							
+	</select>
+	
+	 <resultMap id="detalleConsRestResult" class="java.util.HashMap">
+	 	  <result property="codigoPais" 					column="PAIS_COD_PAIS"  />	      
+	      <result property="oidMensaje" 				  	column="MENS_OID_MENS"  />
+	      <result property="codigoMensaje" 				  	column="MECA_COD_MENS"  />
+	      <result property="codigoConsRest"				  	column="CORE_COD_CONS_REST"  />
+		  <result property="correlativoConsideracion"		column="COR_CONS_REST_DETA"  />	      
+	      <result property="codigoMensaje"				  	column="MECA_COD_MENS"  />
+	      <result property="campanhaProceso"			  	column="MECA_CAM_PROC"  />
+	      <result property="indicadorTipo" 				    column="IND_CONS_REST"  />
+	      <result property="valCondi1"		 				column="VAL_CON1"  />
+	      <result property="valCondi2"			  			column="VAL_CON2"  />	      	      
+	      <result property="valCondi3"	 				    column="VAL_CON3"  />
+	      <result property="valCondi4"	 				    column="VAL_CON4"  />
+ 		  <result property="indicadorAccion"			    column="IND_ACCI"  />	      
+	  </resultMap>
+	
+	 <select id="getDetalleConsRest"  parameterClass="java.util.Map" resultMap="detalleConsRestResult">
+					SELECT 
+					   M.PAIS_COD_PAIS,
+					   N.MENS_OID_MENS,
+					   M.MECA_COD_MENS, 
+					   M.CORE_COD_CONS_REST, 
+					   M.COR_CONS_REST_DETA, 
+					   M.MECA_COD_MENS, 
+					   M.MECA_CAM_PROC,
+					   M.IND_CONS_REST, 
+					   M.VAL_CON1, 
+					   M.VAL_CON2, 
+					   M.VAL_CON3, 
+					   M.VAL_CON4, 
+					   '1' IND_ACCI
+					FROM MSG_CORES_MENSA_DETAL M,
+						 MSG_MENSA_CAMPA N	
+					Where
+    				M.CORE_COD_CONS_REST  = #codigoConsRest#
+					 AND M.IND_CONS_REST = #indicadorTipo#
+					 AND M.MECA_CAM_PROC =#campanhaProceso#
+					 AND M.MECA_CAM_PROC = N.CAM_PROC
+					 AND M.MECA_COD_MENS = N.COD_MENS					 
+					 AND M.IND_ACTI ='1'
+					 AND M.EST_REGI = '1'					
+					 <isNotEmpty prepend="AND" property="codigoMensaje">			 
+					   M.MECA_COD_MENS =#codigoMensaje#
+					 </isNotEmpty>
+					 <isNotEmpty prepend="AND" property="oidMensaje">			 
+					   N.MENS_OID_MENS =#oidMensaje#
+					 </isNotEmpty>					   
+					ORDER BY M.MECA_COD_MENS  ,M.COR_CONS_REST_DETA 							
+	</select>	
+	
+	 <resultMap id="subTiposClientesResult" class="java.util.HashMap">     
+	      <result property="codigoTipoCliente"			  	column="COD_TIPO_CLIE"  />
+	      <result property="codigoSubTipoCliente"		  	column="COD_SUBT_CLIE"  />
+		  <result property="oidSubTipoCliente"				column="OID_SUBT_CLIE"  />	      
+	      <result property="descripcionSubTipoCliente"	  	column="VAL_I18N"  />
+	  </resultMap>
+	
+	 <select id="getSubTiposClientes"  parameterClass="java.util.Map" resultMap="subTiposClientesResult">
+				        SELECT T.COD_TIPO_CLIE, 
+				               C.COD_SUBT_CLIE,  
+				               C.OID_SUBT_CLIE,
+				               VAL_I18N                
+						FROM   GEN_I18N_SICC_COMUN P, 
+						       MAE_SUBTI_CLIEN C, 
+						       MAE_TIPO_CLIEN T,
+						       SEG_IDIOM I
+						WHERE  P.VAL_OID = C.OID_SUBT_CLIE
+					       AND P.IDIO_OID_IDIO = I.OID_IDIO
+					       AND P.ATTR_ENTI = 'MAE_SUBTI_CLIEN'
+					       AND T.OID_TIPO_CLIE = C.TICL_OID_TIPO_CLIE
+					 		<isNotEmpty prepend="AND" property="codigoTipoCliente">   
+							   T.COD_TIPO_CLIE = #codigoTipoCliente#    
+							</isNotEmpty>
+						    <isNotEmpty prepend="AND" property="oidTipoCliente">   
+							   T.OID_TIPO_CLIE = #oidTipoCliente#    
+							</isNotEmpty>
+						    <isNotEmpty prepend="AND" property="codigoSubTipoCliente">   
+							   C.COD_SUBT_CLIE = #codigoSubTipoCliente#    
+							</isNotEmpty>							
+						    <isNotEmpty prepend="AND" property="oidSubTipoCliente">   
+							   C.OID_SUBT_CLIE = #oidSubTipoCliente#    
+							</isNotEmpty>				
+					        							
+	</select>
+	
+	 <resultMap id="tiposClasificacionesResult" class="java.util.HashMap">     
+	      <result property="oidTipoClasificacion"			  	column="OID_TIPO_CLAS"  />
+	      <result property="codigoTipoClasificacion"		  	column="COD_TIPO_CLAS"  />	      
+	      <result property="descripcionTipoClasificacion"  		column="VAL_I18N"  />
+	  </resultMap>
+	
+	 <select id="getTiposClasificaciones"  parameterClass="java.util.Map" resultMap="tiposClasificacionesResult">
+		SELECT  OID_TIPO_CLAS,
+				COD_TIPO_CLAS, 
+			    VAL_I18N 
+		FROM 	GEN_I18N_SICC_COMUN,
+				SEG_IDIOM ,
+				MAE_TIPO_CLASI_CLIEN,
+				MAE_TIPO_CLIEN,
+				MAE_SUBTI_CLIEN
+		WHERE  GEN_I18N_SICC_COMUN.VAL_OID = MAE_TIPO_CLASI_CLIEN.OID_TIPO_CLAS
+			   AND GEN_I18N_SICC_COMUN.IDIO_OID_IDIO = SEG_IDIOM.OID_IDIO
+			   AND GEN_I18N_SICC_COMUN.ATTR_ENTI = 'MAE_TIPO_CLASI_CLIEN'
+				AND MAE_SUBTI_CLIEN.OID_SUBT_CLIE = MAE_TIPO_CLASI_CLIEN.SBTI_OID_SUBT_CLIE
+				AND MAE_TIPO_CLIEN.OID_TIPO_CLIE = MAE_SUBTI_CLIEN.TICL_OID_TIPO_CLIE
+	    <isNotEmpty prepend="AND" property="codigoTipoCliente">				
+				 MAE_TIPO_CLIEN.COD_TIPO_CLIE = #codigoTipoCliente#
+	    </isNotEmpty>
+	    <isNotEmpty prepend="AND" property="codigoSubTipoCliente">				
+				 MAE_SUBTI_CLIEN.COD_SUBT_CLIE = #codigoSubTipoCliente#
+	    </isNotEmpty>
+	    <isNotEmpty prepend="AND" property="oidTipoCliente">				
+				 MAE_TIPO_CLIEN.OID_TIPO_CLIE = #oidTipoCliente#
+	    </isNotEmpty>
+	    <isNotEmpty prepend="AND" property="oidSubTipoCliente">				
+				 MAE_SUBTI_CLIEN.OID_SUBT_CLIE = #oidSubTipoCliente#
+	    </isNotEmpty>
+	    <isNotEmpty prepend="AND" property="oidTipoClasificacion">				
+				 MAE_TIPO_CLASI_CLIEN.OID_TIPO_CLAS = #oidTipoClasificacion#
+	    </isNotEmpty>
+	    <isNotEmpty prepend="AND" property="codigoTipoClasificacion">				
+				 MAE_TIPO_CLASI_CLIEN.COD_TIPO_CLAS = #codigoTipoClasificacion#
+	    </isNotEmpty>	    	    	    							   
+   	  ORDER BY 2	
+					        							
+	</select>			
+	
+	 <resultMap id="clasificacionesResult" class="java.util.HashMap">     
+	      <result property="oidClasificacion"			  	column="OID_CLAS"  />
+	      <result property="codigoClasificacion"		  	column="COD_CLAS"  />	      
+	      <result property="descripcionClasificacion"  		column="VAL_I18N"  />
+	  </resultMap>
+	
+	 <select id="getClasificaciones"  parameterClass="java.util.Map" resultMap="clasificacionesResult">
+		SELECT  OID_CLAS,
+				COD_CLAS , 
+			    VAL_I18N 
+		FROM GEN_I18N_SICC_COMUN,
+				SEG_IDIOM ,
+				MAE_CLASI,
+				MAE_TIPO_CLASI_CLIEN,
+				MAE_SUBTI_CLIEN,
+				MAE_TIPO_CLIEN	 
+		WHERE  GEN_I18N_SICC_COMUN.VAL_OID = MAE_CLASI.OID_CLAS
+				AND GEN_I18N_SICC_COMUN.IDIO_OID_IDIO = SEG_IDIOM.OID_IDIO
+				AND GEN_I18N_SICC_COMUN.ATTR_ENTI = 'MAE_CLASI'
+				AND SEG_IDIOM.COD_ISO_IDIO = #codigoISO#
+				AND MAE_CLASI.TCCL_OID_TIPO_CLAS = MAE_TIPO_CLASI_CLIEN.OID_TIPO_CLAS	  
+				AND MAE_SUBTI_CLIEN.OID_SUBT_CLIE = MAE_TIPO_CLASI_CLIEN.SBTI_OID_SUBT_CLIE
+				AND MAE_TIPO_CLIEN.OID_TIPO_CLIE = MAE_SUBTI_CLIEN.TICL_OID_TIPO_CLIE
+	    <isNotEmpty prepend="AND" property="codigoTipoClasificacion">	
+				 MAE_TIPO_CLASI_CLIEN.COD_TIPO_CLAS = #codigoTipoClasificacion#
+		</isNotEmpty>		
+	    <isNotEmpty prepend="AND" property="codigoTipoCliente">	
+				 MAE_TIPO_CLIEN.COD_TIPO_CLIE = #codigoTipoCliente#
+		</isNotEmpty>
+	    <isNotEmpty prepend="AND" property="codigoSubTipoCliente">		
+				 MAE_SUBTI_CLIEN.COD_SUBT_CLIE = #codigoSubTipoCliente#
+		</isNotEmpty>
+	    <isNotEmpty prepend="AND" property="oidTipoClasificacion">	
+				 MAE_TIPO_CLASI_CLIEN.OID_TIPO_CLAS = #oidTipoClasificacion#
+		</isNotEmpty>		
+	    <isNotEmpty prepend="AND" property="oidTipoCliente">	
+				 MAE_TIPO_CLIEN.OID_TIPO_CLIE = #oidTipoCliente#
+		</isNotEmpty>
+	    <isNotEmpty prepend="AND" property="oidSubTipoCliente">		
+				 MAE_SUBTI_CLIEN.OID_SUBT_CLIE = #oidSubTipoCliente#
+		</isNotEmpty>
+	    <isNotEmpty prepend="AND" property="oidClasificacion">		
+				 MAE_CLASI.OID_CLAS = #oidClasificacion#
+		</isNotEmpty>
+	    <isNotEmpty prepend="AND" property="codigoClasificacion">		
+				 MAE_CLASI.COD_CLAS = #codigoClasificacion#
+		</isNotEmpty>							
+		  ORDER BY 2	  
+					        							
+	</select>			
+	
+	 <resultMap id="zonaResult" class="java.util.HashMap">    
+	 	  <result property="oidRegion"		  		column="oid_regi"  /> 
+	      <result property="oidZona"			  	column="oid_zona"  />	      
+	      <result property="descripcion"  			column="DES_ZONA"  />
+	  </resultMap>
+	
+	 <select id="getZona"  parameterClass="java.util.Map" resultMap="zonaResult">
+				SELECT 	z.oid_regi,
+						y.oid_zona,
+						Y.DES_ZONA				   
+				FROM ZON_ZONA Y, ZON_REGIO Z
+				WHERE Y.COD_ZONA = #codigoZona#
+                 AND Y.ZORG_OID_REGI = Z.OID_REGI
+                 AND Z.COD_REGI = #codigoRegion#					        							
+	</select>		
+
+	 <resultMap id="seccionResult" class="java.util.HashMap">    
+	 	  <result property="codigoSeccion"		  	column="COD_SECC"  /> 
+	      <result property="oidSeccion"			  	column="OID_SECC"  />	      
+	      <result property="descripcion"  			column="DESCRIPCION"  />
+	  </resultMap>
+	
+	 <select id="getSeccion"  parameterClass="java.util.Map" resultMap="seccionResult">
+	SELECT 	   NVL(ZON_SECCI.COD_SECC, ' ') AS COD_SECC,
+			   ZON_SECCI.OID_SECC AS OID_SECC, 	   
+			   NVL(ZON_SECCI.DES_SECCI, ' ') AS DESCRIPCION 
+		 FROM  ZON_ZONA,
+		       SEG_PAIS,
+		       SEG_CANAL,
+		       SEG_MARCA,
+		       ZON_REGIO,
+			   ZON_SECCI
+		 WHERE ZON_SECCI.IND_ACTI = 1		     
+				<isNotEmpty prepend="AND" property="codigoRegion">
+					(ZON_REGIO.COD_REGI = #codigoRegion#)
+				</isNotEmpty>
+				<isNotEmpty prepend="AND" property="codigoZona">
+					(ZON_ZONA.COD_ZONA = #codigoZona#)
+				</isNotEmpty>
+				<isNotEmpty prepend="AND" property="codigoSeccion">
+					(ZON_SECCI.COD_SECC = #codigoSeccion#)
+				</isNotEmpty>
+		        AND (SEG_CANAL.OID_CANA = ZON_REGIO.CANA_OID_CANA)
+		        AND (SEG_PAIS.OID_PAIS = ZON_REGIO.PAIS_OID_PAIS)
+		        AND (SEG_MARCA.OID_MARC = ZON_REGIO.MARC_OID_MARC)	        
+		        AND (SEG_CANAL.OID_CANA = ZON_ZONA.CANA_OID_CANA)
+		        AND (SEG_PAIS.OID_PAIS = ZON_ZONA.PAIS_OID_PAIS)
+		        AND (ZON_REGIO.OID_REGI = ZON_ZONA.ZORG_OID_REGI)
+		        AND (ZON_ZONA.OID_ZONA = ZON_SECCI.ZZON_OID_ZONA)			
+		       ORDER BY 2				        							
+	</select>			
+	
+	 <resultMap id="territorioResult" class="java.util.HashMap">    
+	 	  <result property="codigoTerritorio"		  	column="COD_TERR"  /> 
+	      <result property="oidTerritorio"			  	column="OID_TERR"  />	      
+	      <result property="descripcion"  				column="DESCRIPCION"  />
+	  </resultMap>
+	
+	 <select id="getTerritorio"  parameterClass="java.util.Map" resultMap="territorioResult">
+		SELECT ZON_TERRI.COD_TERR AS COD_TERR,
+			   ZON_TERRI.OID_TERR AS OID_TERR,  	   
+			   ZON_TERRI.COD_TERR AS DESCRIPCION 
+		 FROM  ZON_ZONA,
+		       SEG_PAIS,
+		       SEG_CANAL,
+		       SEG_MARCA,
+		       ZON_REGIO,
+			   ZON_SECCI,
+			   ZON_TERRI,
+			   ZON_TERRI_ADMIN
+		 WHERE ZON_SECCI.IND_ACTI = 1		       
+				<isNotEmpty prepend="AND" property="codigoRegion">
+					(ZON_REGIO.COD_REGI = #codigoRegion#)
+				</isNotEmpty>
+				<isNotEmpty prepend="AND" property="codigoZona">
+					(ZON_ZONA.COD_ZONA = #codigoZona#)
+				</isNotEmpty>
+				<isNotEmpty prepend="AND" property="codigoSeccion">
+					(ZON_SECCI.COD_SECC = #codigoSeccion#)
+				</isNotEmpty>
+				<isNotEmpty prepend="AND" property="codigoTerritorio">
+					(ZON_TERRI.COD_TERR = #codigoTerritorio#)
+				</isNotEmpty>
+				AND (SEG_PAIS.OID_PAIS = ZON_TERRI_ADMIN.PAIS_OID_PAIS)
+		        AND (SEG_MARCA.OID_MARC = ZON_TERRI_ADMIN.MARC_OID_MARC)
+		        AND (SEG_CANAL.OID_CANA = ZON_TERRI_ADMIN.CANA_OID_CANA)
+		        AND (ZON_SECCI.OID_SECC = ZON_TERRI_ADMIN.ZSCC_OID_SECC)
+		        AND (ZON_TERRI.OID_TERR = ZON_TERRI_ADMIN.TERR_OID_TERR)
+		        AND (SEG_CANAL.OID_CANA = ZON_REGIO.CANA_OID_CANA)
+		        AND (SEG_PAIS.OID_PAIS = ZON_REGIO.PAIS_OID_PAIS)
+		        AND (SEG_MARCA.OID_MARC = ZON_REGIO.MARC_OID_MARC)	        
+		        AND (SEG_CANAL.OID_CANA = ZON_ZONA.CANA_OID_CANA)
+		        AND (SEG_PAIS.OID_PAIS = ZON_ZONA.PAIS_OID_PAIS)
+		        AND (ZON_REGIO.OID_REGI = ZON_ZONA.ZORG_OID_REGI)
+		        AND (ZON_ZONA.OID_ZONA = ZON_SECCI.ZZON_OID_ZONA)		
+		       ORDER BY 2			        							
+	</select>		
+
+
+   <update id="updateConRestCabecera" parameterClass="java.util.Map">     
+			UPDATE MSG_CORES_MENSA_CABEC
+			SET    IND_ACTI           = #indicadorActivo#,
+			       USU_MODI           = #login#,
+			       FEC_MODI           = sysdate
+			     <isNotEmpty property="estadoRegistro"> 
+			       ,EST_REGI           = #estadoRegistro#
+			     </isNotEmpty>
+			     <isNotEmpty property="numReg">			       
+			       ,NUM_REG            = TO_NUMBER(#numReg#,'999999999')
+			      </isNotEmpty> 			       
+			WHERE MECA_COD_MENS  = #codigoMensaje#
+			AND MECA_CAM_PROC =  #campanhaProceso#
+			AND CORE_COD_CONS_REST = #codigoConsRest#
+			AND IND_CONS_REST =  #indicadorConsideracion#		    
+    </update>
+          	  
+   <update id="updateConRestDetalle" parameterClass="java.util.Map">     
+		UPDATE MSG_CORES_MENSA_DETAL
+		SET   VAL_CON1          = #condicion1#,
+		      VAL_CON2          = #condicion2#,
+		      VAL_CON3          = #condicion3#,
+		      VAL_CON4          = #condicion4#,
+		      IND_ACTI           = #indicadorActivo#,
+		      USU_MODI           = #login#,
+		      FEC_MODI           = sysdate
+			  <isNotEmpty property="estadoRegistro"> 
+			       ,EST_REGI           = #estadoRegistro#
+			  </isNotEmpty>
+			WHERE MECA_COD_MENS  = #codigoMensaje#
+			AND MECA_CAM_PROC =  #campanhaProceso#
+				 AND CORE_COD_CONS_REST = #codigoConsRest#		
+				<isNotEmpty prepend="AND" property="correlativoConsideracion">
+					 COR_CONS_REST_DETA = #correlativoConsideracion#
+				</isNotEmpty>				 		 
+					 			
+    </update>
+    
+    <delete id="deleteConRestCabecera" parameterClass="java.util.Map">     
+			DELETE FROM MSG_CORES_MENSA_CABEC	 			       
+			WHERE MECA_COD_MENS  = #codigoMensaje#
+			AND MECA_CAM_PROC =  #campanhaProceso#
+			AND CORE_COD_CONS_REST = #codigoConsRest#
+			AND IND_CONS_REST =  #indicadorConsideracion#		    
+    </delete>
+    
+    <delete id="deleteConRestDetalle" parameterClass="java.util.Map">     
+		DELETE FROM MSG_CORES_MENSA_DETAL
+			WHERE MECA_COD_MENS  = #codigoMensaje#
+			AND MECA_CAM_PROC =  #campanhaProceso#
+				 AND CORE_COD_CONS_REST = #codigoConsRest#		
+				<isNotEmpty prepend="AND" property="correlativoConsideracion">
+					 COR_CONS_REST_DETA = #correlativoConsideracion#
+				</isNotEmpty>				 		 
+					 			
+    </delete>
+
+     <parameterMap id="updatePatronMensajeParams" class="java.util.Map">
+    	<parameter property="codigoPais"            jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+    	<parameter property="campanhaProceso"       jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+	  	<parameter property="codigoDocumento"       jdbcType="VARCHAR" javaType="java.math.BigDecimal"  mode="IN"/>
+	  	<parameter property="descripcionPatron"     jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+	  	<parameter property="tipoMensaje"        	jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+	  	<parameter property="codigoModulo"      	jdbcType="VARCHAR" javaType="java.lang.String" 		mode="IN"/>
+    	<parameter property="codigoMensaje"         jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+	  	<parameter property="codigoSeccion"         jdbcType="VARCHAR" javaType="java.math.BigDecimal"  mode="IN"/>
+	  	<parameter property="correlativo"           jdbcType="VARCHAR" javaType="java.math.BigDecimal"  mode="IN"/>
+	  	<parameter property="indicadorActivo"       jdbcType="VARCHAR" javaType="java.lang.String" 		mode="IN"/>
+	  	<parameter property="estadoRegistro"        jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>	  	
+	  	<parameter property="descripcionMensaje"    jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+	  	<parameter property="textoMensaje"    		jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+	  	<parameter property="textoHtml"    			jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+	  	<parameter property="oidPatron"    			jdbcType="VARCHAR" javaType="java.math.BigDecimal"  mode="IN"/>
+	  	<parameter property="oidPeriodoCorpo"    	jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>	  	
+	  	<parameter property="login"         		jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>	  	
+	  	<parameter property="indicadorActualizar"   jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+	  	<parameter property="nombreImagenFondo"     jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+	  	<parameter property="mensajeResultado"      jdbcType="VARCHAR" javaType="java.lang.String"  	mode="OUT"/>
+	 </parameterMap>
+
+  	<procedure id="updatePatronMensaje" parameterMap="updatePatronMensajeParams">
+			{call MSG_PKG_PROCE_MENSA.MSG_PR_ACTUA_MENSA(?,?,TO_CHAR(?),?,?,?,?,TO_CHAR(?),TO_CHAR(?),?,?,?,?,?,TO_CHAR(?),?,?,?,?,?)}
+	</procedure>
+	
+	<select id="getCodigoVentaReemplazado" parameterClass="java.util.Map"  resultClass="labelValue">
+			       			
+		SELECT  pofd1.val_codi_vent as value,
+       			g1.val_i18n         as label
+		  FROM pre_matri_factu_cabec pmfc, 
+		       pre_ofert             pof, 
+		       pre_ofert_detal       pofd1, 
+		       pre_matri_factu       pmf1,
+		       cra_perio             cp,
+		       seg_perio_corpo       sp,
+		       pre_ofert_detal       pofd2,
+		       pre_matri_factu       pmf2,
+		       pre_matri_reemp       pmr,
+		       mae_produ             mp1,
+		       mae_produ             mp2,
+		       gen_i18n_sicc_pais    g1,
+		       gen_i18n_sicc_pais    g2
+		 WHERE pmfc.oid_cabe = pof.mfca_oid_cabe
+		   AND pof.oid_ofer = pofd1.ofer_oid_ofer
+		   AND pofd1.oid_deta_ofer = pmf1.ofde_oid_deta_ofer
+		   AND pmfc.perd_oid_peri = cp.oid_peri
+		   AND pmr.mafa_oid_cod_ppal = pmf1.oid_matr_fact
+		   AND pmr.mafa_oid_cod_reem = pmf2.oid_matr_fact
+		   AND pmf2.ofde_oid_deta_ofer = pofd2.oid_deta_ofer
+		   AND sp.oid_peri = cp.peri_oid_peri
+		   AND sp.cod_peri = #codigoPeriodo#
+		   AND pofd1.prod_oid_prod = mp1.oid_prod
+		   AND mp1.oid_prod = g1.val_oid
+		   AND g1.attr_enti = 'MAE_PRODU'
+		   AND pofd2.prod_oid_prod = mp2.oid_prod
+		   AND mp2.oid_prod = g2.val_oid
+		   AND g2.attr_enti = 'MAE_PRODU'		 
+		   AND pofd1.val_codi_vent = #codigoVenta#      			
+
+    </select>	  
+    
+    
+    <select id="getCodigoVentaReemplazo" parameterClass="java.util.Map"  resultClass="labelValue">
+		SELECT  pofd2.val_codi_vent as value,
+       			g2.val_i18n         as label       			
+		  FROM pre_matri_factu_cabec pmfc, 
+		       pre_ofert             pof, 
+		       pre_ofert_detal       pofd1, 
+		       pre_matri_factu       pmf1,
+		       cra_perio             cp,
+		       seg_perio_corpo       sp,
+		       pre_ofert_detal       pofd2,
+		       pre_matri_factu       pmf2,
+		       pre_matri_reemp       pmr,
+		       mae_produ             mp1,
+		       mae_produ             mp2,
+		       gen_i18n_sicc_pais    g1,
+		       gen_i18n_sicc_pais    g2
+		 WHERE pmfc.oid_cabe = pof.mfca_oid_cabe
+		   AND pof.oid_ofer = pofd1.ofer_oid_ofer
+		   AND pofd1.oid_deta_ofer = pmf1.ofde_oid_deta_ofer
+		   AND pmfc.perd_oid_peri = cp.oid_peri
+		   AND pmr.mafa_oid_cod_ppal = pmf1.oid_matr_fact
+		   AND pmr.mafa_oid_cod_reem = pmf2.oid_matr_fact
+		   AND pmf2.ofde_oid_deta_ofer = pofd2.oid_deta_ofer
+		   AND sp.oid_peri = cp.peri_oid_peri
+		   AND sp.cod_peri = #codigoPeriodo#
+		   AND pofd1.prod_oid_prod = mp1.oid_prod
+		   AND mp1.oid_prod = g1.val_oid
+		   AND g1.attr_enti = 'MAE_PRODU'
+		   AND pofd2.prod_oid_prod = mp2.oid_prod
+		   AND mp2.oid_prod = g2.val_oid
+		   AND g2.attr_enti = 'MAE_PRODU'		 
+		   AND pofd1.val_codi_vent = #codigoVenta#
+		   AND pofd2.val_codi_vent = #codigoReemplazo#      	
+    </select>	  
+    
+    
+    <insert id="saveConRestBuzonDetalle" parameterClass="java.util.Map">
+    	INSERT INTO MSG_BUZON_MENSA
+    		(OID_BUZO_MENS ,
+    		 NUM_SECU,
+			 MENS_OID_MENS,
+			 CLIE_OID_CLIE,
+			 VAL_NOM1_CLIE,
+			 VAL_NOM2_CLIE,
+			 VAL_APE1_CLIE,
+			 VAL_APE2_CLIE,
+			 VAL_APEL_CASA_CLIE,
+			 MODU_OID_MODU_ORIG ,
+			 FEC_GRAB,
+			 IND_ACTI,    
+			 IND_LIST_CONS,
+			 DATO_VARI_01,
+			 DATO_VARI_02,
+			 DATO_VARI_03,
+			 DATO_VARI_04,
+			 DATO_VARI_05,
+			 DATO_VARI_06,
+			 DATO_VARI_07,
+			 DATO_VARI_08,
+			 DATO_VARI_09,
+			 DATO_VARI_10,
+			 DATO_VARI_11,
+			 DATO_VARI_12,
+			 DATO_VARI_13,
+			 DATO_VARI_14,
+			 DATO_VARI_15,
+			 DATO_VARI_16,
+			 DATO_VARI_17,
+			 DATO_VARI_18,
+			 DATO_VARI_19,
+			 DATO_VARI_20,
+			 PERI_OID_PERI,
+			 CORE_COD_CONS_REST,
+			 USU_MODI,
+			 FEC_MODI,
+			 NUM_LOTE)
+		VALUES(MSG_BUME_SEQ.NEXTVAL, 
+			   MSG_BUM2_SEQ.NEXTVAL,
+		       to_number(#oidMensaje#,'999999999'),
+		       GEN_PKG_GENER.GEN_FN_DEVUELVE_ID_CLIENTE(#0#),		
+		       (SELECT VAL_NOM1 FROM MAE_CLIEN WHERE COD_CLIE = #0#),
+		       (SELECT VAL_NOM2 FROM MAE_CLIEN WHERE COD_CLIE = #0#),
+		       (SELECT VAL_APE1 FROM MAE_CLIEN WHERE COD_CLIE = #0#),
+		       (SELECT VAL_APE2 FROM MAE_CLIEN WHERE COD_CLIE = #0#),
+		       (SELECT VAL_APEL_CASA FROM MAE_CLIEN WHERE COD_CLIE = #0#),	    
+			   to_number(#oidModulo#,'999999999'),
+			   SYSDATE,
+			   1,
+			   1,			   
+			   #1#,#2#,#3#,#4#,#5#,#6#,#7#,#8#,#9#,#10#,
+			   #11#,#12#,#13#,#14#,#15#,#16#,#17#,#18#,#19#,#20#,
+			   TO_NUMBER(#oidPeriodoCorpo#,'999999999'),
+			   TO_NUMBER(#codigoConsRest#,'999999999'),
+			   #login#,
+		 	   SYSDATE,
+		 	   #numeroLote# )
+    </insert>
+    
+    <update id="updateConRestBuzonDetalle" parameterClass="java.util.Map">    	
+	   UPDATE MSG_BUZON_MENSA
+	   SET EST_REGI = '9',
+	       IND_ACTI =0,
+	       USU_MODI = #login#,
+	       FEC_MODI = SYSDATE
+	   WHERE IND_ACTI =1     		 	   
+	    <isNotEmpty prepend="AND" property="oidMensaje">
+		 MENS_OID_MENS = to_number(#oidMensaje#,'999999999') 
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="oidModulo"> 
+		 MODU_OID_MODU_ORIG = to_number(#oidModulo#,'999999999')
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="oidPeriodoCorpo"> 	   
+		 PERI_OID_PERI = TO_NUMBER(#oidPeriodoCorpo#,'999999999') 
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="codigoConsRest"> 
+		 CORE_COD_CONS_REST=  TO_NUMBER(#codigoConsRest#,'999999999') 
+		 </isNotEmpty>
+		  <isNotEmpty prepend="AND" property="numLote">
+			   NUM_LOTE = #numLote#
+		 </isNotEmpty>  
+    </update>
+
+	 <resultMap id="genericoResult" class="java.util.HashMap">     
+	      <result property="oid"			  			column="OID"  />
+	      <result property="descripcion"		  		column="DESCRIPCION"  />	      
+	      <result property="nivel"  					column="NIVEL"  />
+	      <result property="indicadorSeleccion"  		column="IND_SELEC"  />
+	      
+	  </resultMap>
+	
+	 <select id="getDocumentosPatron"  parameterClass="java.util.Map" resultMap="genericoResult">
+            select r.COD_MENS_DOCU OID,
+                   r.DES_MENS_DOCU DESCRIPCION,   
+                   '0' NIVEL,               
+                   '0' IND_SELEC     
+            from MSG_PATRO x,
+                 MSG_PATRO_PERIO y,
+                 MSG_DOCUM r                             
+            where x.EST_REGI='1'
+              and x.IND_ACTI = 1
+              and x.ind_acti = y.ind_acti
+              and y.est_regi = x.EST_REGI              
+              and x.oid_patr = y.PATR_OID_PATR
+              AND r.COD_MENS_DOCU = x.MDOC_COD_MENS_DOCU              
+              AND y.PERI_OID_PERI =  (SELECT A.OID_PERI
+                                     FROM SEG_PERIO_CORPO A
+                                     WHERE A.COD_PERI = #campanhaProceso#)
+				<isNotEmpty prepend="AND" property="codigoDocumento">
+					r.COD_MENS_DOCU = #codigoDocumento#
+				</isNotEmpty>                                                			    	                                     
+            ORDER BY X.OID_PATR					        						
+	</select>			
+
+	 <select id="getSeccionDocumentoPatron"  parameterClass="java.util.Map" resultMap="genericoResult">
+            select 
+                 z.OID_PATR_SECC OID,              
+                 r.DES_SECC_DOCU DESCRIPCION,
+                 '1' NIVEL,               
+                 '0' IND_SELEC                 
+            from MSG_PATRO x,
+                 MSG_PATRO_PERIO y,
+                 MSG_PATRO_SECCI Z,            
+                 MSG_SECCI_DOCUM r                             
+            where x.EST_REGI='1'
+ 			  and x.IND_ACTI = 1
+              and x.ind_acti = y.ind_acti            
+              and y.est_regi = x.EST_REGI
+              and z.ind_acti = 1
+              
+              <![CDATA[
+              	and z.est_regi <> '9'
+              ]]>
+              
+              and x.oid_patr = y.PATR_OID_PATR
+              AND z.PATR_OID_PATR = x.OID_PATR
+              AND z.MDOC_COD_MENS_DOCU = r.mdoc_cod_mens_docu
+              AND z.MSEC_COD_SECC_DOCU = r.COD_SECC_DOCU              
+              AND r.MDOC_COD_MENS_DOCU = x.MDOC_COD_MENS_DOCU              
+              AND y.PERI_OID_PERI =  (SELECT A.OID_PERI
+                                     FROM SEG_PERIO_CORPO A
+                                     WHERE A.COD_PERI = #campanhaProceso#)            
+              and  r.MDOC_COD_MENS_DOCU = #codigoDocumento#       
+            ORDER BY X.OID_PATR,Z.NUM_ORDE_SECC					        							
+	</select>			
+
+	 <select id="getMensajesSeccionDocumentoPatron"  parameterClass="java.util.Map" resultMap="genericoResult">
+        select  b.MENS_OID_MENS OID,                       
+                b.COD_MENS || ' - ' || b.DES_MENS as DESCRIPCION,
+                '2' NIVEL,               
+                '0' IND_SELEC                                                  
+            from MSG_PATRO x,
+                 MSG_PATRO_PERIO y,
+                 MSG_PATRO_SECCI Z,
+                 MSG_PATRO_MENSA a,
+                 MSG_MENSA_CAMPA b,
+                 MSG_SECCI_DOCUM r                             
+            where x.EST_REGI='1'
+ 			  and x.IND_ACTI = 1
+              and x.ind_acti = y.ind_acti                     
+              and y.est_regi = x.EST_REGI
+ 			  and z.ind_acti = 1
+ 			  
+              <![CDATA[
+              	and z.est_regi <> '9'
+              ]]>
+                            
+              and x.oid_patr = y.PATR_OID_PATR
+              AND z.PATR_OID_PATR = x.OID_PATR
+              AND z.OID_PATR_SECC = a.PASE_OID_PATR_SECC
+             AND z.MDOC_COD_MENS_DOCU = r.mdoc_cod_mens_docu
+             AND z.MSEC_COD_SECC_DOCU = r.COD_SECC_DOCU              
+              AND b.CAM_PROC =#campanhaProceso#              
+              AND a.MENS_OID_MENS = b.MENS_OID_MENS
+              AND r.MDOC_COD_MENS_DOCU = x.MDOC_COD_MENS_DOCU              
+              AND a.EST_REGI =  '1' 
+              AND a.IND_ACTI =  '1' 
+              AND a.ind_acti = b.ind_acti
+              AND b.EST_REGI =  '1'              
+              AND y.PERI_OID_PERI =  (SELECT A.OID_PERI
+                                     FROM SEG_PERIO_CORPO A
+                                     WHERE A.COD_PERI = #campanhaProceso#)                       
+               and OID_PATR_SECC = #oidSeccion#
+            ORDER BY X.OID_PATR,Z.NUM_ORDE_SECC, A.NUM_ORDE_IMPR					        							
+	</select>					    
+	
+		
+	<select id="getValidaPatron"  parameterClass="java.util.Map" resultClass="int">
+        	select count(1) 
+            from MSG_PATRO x,
+                 MSG_PATRO_PERIO y
+            where x.EST_REGI='1'
+              and y.est_regi = x.EST_REGI
+              and x.oid_patr = y.PATR_OID_PATR
+			  and y.PERI_OID_PERI =  (SELECT A.OID_PERI
+                     				FROM SEG_PERIO_CORPO A
+                     				WHERE A.COD_PERI = #codigoPeriodo#)
+ 			 <isNotEmpty prepend="AND" property="codigoDocumento">
+			   x.MDOC_COD_MENS_DOCU = #codigoDocumento#
+			 </isNotEmpty>  
+	</select>	
+		                	  		        
+    <update id="updateImpresionPatronMensaje" parameterClass="java.util.Map">    			 
+		UPDATE MSG_PATRO_MENSA
+		SET    NUM_ORDE_IMPR      = to_number(#orden#,'999999999'),
+		       USU_MODI           = #login#,
+		       FEC_MODI           = SYSDATE
+		WHERE  PASE_OID_PATR_SECC = TO_NUMBER(#oidSeccion#,'999999999999')
+		      AND MENS_OID_MENS      = TO_NUMBER(#oidMensaje#,'999999999999')
+		 		 
+    </update>
+    
+    <update id="updatePatron" parameterClass="java.util.Map">    			 
+		UPDATE MSG_PATRO
+		SET    DES_PATR    = #descripcionPatron#,
+		       USU_MODI    = #login#,
+		       FEC_MODI     = SYSDATE
+		WHERE OID_PATR = #oidPatron#		     
+    </update>    
+    
+    
+      <update id="updateImpresionPatronSeccion" parameterClass="java.util.Map">    			 
+		UPDATE MSG_PATRO_SECCI
+		SET    NUM_ORDE_SECC      = to_number(#orden#,'999999999'),
+		       USU_MODI           = #login#,
+		       FEC_MODI           = SYSDATE
+		WHERE  OID_PATR_SECC = TO_NUMBER(#oidSeccion#,'999999999')		 		 
+    </update>
+    
+    <insert id="insertReplicaPatron" parameterClass="java.util.Map">		     
+			INSERT INTO MSG_TMP_REPLI_PATRO (
+			   COD_PAIS,
+			   COD_NIVE, 
+			   OID_REPL, 
+			   CAM_ORIG,  
+			   CAM_DEST,
+			   COD_USUA ) 
+			VALUES (#codigoPais#,
+					#nivel#,
+					TO_NUMBER(#oid#,'999999999'),
+					#campanhaOrigen#,
+					#campanhaDestino#,
+					#login#)	   
+    </insert>    
+    
+     <update id="deleteReplicaPatron" parameterClass="java.util.Map">
+		   DELETE FROM 	MSG_TMP_REPLI_PATRO	
+    </update>      
+
+  	<procedure id="executeReplicarPatron" >
+			{call MSG_PKG_PROCE_MENSA.MSG_PR_REPLI_PATRO }
+	</procedure>    
+	
+
+	 <resultMap id="mensajeResult" class="java.util.HashMap">     
+	      <result property="oidMensaje"					column="MENS_OID_MENS"  />
+	      <result property="codigoMensaje"		  		column="COD_MENS"  />	      
+	      <result property="descripcionMensaje"			column="DES_MENS"  />
+	      <result property="valorTexto"  				column="VAL_TEXT"  />
+	      <result property="valorTextoHtml"  			column="VAL_HTML"  javaType="java.lang.String" />
+		  <result property="oidModulo"  				column="MODU_OID_MODU"  />		  	      	      
+	  </resultMap>
+	
+	 <select id="getMensajeByOid"  parameterClass="java.util.Map" resultMap="mensajeResult">
+			SELECT MENS_OID_MENS,
+				   COD_MENS,
+				   DES_MENS,
+				   VAL_TEXT,
+				   VAL_HTML,
+				   MODU_OID_MODU
+			FROM MSG_MENSA_CAMPA
+			WHERE MENS_OID_MENS = #oid#		
+			 AND CAM_PROC = #campanhaProceso#			        							
+	</select>
+	
+    <select id="getRegistrosBuzon"  parameterClass="java.util.Map" resultClass="int">
+			SELECT COUNT(1)
+			FROM MSG_BUZON_MENSA
+			WHERE MENS_OID_MENS = #oidMensaje#
+				AND MODU_OID_MODU_ORIG=#oidModulo#
+				AND PERI_OID_PERI =#oidPeriodoCorpo#
+				AND CORE_COD_CONS_REST =#codigoConsRest#			        							
+	</select>					
+	
+    <select id="getNumeroLote" resultClass="string">
+		  SELECT TO_CHAR(SYSDATE, 'YYYYMMDD') || 
+		  		 LPAD(NVL(MAX(SUBSTR(A.NUM_LOTE, 9, 4)) + 1, 1), 4, '0') AS NUM_LOTE
+		  FROM MSG_BUZON_MENSA A
+    </select>  	
+    
+    
+    <resultMap id="loteBuzonResult" class="java.util.HashMap">     
+	      <result property="numLote"					column="NUM_LOTE"  />
+	      <result property="numRegistro"		  		column="NUM_REGI"  />	      
+	      <result property="indicadorAccion"			column="IND_ACCI"  />		  	      	      
+	 </resultMap>
+	 
+    <select id="getLoteBuzon"  parameterClass="java.util.Map" resultMap="loteBuzonResult">
+			SELECT NUM_LOTE,
+					COUNT(1) NUM_REGI,
+					'1' IND_ACCI
+			FROM MSG_BUZON_MENSA A
+			WHERE A.MENS_OID_MENS = #oidMensaje#
+				AND A.MODU_OID_MODU_ORIG=#oidModulo#
+				AND A.PERI_OID_PERI =#oidPeriodoCorpo#
+				AND A.CORE_COD_CONS_REST =#codigoConsRest#
+			    AND EST_REGI = '1'
+			    AND IND_ACTI= '1'
+			GROUP BY NUM_LOTE
+			ORDER BY NUM_LOTE DESC			    					        							
+	</select>	    
+	
+	    <select id="getNumRegLoteBuzon"  parameterClass="java.util.Map" resultClass="int">
+			SELECT 	COUNT(1) 					
+			FROM MSG_BUZON_MENSA A
+			WHERE A.MENS_OID_MENS = #oidMensaje#
+				AND A.MODU_OID_MODU_ORIG=#oidModulo#
+				AND A.PERI_OID_PERI =#oidPeriodoCorpo#
+				AND A.CORE_COD_CONS_REST =#codigoConsRest#
+			    AND EST_REGI = '1'
+			    AND IND_ACTI= '1'			    					        							
+	</select>	
+	
+	
+	 <select id="getVariables"  parameterClass="java.util.Map" resultClass="string">
+			SELECT VAL_VALI
+			FROM MSG_MENSA_VARIA_VALID
+			WHERE IND_VALI=#indValid#		    					        							
+	</select>	    
+	
+	
+     <parameterMap id="updateAsignacionParams" class="java.util.Map">
+    	<parameter property="codigoPais"            jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+    	<parameter property="campanhaProceso"       jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+    	<parameter property="codigoMensaje"         jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+    	<parameter property="login"         		jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+	 </parameterMap>
+
+  	<procedure id="updateAsignacion" parameterMap="updateAsignacionParams">
+			{call MSG_PKG_PROCE_MENSA.MSG_PR_ACTUA_MENSA_ASIGN(?,?,?,?)}
+	</procedure>
+	
+	
+	<select id="getMensajesDisponibles"  parameterClass="java.util.Map" resultMap="genericoResult">
+			select  b.OID_MENS OID,                       
+			        b.COD_MENS || ' - ' || b.DES_MENS as DESCRIPCION,
+			        '2' NIVEL,               
+			        '0' IND_SELEC                                               
+			from msg_mensa b
+			where cod_mens not in(
+			       select x.cod_mens
+			       from msg_mensa_campa x
+			       where PAIS_COD_PAIS = #codigoPais#
+			          and CAM_PROC = #campanhaProceso#
+			          and cod_mens = x.cod_mens)
+			      and EST_REGI = '1'    
+			order by cod_mens 					        							
+	</select>	
+	
+	
+   <insert id="insertImpresionPatronMensaje" parameterClass="java.util.Map">
+		
+	  INSERT INTO MSG_PATRO_MENSA
+            (OID_PATR_MENS,
+             PASE_OID_PATR_SECC,
+             MENS_OID_MENS,
+             NUM_ORDE_IMPR,
+             IND_ACTI,
+             USU_MODI,
+             FEC_MODI,
+             EST_REGI
+            )
+         VALUES(MSG_PAMS_SEQ.NEXTVAL,
+                TO_NUMBER(#oidSeccion#,'999999999999'),
+                TO_NUMBER(#oidMensaje#,'999999999999'),
+                to_number(#orden#,'999999999'),
+                1,
+                #login#,
+                SYSDATE,
+                '1')
+		
+    </insert>
+    
+    <insert id="insertImpresionMensaje" parameterClass="java.util.Map">
+    		
+	     INSERT INTO MSG_MENSA_CAMPA (
+                PAIS_COD_PAIS,
+                CAM_PROC,
+                MENS_OID_MENS,
+                COD_MENS,
+                DES_MENS,
+                VAL_TEXT,
+                MODU_OID_MODU,
+                PERI_OID_PERI,
+                TMEN_OID_TIPO_MENS,
+                IND_EDIT,
+                IND_ACTI,
+                USU_CREA,
+                FEC_CREA,
+                EST_REGI)
+             select #codigoPais#,
+                #campanha#,
+                OID_MENS,
+                COD_MENS,
+                DES_MENS,
+                VAL_TEXT,
+                MODU_OID_MODU,
+                (SELECT A.OID_PERI FROM SEG_PERIO_CORPO A WHERE A.COD_PERI = #campanha#),
+                TMEN_OID_TIPO_MENS,
+                1,
+                1,
+                #login#,
+                SYSDATE,
+                '1'
+            from msg_mensa
+            where oid_mens = TO_NUMBER(#oidMensaje#,'999999999999')
+            		
+    </insert>
+        
+     <parameterMap id="deleteImpresionPatronMensajeParams" class="java.util.Map">
+    	<parameter property="codigoPais"        jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+    	<parameter property="oidDocumento"      jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+    	<parameter property="oidSeccion"        jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+    	<parameter property="oidMensaje"        jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+    	<parameter property="campanha"          jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+    	<parameter property="login"         	jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+	 </parameterMap>
+
+  	<procedure id="deleteImpresionPatronMensaje" parameterMap="deleteImpresionPatronMensajeParams">
+			{call MSG_PKG_PROCE_MENSA.MSG_PR_EXCLU_MENSA(?,?,?,?,?,?)}
+	</procedure>
+    	
+    <select id="getDescripcionMensaje"  parameterClass="java.util.Map" resultClass="string">
+	    SELECT DES_MENS 
+		  FROM MSG_MENSA 
+		 WHERE PAIS_OID_PAIS = gen_pkg_gener.gen_fn_devuelve_id_pais(#codigoPais#)
+		   AND COD_MENS = #codigoMensaje#							
+	</select>
+	
+	 <select id="getVerRegionesZonasAprobadasNoProc"  parameterClass="java.util.Map" resultClass="java.lang.Integer">
+		SELECT count(1) cantidad
+        FROM fac_progr_cierr
+        WHERE cam_proc = #codigoPeriodo#
+        AND fec_cier = (SELECT MAX(FEC_CIER)
+						FROM fac_progr_cierr
+						WHERE cam_proc = #codigoPeriodo#
+						  AND TIP_CIER = 'Z'
+						  <![CDATA[	
+						  AND fec_cier  <= trunc(sysdate))
+						  ]]>
+        AND est_cier != 'P'
+        AND TIP_CIER = 'Z'
+	</select> 
+	
+	<update id="updateAnulacionMensajeImagen" parameterClass="java.util.Map">
+				DELETE FROM MSG_MENSA_CAMPA_IMAGE 
+				WHERE  PAIS_COD_PAIS = #codigoPais#
+				   AND MECA_CAM_PROC = #campanhaProceso#
+				   AND MECA_COD_MENS = #codigoMensaje# 
+    </update>
+    
+    <parameterMap id="insertaMensajeImagenParams" class="java.util.Map">
+    	<parameter property="codigoPais"               jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+    	<parameter property="campanhaProceso"          jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+    	<parameter property="codigoMensaje"            jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+    	<parameter property="login"         	       jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+    	<parameter property="archivoImagen"            jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+    	<parameter property="indicadorImagenFondo"     jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+	 </parameterMap>
+
+  	<procedure id="insertaMensajeImagen" parameterMap="insertaMensajeImagenParams">
+			{call MSG_PKG_PROCE_MENSA.MSG_PR_GRABA_IMAGE_BLOB(?,?,?,?,?,?)}
+	</procedure>
+	
+	
+	<parameterMap id="leerMensajeImagenParams" class="java.util.Map">
+    	<parameter property="codigoPais"        jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+    	<parameter property="campanhaProceso"      jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+    	<parameter property="codigoMensaje"        jdbcType="VARCHAR" javaType="java.lang.String"  	mode="IN"/>
+	 </parameterMap>
+
+  	<procedure id="leerMensajeImagen" parameterMap="leerMensajeImagenParams">
+			{call MSG_PKG_PROCE_MENSA.MSG_PR_LEER_IMAGE_BLOB(?,?,?)}
+	</procedure>
+    
+    <select id="getListaBandejaFlyers"  parameterClass="java.util.Map" resultMap="baseResult">
+        SELECT NOM_BAND_FLYE CODIGO,
+        	   NOM_BAND_FLYE DESCRIPCION
+        FROM MSG_BANDE_FLYER        
+        ORDER BY NOM_BAND_FLYE							
+	</select>
+    
+    <parameterMap id="executaSavePatronFlyersMensajeParams" class="java.util.Map">
+        <parameter property="oidPatron"    			jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="codigoPais"            jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="campanhaProceso"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    	<parameter property="oidPeriodoCorpo"    	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>	  
+	  	<parameter property="codigoDocumento"       jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="codigoBandeja"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="descripcionPatron"     jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	  	<parameter property="login"         		jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	 </parameterMap>
+
+  	<procedure id="executaSavePatronFlyersMensaje" parameterMap="executaSavePatronFlyersMensajeParams">
+			{call MSG_PKG_PROCE_MENSA.MSG_PR_GRABA_FLYER(?,?,?,?,?,?,?,?)}
+	</procedure>	  
+    
+    <select id="getListaFlyers"  parameterClass="java.util.Map" resultMap="patronMensajeResult">
+            select ( SELECT A.COD_PERI
+                     FROM SEG_PERIO_CORPO A
+                     WHERE A.OID_PERI = y.PERI_OID_PERI) CAM_PROC,
+                 x.OID_PATR,
+                 x.cod_patr,  
+                 x.des_patr,
+                 x.MDOC_COD_MENS_DOCU COD_MENS_DOCU, 
+                 (SELECT z.DES_MENS_DOCU FROM MSG_DOCUM z where z.COD_MENS_DOCU=x.MDOC_COD_MENS_DOCU) des_docu,
+                 x.ind_acti,
+                 x.NOM_BAND_FLYE
+            from MSG_PATRO x,
+                 MSG_PATRO_PERIO y
+            where x.oid_patr = y.PATR_OID_PATR
+			 <isNotEmpty prepend="AND" property="campanhaProceso">
+			  	y.PERI_OID_PERI =  (SELECT A.OID_PERI
+                     				FROM SEG_PERIO_CORPO A
+                     				WHERE A.COD_PERI = #campanhaProceso#)
+			 </isNotEmpty> 
+			 <isNotEmpty prepend="AND" property="codigoDocumento">
+			   x.MDOC_COD_MENS_DOCU = #codigoDocumento#
+			 </isNotEmpty>  
+			 <isNotEmpty prepend="AND" property="codigoBandeja">
+			   x.NOM_BAND_FLYE = #codigoBandeja#
+			 </isNotEmpty> 
+			 <isNotEmpty prepend="AND" property="notOidPatron">			 
+			   x.oid_patr != #notOidPatron#
+			 </isNotEmpty>  
+			ORDER BY 1 DESC ,5 DESC 							
+	</select>
+		
+<!-- FIN NUEVO MODULO DE MENSAJE -->            	  
+</sqlMap>

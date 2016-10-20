@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.ProcesosPRYSQL">
+    <typeAlias alias="bproyeccionGrupo" type="biz.belcorp.ssicc.dao.sisicc.model.ProyeccionFaltanteGrupo"/> 
+	<typeAlias alias="bproyeccionProducto" type="biz.belcorp.ssicc.dao.sisicc.model.ProyeccionFaltanteProducto"/> 
+    <typeAlias alias="bporcentajeFaltante" type="biz.belcorp.ssicc.dao.spusicc.proyeccion.model.PorcentajeFaltante"/> 
+    
+	<resultMap id="baseResult"          class="baseGenerico">
+    	<result property="codigo" 		column="CODIGO" 	/>
+    	<result property="descripcion" 	column="DESCRIPCION"/>
+    </resultMap>
+	
+    
+	<parameterMap id="paramExecuteProyeccionFaltante" class="map" >
+		<parameter property="codigoPais"       jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+     	<parameter property="codIso"           jdbcType="VARCHAR" javaType="java.lang.String" mode="IN"/>
+		<parameter property="codigoPeriodo"    jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>
+		<parameter property="numeroVersion"    jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>
+	</parameterMap>
+
+	<procedure id="executeProyeccionFaltante" parameterMap="paramExecuteProyeccionFaltante" >
+		{call PRY_PKG_PROYE_PARCI.PRY_PR_GENER_PROYE_FALTA_FACTU( ?, ?, ?, ?, ? )}
+	</procedure>
+	
+	<select id="existeIndicadorValorCritico" parameterClass="java.util.Map"
+    		resultClass="int">
+    	SELECT COUNT(1)
+		FROM FAC_PROYE_FALTA_NEGOC
+		WHERE PAIS_COD_PAIS = #codigoPais#
+		  AND FEC_FACT = TO_DATE(#fechaFacturacion#,'DD/MM/YYYY') 
+		  AND NUM_VERS = TO_NUMBER(#numeroVersion#)
+		  AND IND_VALO_CRIT = 'S'
+	</select>
+
+	<select id="existeIndicadorValorCriticoVersion2" parameterClass="java.util.Map"
+    		resultClass="int">
+    	SELECT COUNT(1)
+		FROM FAC_PROYE_FALTA_NEGOC A,
+			 BAS_PARAM_PORCE_FALTA B
+		WHERE A.PAIS_COD_PAIS = #codigoPais#
+		  AND A.FEC_FACT = TO_DATE(#fechaFacturacion#,'DD/MM/YYYY') 
+		  AND A.NUM_VERS = TO_NUMBER(#numeroVersion#)
+		  AND B.COD_NEGO = A.COD_NEGO
+		<![CDATA[  
+		  AND B.VAL_PORC_MAXI_PERM < A.POR_FALT_MONT_DEMA
+		 ]]>	 
+	</select>
+
+   <select id="getExisteProyeccionFaltanteDia" parameterClass="java.util.Map"
+    		resultClass="string">
+    	SELECT TRIM(TO_CHAR(NVL(COUNT(1),0)))
+		FROM FAC_PROYE_FALTA_NEGOC
+		WHERE PAIS_COD_PAIS = #codigoPais#
+		  AND FEC_FACT = TO_DATE(#fechaFacturacion#,'DD/MM/YYYY') 
+	</select>
+	
+   <resultMap id="proyeccionFaltanteGrupoMapResult" class="bproyeccionGrupo" >    
+	    <result property="codigoGrupo"             column="COD_NEGO"/>
+	    <result property="descripcionGrupo"        column="DES_NEGO"/>
+	    <result property="unidadesDisponibles"     column="NUM_UNI_STOC_DISPO"/>
+	    <result property="unidadesDemandadas"      column="TOT_UNID_DEMA"/>	 
+		<result property="unidadesFaltantes"       column="TOT_UNID_FALT"/>
+	    <result property="unidadesAtendidas"       column="TOT_UNID_ATEN"/>
+	    <result property="porUnidadesDemandadas"   column="POR_FALT_UNID_DEMA"/>
+		<result property="montoUnidadesDemandadas" column="TOT_MONT_UNID_DEMA"/>
+		<result property="montoUnidadesAtendidas"  column="TOT_MONT_UNID_ATEN"/>
+		<result property="montoUnidadesFaltantes"  column="TOT_MONT_UNID_FALT"/>
+		<result property="porMontoDemandadas"      column="POR_FALT_MONT_DEMA"/>
+		<result property="porMontoTotalFactu"      column="POR_FALT_TOTA_FACT"/>
+		<result property="porMaximoPermitido"      column="VAL_PORC_MAXI_PERM"/>
+		<result property="indicadorValorCritico"   column="IND_VALO_CRIT"/>
+	</resultMap>
+	
+    <select id="getProyeccionFaltanteGrupo" parameterClass="java.util.Map" 
+		    resultMap="proyeccionFaltanteGrupoMapResult">
+    	SELECT 
+			A.COD_NEGO,
+			A.DES_NEGO,
+			A.NUM_UNI_STOC_DISPO,
+			A.TOT_UNID_DEMA,
+			A.TOT_UNID_ATEN,
+			A.TOT_UNID_FALT,
+			ROUND(A.POR_FALT_UNID_DEMA,2) AS POR_FALT_UNID_DEMA,
+			A.TOT_MONT_UNID_DEMA,
+			A.TOT_MONT_UNID_ATEN,
+			A.TOT_MONT_UNID_FALT,
+			ROUND(A.POR_FALT_MONT_DEMA,2) AS POR_FALT_MONT_DEMA,
+			ROUND(A.POR_FALT_TOTA_FACT,3) AS POR_FALT_TOTA_FACT,
+			ROUND(B.VAL_PORC_MAXI_PERM,2) AS VAL_PORC_MAXI_PERM,
+			A.IND_VALO_CRIT
+		FROM FAC_PROYE_FALTA_NEGOC A,
+		     BAS_PARAM_PORCE_FALTA B
+		WHERE A.PAIS_COD_PAIS = #codigoPais#
+		  AND A.FEC_FACT = TO_DATE(#fechaFacturacion#,'DD/MM/YYYY') 
+		  AND NUM_VERS = TO_NUMBER(#numeroVersion#)
+		  AND B.PAIS_COD_PAIS = A.PAIS_COD_PAIS
+		  AND B.COD_NEGO = A.COD_NEGO
+		ORDER BY A.PAIS_COD_PAIS, A.FEC_FACT, A.COD_NEGO  
+	</select>
+	
+	<resultMap id="proyeccionFaltanteProductoMapResult" class="bproyeccionProducto" >    
+		<result property="codigoProducto"           column="COD_PROD"/>
+		<result property="descripcionProducto"      column="DES_PROD"/>
+	    <result property="codigoGrupo"              column="COD_NEGO"/>
+		<result property="codigoMarcaProducto"      column="COD_MARC_PROD"/>
+		<result property="descripcionMarcaProducto" column="DES_MARC_PROD"/>
+	    <result property="unidadesDisponibles"      column="NUM_UNI_STOC_DISPO"/>
+	    <result property="unidadesDemandadas"       column="TOT_UNID_DEMA"/>	 
+		<result property="unidadesFaltantes"        column="TOT_UNID_FALT"/>
+	    <result property="unidadesAtendidas"        column="TOT_UNID_ATEN"/>
+	    <result property="porUnidadesDemandadas"    column="POR_FALT_UNID_DEMA"/>
+		<result property="montoUnidadesDemandadas"  column="TOT_MONT_UNID_DEMA"/>
+		<result property="montoUnidadesAtendidas"   column="TOT_MONT_UNID_ATEN"/>
+		<result property="montoUnidadesFaltantes"   column="TOT_MONT_UNID_FALT"/>
+		<result property="porMontoDemandadas"       column="POR_FALT_MONT_DEMA"/>
+		<result property="porMontoGrupo"            column="POR_FALT_NEGO"/>
+		<result property="porMontoTotalFactu"       column="POR_FALT_TOTA_FACT"/>
+	</resultMap>
+	
+    <select id="getProyeccionFaltanteProducto" parameterClass="java.util.Map" 
+		    resultMap="proyeccionFaltanteProductoMapResult">
+		SELECT
+			COD_PROD, 
+			DES_PROD, 
+			COD_NEGO, 
+			COD_MARC_PROD, 
+			DES_MARC_PROD, 
+			NUM_UNI_STOC_DISPO, 
+			TOT_UNID_DEMA, 
+			TOT_UNID_ATEN, 
+			TOT_UNID_FALT, 
+			ROUND(POR_FALT_UNID_DEMA,2) AS POR_FALT_UNID_DEMA, 
+			TOT_MONT_UNID_DEMA, 
+			TOT_MONT_UNID_ATEN, 
+			TOT_MONT_UNID_FALT, 
+			ROUND(POR_FALT_MONT_DEMA,2) AS POR_FALT_MONT_DEMA, 
+			ROUND(POR_FALT_NEGO,2) AS POR_FALT_NEGO, 
+			ROUND(POR_FALT_TOTA_FACT,3) AS POR_FALT_TOTA_FACT
+		FROM FAC_PROYE_FALTA_PRODU
+		WHERE PAIS_COD_PAIS = #codigoPais#
+		<isNotEmpty prepend="AND" property="fechaFacturacion">
+			  FEC_FACT = TO_DATE(#fechaFacturacion#,'DD/MM/YYYY') 
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="numeroVersion">
+			  NUM_VERS = TO_NUMBER(#numeroVersion#)	
+		</isNotEmpty>
+		<isNotEmpty prepend="AND" property="codigoGrupo">
+			  COD_NEGO = #codigoGrupo#    
+		</isNotEmpty>
+		ORDER BY PAIS_COD_PAIS, FEC_FACT, COD_NEGO, TOT_MONT_UNID_FALT DESC, COD_PROD
+	</select>
+	
+	<select id="getProyeccionFaltanteProductoTodos" parameterClass="java.util.Map" 
+		    resultMap="proyeccionFaltanteProductoMapResult">
+		SELECT
+			COD_PROD, 
+			DES_PROD, 
+			COD_NEGO, 
+			COD_MARC_PROD, 
+			DES_MARC_PROD, 
+			NUM_UNI_STOC_DISPO, 
+			TOT_UNID_DEMA, 
+			TOT_UNID_ATEN, 
+			TOT_UNID_FALT, 
+			ROUND(POR_FALT_UNID_DEMA,2) AS POR_FALT_UNID_DEMA, 
+			TOT_MONT_UNID_DEMA, 
+			TOT_MONT_UNID_ATEN, 
+			TOT_MONT_UNID_FALT, 
+			ROUND(POR_FALT_MONT_DEMA,2) AS POR_FALT_MONT_DEMA, 
+			ROUND(POR_FALT_NEGO,2) AS POR_FALT_NEGO, 
+			ROUND(POR_FALT_TOTA_FACT,3) AS POR_FALT_TOTA_FACT
+		FROM FAC_PROYE_FALTA_PRODU
+		WHERE PAIS_COD_PAIS = #codigoPais# AND
+			  COD_NEGO != '999'
+		<isNotEmpty prepend="AND" property="fechaFacturacion">
+			  FEC_FACT = TO_DATE(#fechaFacturacion#,'DD/MM/YYYY') 
+		</isNotEmpty> 
+		<isNotEmpty prepend="AND" property="numeroVersion">
+			  NUM_VERS = TO_NUMBER(#numeroVersion#)	
+		</isNotEmpty>
+		ORDER BY PAIS_COD_PAIS, FEC_FACT, COD_NEGO, TOT_MONT_UNID_FALT DESC, COD_PROD
+	</select>
+	
+    <select id="getPeriodoActual" parameterClass="java.util.Map"   resultClass="string">
+	<![CDATA[  
+		SELECT B.COD_PERI 
+		FROM
+		   CRA_PERIO A,
+		   SEG_PERIO_CORPO B
+		WHERE A.FEC_INIC <= TO_DATE(#fechaFacturacion#, 'DD/MM/YYYY')
+		  AND A.FEC_FINA >= TO_DATE(#fechaFacturacion#, 'DD/MM/YYYY')
+		  AND A.PERI_OID_PERI = B.OID_PERI
+		  AND ROWNUM = 1
+	 ]]>	
+	</select>	
+	
+	<select id="getTotalOC" parameterClass="java.util.Map" resultClass="int">
+		SELECT SUM(T.TOT_SOLI_OC)
+		FROM
+		  FAC_PROYE_FALTA_NEGOC T
+		WHERE T.PAIS_COD_PAIS = #codigoPais#
+		  AND T.FEC_FACT = TO_DATE(#fechaFacturacion#,'DD/MM/YYYY') 
+		  AND T.NUM_VERS = TO_NUMBER(#numeroVersion#)	 
+		  AND T.COD_NEGO != '999'  
+	</select>	  
+	
+	<select id="getMaximoVersionProyeccionFaltanteDia" parameterClass="java.util.Map" resultClass="string">
+		SELECT TRIM(TO_CHAR(MAX(NUM_VERS)))
+		FROM
+		  FAC_PROYE_FALTA_NEGOC T
+		WHERE T.PAIS_COD_PAIS = #codigoPais#
+		  AND T.FEC_FACT = TO_DATE(#fechaFacturacion#,'DD/MM/YYYY')
+	</select>	  
+	
+	<select id="getPorcentajeFaltante" parameterClass="bporcentajeFaltante" resultClass="bporcentajeFaltante">
+		SELECT 
+			T.PAIS_COD_PAIS as codigoPais,
+			T.COD_NEGO as codigoUnidadNegocio,
+			NVL(pq_apl_aux.Valor_Gen_I18n_Sicc(1, b.oid_unid_nego, 'MAE_UNIDA_NEGOC'), 'General') as descripcionUnidadNegocio,
+			T.VAL_PORC_MAXI_PERM as porcentajeMaximo
+		FROM
+		  BAS_PARAM_PORCE_FALTA T,
+		  MAE_UNIDA_NEGOC B
+		WHERE  T.PAIS_COD_PAIS = #codigoPais# 
+		   AND B.COD_UNID_NEGO(+) = T.COD_NEGO
+		  <isNotEmpty prepend="AND" property="codigoUnidadNegocio">
+			   T.COD_NEGO = #codigoUnidadNegocio#
+		  </isNotEmpty> 
+		   AND T.EST_ACTI != '9'
+	</select>	  
+
+    <insert id="insertPorcentajeFaltante" parameterClass="bporcentajeFaltante">
+	    INSERT INTO BAS_PARAM_PORCE_FALTA
+	    (
+		PAIS_COD_PAIS,
+		COD_NEGO,
+		VAL_PORC_MAXI_PERM,
+		EST_ACTI,
+		USU_DIGI,
+		FE_DIGI
+		) 
+	    VALUES 
+	    (
+		#codigoPais#,
+		#codigoUnidadNegocio#,
+		#porcentajeMaximo#,
+		'1',
+		#auditInfo.createdBy#,
+		#auditInfo.created#
+	    )
+	</insert>
+	
+	<update id="updatePorcentajeFaltante" parameterClass="bporcentajeFaltante">
+		UPDATE BAS_PARAM_PORCE_FALTA
+		SET USU_MODI = #auditInfo.updatedBy#,
+        	FE_MODI = #auditInfo.lastUpdated#,
+				VAL_PORC_MAXI_PERM = #porcentajeMaximo#
+		WHERE
+		   PAIS_COD_PAIS = #codigoPais# AND
+		   COD_NEGO = #codigoUnidadNegocio# 
+    </update>   
+	
+	<delete id="deletePorcentajeFaltante" parameterClass="bporcentajeFaltante">
+		DELETE FROM BAS_PARAM_PORCE_FALTA
+		WHERE
+		   PAIS_COD_PAIS = #codigoPais# AND
+		   COD_NEGO = #codigoUnidadNegocio# 
+    </delete>   
+	
+	<select id="getDevuelveDescripcionPeriodo" parameterClass="java.util.Map" resultClass="string">
+		SELECT GEN_PKG_GENER.GEN_FN_DEVUE_DESCR_CAMPA_FECHA( #fechaFacturacion# )
+			FROM DUAL
+	</select>	
+	
+	<select id="getNumeroVersionesFaltanteDia" parameterClass="java.util.Map" resultMap="baseResult">
+     	SELECT DISTINCT
+		       TRIM(TO_CHAR(A.NUM_VERS)) AS CODIGO, 	   
+			   TRIM(TO_CHAR(A.NUM_VERS)) AS DESCRIPCION
+		 FROM  FAC_PROYE_FALTA_NEGOC A
+		 WHERE 
+		       PAIS_COD_PAIS = #codigoPais# AND
+			   A.FEC_FACT = TO_DATE(#fechaFacturacion#,'DD/MM/YYYY')
+    </select>
+	
+	
+</sqlMap>

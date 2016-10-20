@@ -1,0 +1,452 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.microseguro.MantenimientoMICSQL">
+ 
+   <typeAlias alias="baseMicroseguro" type="biz.belcorp.ssicc.dao.sisicc.model.Base"/>
+    	
+   <resultMap id="baseResult" class="baseMicroseguro">
+      <result property="codigo" 		column="CODIGO" 	/>
+      <result property="descripcion" 	column="DESCRIPCION"/>
+   </resultMap>
+
+	 <resultMap id="cronogramaMicrosegurosResult" class="java.util.HashMap">
+	      <result property="codigoPais" 				column="COD_PAIS" 	/>
+	      <result property="codigoCronograma" 			column="COD_CRON" 	/>
+	      <result property="descripcionCronograma" 		column="DES_CRON" 	/>
+	      <result property="fechaInicio" 				column="FEC_INIC" 	/>
+	      <result property="fechaFin" 					column="FEC_FINA" 	/>
+	      <result property="indicadorActivo" 			column="IND_ACTI" 	/>
+	      <result property="tipoOperacion" 				column="TIP_OPER" 	/>
+   		  <result property="tipoOperacionDescripcion" 	column="TIP_OPER_DESC" 	/>	
+	 </resultMap>
+	         
+     <select id="getCronogramaMicroseguros"  parameterClass="java.util.Map" resultMap="cronogramaMicrosegurosResult">
+					SELECT 
+						X.COD_PAIS,
+						X.COD_CRON,
+						X.DES_CRON,
+						TO_CHAR(X.FEC_INIC,'dd/MM/yyyy') FEC_INIC,
+						TO_CHAR(X.FEC_FINA,'dd/MM/yyyy') FEC_FINA,
+						X.IND_ACTI,
+						(SELECT A.TIP_OPER 
+						 FROM MIC_TIPO_OPERA A
+						 WHERE A.TIP_OPER=X.TIP_OPER) TIP_OPER,						
+						(SELECT A.TIP_OPER_DESC 
+						 FROM MIC_TIPO_OPERA A
+						 WHERE A.TIP_OPER=X.TIP_OPER) TIP_OPER_DESC
+					FROM MIC_CRONO X 
+					WHERE X.COD_PAIS=#codigoPais#
+					<isNotEmpty prepend="AND" property="codigoCronograma">
+				 		X.COD_CRON=#codigoCronograma#
+					</isNotEmpty>						 
+					<isNotEmpty prepend="AND" property="descripcionCronograma">
+				 		UPPER(X.DES_CRON) LIKE UPPER('%$descripcionCronograma$%')
+					</isNotEmpty>	
+					<isNotEmpty prepend="AND" property="indicadorActivo">
+						X.IND_ACTI=#indicadorActivo#
+					</isNotEmpty>
+				    <isNotEmpty prepend="AND" property="tipoOperacion">
+						X.TIP_OPER=#tipoOperacion#
+					</isNotEmpty>							
+	</select>  
+
+    <select id="getTipoOperacion"   resultMap="baseResult">
+					SELECT 
+						TIP_OPER CODIGO,
+						TIP_OPER_DESC DESCRIPCION
+					FROM MIC_TIPO_OPERA 
+	</select>  	   
+	
+	<update id="updateCronograma" parameterClass="java.util.Map">
+			UPDATE MIC_CRONO
+			SET    DES_CRON = #descripcionCronograma#,
+			       FEC_INIC = TO_DATE(#fechaInicio#,'dd/MM/yyyy'),
+			       FEC_FINA = TO_DATE(#fechaFin#,'dd/MM/yyyy'),
+			       IND_ACTI = #indicadorActivo#,
+			       TIP_OPER = #tipoOperacion#
+			WHERE  COD_PAIS = #codigoPais#
+			AND    COD_CRON = #codigoCronograma#
+    </update>	
+	
+	<insert id="insertCronograma" parameterClass="java.util.Map">
+		INSERT INTO MIC_CRONO (
+		   COD_PAIS, 
+		   COD_CRON, 
+		   DES_CRON, 
+		   FEC_INIC, 
+		   FEC_FINA, 
+		   IND_ACTI, 
+		   TIP_OPER) 
+		VALUES ( #codigoPais#,
+				 (SELECT LPAD((NVL(MAX(COD_CRON),0) + 1),6,'0')  
+           		  FROM MIC_CRONO
+           		  WHERE COD_PAIS=#codigoPais#),
+				 #descripcionCronograma# ,
+		   		 TO_DATE(#fechaInicio#,'dd/MM/yyyy'),
+		   		 TO_DATE(#fechaFin#,'dd/MM/yyyy') ,
+		   		 '1' ,
+		   		 #tipoOperacion# )
+    </insert>
+	
+	<update id="updateMicroseguros" parameterClass="java.util.Map">
+		UPDATE MIC_MICRO
+			SET    COD_MICR_EXTE = #codigoMicroSeguros#,
+			       DES_MICR = #descripcionMicroSeguros#,			       
+			       IND_ACTI = #indicadorActivo#			       
+			WHERE  COD_MICR = #codigoInterno#
+    </update>	
+	
+	<insert id="insertMicroseguros" parameterClass="java.util.Map">
+	
+		INSERT INTO MIC_MICRO (
+   					COD_MICR, 
+   					DES_MICR, 
+   					IND_ACTI, 
+   					COD_MICR_EXTE) 
+				VALUES ( (SELECT LPAD((NVL(MAX(COD_MICR),0) + 1),2,'0')
+						  FROM MIC_MICRO) ,
+						 #descripcionMicroSeguros#,'1' ,#codigoMicroSeguros# )
+	
+    </insert>
+	
+	<update id="updateCobertura" parameterClass="java.util.Map">
+			UPDATE MIC_COBER
+			SET    COD_COBE_EXTE = #codigoCobertura#,
+			       DES_COBE = #descripcionCobertura#,			       
+			       IND_ACTI = #indicadorActivo#			       
+			WHERE  COD_COBE = #codigoInterno#
+			
+    </update>	
+	
+	<insert id="insertCobertura" parameterClass="java.util.Map">
+			INSERT INTO MIC_COBER (COD_MICR,
+   							COD_COBE,
+   							DES_COBE,
+   							IND_ACTI,
+   							COD_COBE_EXTE) 
+			VALUES (#codigoMicroSeguros#,
+					(SELECT LPAD((NVL(MAX(COD_COBE),0) + 1),2,'0')
+						  FROM MIC_COBER),
+					#descripcionCobertura#,'1',#codigoCobertura#)
+    </insert>
+
+	<update id="updateBancos" parameterClass="java.util.Map">
+		UPDATE MIC_BANCO
+		SET COD_BANC_EXTE =#codigoBanco#,
+			DES_BANC=#descripcionBanco#,
+			IND_ACTI =#indicadorActivo#
+		WHERE COD_BANC=#codigoInterno#
+		
+    </update>	
+	
+	<insert id="insertBancos" parameterClass="java.util.Map">
+		INSERT INTO MIC_BANCO (COD_BANC, 
+				DES_BANC, COD_BANC_EXTE,IND_ACTI) 
+			VALUES ((SELECT LPAD((NVL(MAX(COD_BANC),0) + 1),2,'0')
+						  FROM MIC_BANCO),
+					#descripcionBanco#, 
+					#codigoBanco#,'1')
+    </insert>
+    	
+	<update id="updateGrupos" parameterClass="java.util.Map">
+			UPDATE MIC_GRUPO_CLIEN_CABEC
+			SET DES_GRUP=#descripcionGrupo#,
+			    IND_ACTI=#indicadorActivo# 
+			WHERE COD_GRUP=#codigoGrupo#
+			
+			
+    </update>	
+	
+	<insert id="insertGrupos" parameterClass="java.util.Map">
+		
+		INSERT INTO MIC_GRUPO_CLIEN_CABEC (
+   				COD_GRUP, 
+   				DES_GRUP, 
+   				IND_ACTI) 
+		VALUES ( (SELECT LPAD((NVL(MAX(COD_GRUP),0) + 1),2,'0')
+				  FROM MIC_GRUPO_CLIEN_CABEC), 
+				 #descripcionGrupo#, 
+				 '1')		
+    </insert>    
+    
+    <update id="updateGruposDetalle" parameterClass="java.util.Map">
+		UPDATE MIC_GRUPO_CLIEN_DETAL
+		SET     COD_NIVE           = #codigoNivel#,
+		       TICL_OID_TIPO_CLIE = #oidTipoCliente#,
+		       SBTI_OID_SUBT_CLIE = #oidSubTipoCliente#,
+		       TCCL_OID_TIPO_CLAS = #oidTipoClasificacion#,
+		       CLAS_OID_CLAS      = #oidClasificacion#
+		WHERE  NUM_DETA           = #numeroDetalle#
+
+    </update>	
+
+    <delete id="deleteGruposDetalle" parameterClass="java.util.Map">
+		DELETE FROM  MIC_GRUPO_CLIEN_DETAL
+		WHERE  NUM_DETA  = #numeroDetalle#
+    </delete>	    
+	
+	<insert id="insertGruposDetalle" parameterClass="java.util.Map">
+		INSERT INTO MIC_GRUPO_CLIEN_DETAL (
+   					NUM_DETA, 
+   					COD_GRUP, 
+   					COD_NIVE, 
+   					TICL_OID_TIPO_CLIE, 
+   					SBTI_OID_SUBT_CLIE, 
+   					TCCL_OID_TIPO_CLAS, 
+   					CLAS_OID_CLAS) 
+		VALUES ((SELECT (NVL(MAX(NUM_DETA),0) + 1)
+				  FROM MIC_GRUPO_CLIEN_DETAL), 
+			#codigoGrupo# , 
+			#codigoNivel#,
+		    #oidTipoCliente#,
+		    #oidSubTipoCliente# ,
+		    #oidTipoClasificacion# ,
+		    #oidClasificacion# )
+    </insert>    	
+    
+     <resultMap id="bancosResult" class="java.util.HashMap">
+	      <result property="codigoInterno" 		column="COD_BANC" 	/>
+	      <result property="codigoBanco" 		column="COD_BANC_EXTE" 	/>
+	      <result property="descripcionBanco" 	column="DES_BANC" 	/>
+	      <result property="indicadorActivo"    column="IND_ACTI" 	/>
+	 </resultMap>
+	         
+     <select id="getBancos"  parameterClass="java.util.Map" resultMap="bancosResult">
+					SELECT 
+						X.COD_BANC,
+						X.COD_BANC_EXTE,
+						X.DES_BANC,
+						X.IND_ACTI
+					FROM MIC_BANCO X 
+					 <dynamic prepend="WHERE">
+						<isNotEmpty prepend="AND" property="codigoInterno">
+					 		X.COD_BANC=#codigoInterno#
+						</isNotEmpty>						 
+						<isNotEmpty prepend="AND" property="descripcionBanco">
+					 		UPPER(X.DES_BANC) LIKE UPPER('%$descripcionBanco$%')
+						</isNotEmpty>	
+						<isNotEmpty prepend="AND" property="codigoBanco">
+							X.COD_BANC_EXTE=#codigoBanco#
+						</isNotEmpty>	
+					</dynamic>						
+	</select>  
+    
+     <resultMap id="coberturaResult" class="java.util.HashMap">
+	      <result property="codigoInterno" 		        column="COD_COBE" 	/>
+	      <result property="codigoInternoMicroseguros" 	column="COD_MICR" 	/>
+	      <result property="codigoMicroSeguros" 	    column="COD_MICR_EXTE" 	/>	      
+	       <result property="descripcionMicroseguros" 	column="DES_MICR" 	/>
+	      <result property="codigoCobertura" 		    column="COD_COBE_EXTE" 	/>
+	      <result property="descripcionCobertura" 	    column="DES_COBE" 	/>
+	      <result property="indicadorActivo" 		    column="IND_ACTI" 	/>
+	 </resultMap>
+	         
+     <select id="getCobertura"  parameterClass="java.util.Map" resultMap="coberturaResult">
+					SELECT 
+						X.COD_COBE,
+						X.COD_MICR,
+						(SELECT Y.COD_MICR_EXTE FROM MIC_MICRO Y  WHERE Y.COD_MICR=X.COD_MICR) COD_MICR_EXTE,
+						(SELECT Y.DES_MICR FROM MIC_MICRO Y  WHERE Y.COD_MICR=X.COD_MICR) DES_MICR,
+						X.COD_COBE_EXTE,
+						X.DES_COBE,
+						X.IND_ACTI
+					FROM MIC_COBER X 
+					 <dynamic prepend="WHERE">
+						<isNotEmpty prepend="AND" property="codigoInterno">
+					 		X.COD_COBE=#codigoInterno#
+						</isNotEmpty>
+						<isNotEmpty prepend="AND" property="codigoMicroSeguros">
+					 		X.COD_MICR=#codigoMicroSeguros#
+						</isNotEmpty>												 
+						<isNotEmpty prepend="AND" property="descripcionCobertura">
+					 		UPPER(X.DES_COBE) LIKE UPPER('%$descripcionCobertura$%')
+						</isNotEmpty>	
+						<isNotEmpty prepend="AND" property="codigoCobertura">
+							X.COD_COBE_EXTE=#codigoCobertura#
+						</isNotEmpty>
+						<isNotEmpty prepend="AND" property="indicadorActivo">
+					 		X.IND_ACTI=#indicadorActivo#
+						</isNotEmpty>							
+					</dynamic>						
+	</select>    
+    
+
+    <resultMap id="microsegurosResult" class="java.util.HashMap">
+	      <result property="codigoInterno" 		    	column="COD_MICR" 	/>
+	      <result property="descripcionMicroSeguros" 	column="DES_MICR" 	/>
+	      <result property="indicadorActivo" 			column="IND_ACTI" 	/>
+	      <result property="codigoMicroSeguros" 		column="COD_MICR_EXTE" 	/>
+	 </resultMap>
+	         
+     <select id="getMicroseguros"  parameterClass="java.util.Map" resultMap="microsegurosResult">
+					SELECT 
+						X.COD_MICR,
+						X.DES_MICR,
+						X.IND_ACTI,
+						X.COD_MICR_EXTE
+					FROM MIC_MICRO X 
+					 <dynamic prepend="WHERE">
+						<isNotEmpty prepend="AND" property="codigoInterno">
+					 		X.COD_MICR=#codigoInterno#
+						</isNotEmpty>
+						<isNotEmpty prepend="AND" property="codigoMicroSeguros">
+					 		X.COD_MICR_EXTE=#codigoMicroSeguros#
+						</isNotEmpty>												 
+						<isNotEmpty prepend="AND" property="descripcionMicroSeguros">
+					 		UPPER(X.DES_MICR) LIKE UPPER('%$descripcionMicroSeguros$%')
+						</isNotEmpty>	
+						<isNotEmpty prepend="AND" property="indicadorActivo">
+					 		X.IND_ACTI=#indicadorActivo#
+						</isNotEmpty>							
+					</dynamic>						
+	</select>        
+	
+
+    <resultMap id="gruposResult" class="java.util.HashMap">
+	      <result property="codigoGrupo" 		    	column="COD_GRUP" 	/>
+	      <result property="descripcionGrupo" 		    column="DES_GRUP" 	/>
+	      <result property="indicadorActivo" 			column="IND_ACTI" 	/>
+	 </resultMap>
+	         
+     <select id="getGrupos"  parameterClass="java.util.Map" resultMap="gruposResult">
+					SELECT 
+						X.COD_GRUP,
+						X.DES_GRUP,
+						X.IND_ACTI
+					FROM MIC_GRUPO_CLIEN_CABEC X 
+					 <dynamic prepend="WHERE">
+						<isNotEmpty prepend="AND" property="codigoGrupo">
+					 		X.COD_GRUP=#codigoGrupo#
+						</isNotEmpty>
+						<isNotEmpty prepend="AND" property="descripcionGrupo">
+					 		UPPER(X.DES_GRUP) LIKE UPPER('%$descripcionGrupo$%')
+						</isNotEmpty>	
+						<isNotEmpty prepend="AND" property="indicadorActivo">
+					 		X.IND_ACTI=#indicadorActivo#
+						</isNotEmpty>							
+					</dynamic>						
+	</select>   
+	
+	
+	    <resultMap id="gruposDetalleResult" class="java.util.HashMap">
+	      <result property="numeroDetalle" 		      	    column="NUM_DETA" 	/>
+	      <result property="codigoGrupo" 		            column="COD_GRUP" 	/>
+	      <result property="codigoNivel" 		            column="COD_NIVE" 	/>	  
+	      <result property="oidTipoCliente" 		        column="TICL_OID_TIPO_CLIE" 	/>
+	      <result property="oidSubTipoCliente" 			    column="SBTI_OID_SUBT_CLIE" 	/>
+	      <result property="oidTipoClasificacion" 		    column="TCCL_OID_TIPO_CLAS" 	/>
+	      <result property="oidClasificacion" 			    column="CLAS_OID_CLAS" 	/>    
+	      <result property="codigoTipoCliente" 		        column="COD_TIPO_CLIE" 	/>
+	      <result property="codigoSubTipoCliente" 		    column="COD_SUBT_CLIE" 	/>
+	      <result property="codigoTipoClasificacion" 	    column="COD_TIPO_CLAS" 	/>
+	      <result property="codigoClasificacion" 		    column="COD_CLAS" 	/>
+	      <result property="descripcionTipoCliente" 		column="DES_TIPO_CLIE" 	/>
+	      <result property="descripcionSubTipoCliente" 		column="DES_SUBT_CLIE" 	/>
+	      <result property="descripcionTipoClasificacion" 	column="DES_TIPO_CLAS" 	/>
+	      <result property="descripcionClasificacion" 		column="DES_CLAS" 	/>	      
+	 </resultMap>
+	         
+     <select id="getGruposDetalle"  parameterClass="java.util.Map" resultMap="gruposDetalleResult">
+	                SELECT 
+						X.NUM_DETA, 
+						X.COD_GRUP, 
+						X.COD_NIVE, 
+   						X.TICL_OID_TIPO_CLIE, 
+   						X.SBTI_OID_SUBT_CLIE, 
+   						X.TCCL_OID_TIPO_CLAS, 
+   						X.CLAS_OID_CLAS,
+                        (SELECT COD_TIPO_CLIE  FROM MAE_TIPO_CLIEN  WHERE OID_TIPO_CLIE =X.TICL_OID_TIPO_CLIE) COD_TIPO_CLIE,
+                        (SELECT COD_SUBT_CLIE
+                         FROM  MAE_SUBTI_CLIEN                    
+                         WHERE TICL_OID_TIPO_CLIE = X.TICL_OID_TIPO_CLIE                    
+                           AND OID_SUBT_CLIE=X.SBTI_OID_SUBT_CLIE) COD_SUBT_CLIE,
+                        (SELECT COD_TIPO_CLAS
+                         FROM MAE_TIPO_CLASI_CLIEN                     
+                         WHERE  OID_TIPO_CLAS= X.TCCL_OID_TIPO_CLAS
+                            AND SBTI_OID_SUBT_CLIE=X.SBTI_OID_SUBT_CLIE) COD_TIPO_CLAS,
+                       (SELECT COD_CLAS
+                        FROM MAE_CLASI
+                        WHERE OID_CLAS = X.CLAS_OID_CLAS
+                         AND TCCL_OID_TIPO_CLAS=X.TCCL_OID_TIPO_CLAS) COD_CLAS,                               
+                        pq_apl_aux.Valor_Gen_I18n_Sicc(1,X.TICL_OID_TIPO_CLIE, 'MAE_TIPO_CLIEN') DES_TIPO_CLIE,
+                        pq_apl_aux.Valor_Gen_I18n_Sicc(1,X.SBTI_OID_SUBT_CLIE, 'MAE_SUBTI_CLIEN')DES_SUBT_CLIE,
+                        pq_apl_aux.Valor_Gen_I18n_Sicc(1,X.TCCL_OID_TIPO_CLAS, 'MAE_TIPO_CLASI_CLIEN') DES_TIPO_CLAS,
+                        pq_apl_aux.Valor_Gen_I18n_Sicc(1,X.CLAS_OID_CLAS, 'MAE_CLASI') DES_CLAS                                                                                                
+					FROM MIC_GRUPO_CLIEN_DETAL X 
+					 <dynamic prepend="WHERE">
+						<isNotEmpty prepend="AND" property="codigoGrupo">
+					 		X.COD_GRUP=#codigoGrupo#
+						</isNotEmpty>
+					</dynamic>		
+					ORDER BY X.NUM_DETA DESC				
+	</select>
+	
+	
+	  <resultMap id="coberturaGruposResult" class="java.util.HashMap">	      
+	      <result property="codigoMicroSeguros" 	    column="COD_MICR_EXTE" 	/>
+	      <result property="codigoCobertura" 		    column="COD_COBE_EXTE" 	/>	
+	      <result property="codigoGrupo" 		   	 	column="COD_GRUP" 	/>	      
+	       <result property="descripcionMicroseguros" 	column="DES_MICR" 	/>
+	      <result property="descripcionCobertura" 	    column="DES_COBE" 	/>
+	      <result property="descripcionGrupo" 	    	column="DES_GRUP" 	/>
+	      <result property="precioCobertura" 	    	column="VAL_PREC" 	/>
+	      <result property="codigoInternoMicroSeguros" 	column="COD_MICR" 	/>
+	      <result property="codigoInternoCobertura" 	column="COD_COBE" 	/>
+	 </resultMap>
+	         
+     <select id="getCoberturaGrupos"  parameterClass="java.util.Map" resultMap="coberturaGruposResult">
+					SELECT
+					    (SELECT Y.COD_MICR_EXTE FROM MIC_MICRO Y  WHERE Y.COD_MICR=X.COD_MICR) COD_MICR_EXTE, 
+						(SELECT Y.COD_COBE_EXTE FROM MIC_COBER Y  WHERE Y.COD_COBE=X.COD_COBE AND  Y.COD_MICR=X.COD_MICR) COD_COBE_EXTE,
+						X.COD_GRUP,
+						(SELECT Y.DES_MICR FROM MIC_MICRO Y  WHERE Y.COD_MICR=X.COD_MICR) DES_MICR,
+						(SELECT Y.DES_COBE FROM MIC_COBER Y  WHERE Y.COD_COBE=X.COD_COBE AND  Y.COD_MICR=X.COD_MICR) DES_COBE,
+						(SELECT Y.DES_GRUP FROM MIC_GRUPO_CLIEN_CABEC Y  WHERE Y.COD_GRUP=X.COD_GRUP) DES_GRUP,
+						TRIM(TO_CHAR(X.VAL_PREC,'99999999.99')) VAL_PREC,
+						COD_MICR,
+						COD_COBE
+					FROM MIC_COBER_GRUPO_CLIEN  X 
+					 <dynamic prepend="WHERE">
+						<isNotEmpty prepend="AND" property="codigoMicroSeguros">
+					 		X.COD_MICR=#codigoMicroSeguros#
+						</isNotEmpty>												 
+						<isNotEmpty prepend="AND" property="codigoCobertura">
+							X.COD_COBE=#codigoCobertura#
+						</isNotEmpty>					 
+						<isNotEmpty prepend="AND" property="codigoGrupo">
+					 		X.COD_GRUP=#codigoGrupo#
+						</isNotEmpty>
+													
+					</dynamic>						
+	</select>    
+
+
+	<update id="updateCoberturaGrupos" parameterClass="java.util.Map">
+			UPDATE MIC_COBER_GRUPO_CLIEN
+			SET    VAL_PREC = TO_NUMBER(#precioCobertura#,'99999999.99')
+			WHERE COD_MICR =#codigoMicroSeguros#
+			  AND COD_COBE = #codigoCobertura#
+			  AND COD_GRUP =#codigoGrupo#
+			
+    </update>	
+	
+	<insert id="insertCoberturaGrupos" parameterClass="java.util.Map">
+			INSERT INTO MIC_COBER_GRUPO_CLIEN
+						   (COD_MICR,
+   							COD_COBE,
+   							COD_GRUP,
+   							VAL_PREC) 
+			VALUES (#codigoMicroSeguros#,
+					#codigoCobertura#,
+					#codigoGrupo#,
+					TO_NUMBER(#precioCobertura#,'99999999.99'))
+    </insert>
+	        		
+	 <select id="getValidacionFechaInicioCronograma" parameterClass="java.util.Map" resultClass="int">													
+		SELECT MIC_PKG_PROCE_MICRO.MIC_FN_VALID_FECHA_INICI_CRONO(#codigoPais#,#codigoCronograma#,#fechaInicio#,#tipoOperacion#) FROM DUAL												
+	</select>	
+	        	
+</sqlMap>

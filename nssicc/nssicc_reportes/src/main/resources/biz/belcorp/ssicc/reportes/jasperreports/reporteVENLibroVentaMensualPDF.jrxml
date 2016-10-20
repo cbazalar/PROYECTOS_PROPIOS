@@ -1,0 +1,981 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteVENLibroVentaMensualPDF"
+		 columnCount="1"
+		 printOrder="Horizontal"
+		 orientation="Landscape"
+		 pageWidth="1340"
+		 pageHeight="1075"
+		 columnWidth="1340"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="BlankPage"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="codigoPais" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPais")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoPeriodo" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoPeriodo")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="marca" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("marca")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="codigoInterfaz" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoInterfaz")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="titulo" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("titulo")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaInicio" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaInicio")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="fechaFin" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaFin")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[SELECT CASE INT_PKG_RUV.RUV_FN_DEVUE_MARC_PAIS(RUV.PAIS_OID_PAIS) 
+           WHEN 'ES' THEN          '2' 
+           WHEN 'LB' THEN          '1' 
+           ELSE          NULL 
+           END NEGOCIO,       
+       'D' CANAL_VENTA, 
+              
+       TO_CHAR(RUV.FEC_EMIS, 'DD/MM/YYYY') FECHA, 
+       RUV.VAL_NUME_IDEN_NNAL DOC_IDENTIDAD, 
+       nvl(trim(SUBSTR((RUV.VAL_APE1 || ' ' || RUV.VAL_APE2 || ' ' || 
+               RUV.VAL_NOM1 || ' ' || RUV.VAL_NOM2),1, 50) ),ruv.val_nomb) RAZON_SOCIAL, 
+       CASE RUV.TIDO_OID_TIPO_DOCU 
+         WHEN (SELECT OID_TIPO_DOCU FROM FAC_TIPO_DOCUM WHERE COD_TIPO_DOCU = '021') THEN NULL 
+         ELSE LPAD(RUV.VAL_NUME_DOCU_LEGA, 8, '0') 
+       END NUM_FACT, 
+       ruv.num_cont_docu_lega NUM_CONTROL, 
+       ruv.num_cont_docu_lega NUM_CONTROL2, 
+       CASE RUV.TIDO_OID_TIPO_DOCU 
+         WHEN (SELECT OID_TIPO_DOCU FROM FAC_TIPO_DOCUM WHERE COD_TIPO_DOCU = '001') THEN NULL 
+         ELSE LPAD(RUV.VAL_NUME_DOCU_LEGA, 8, '0') 
+       END NOTA_CREDITO, 
+       LPAD(NVL(RUV.VAL_NUME_DOCU_REFE,INT_PKG_RUV.RUV_FN_DEVUE_NUME_DOCU(RUV.OID_REGI)),8,'0') FACT_AFECTADO, 
+        
+       CASE RUV.TIDO_OID_TIPO_DOCU 
+         WHEN (SELECT OID_TIPO_DOCU FROM FAC_TIPO_DOCUM WHERE COD_TIPO_DOCU = '001') THEN 'FAC'/*'1'*/ 
+         ELSE 'NC'/*'3'*/ 
+       END TIPO_TRANSACCION, 
+        
+       RUV.IMP_TOTA TOTAL_CON_IVA, 
+       RUV.VAL_BASE_IMPO_NETO TOTAL_SIN_IVA, 
+       (SELECT VAL_TASA_IMPU FROM PED_TASA_IMPUE 
+         WHERE PAIS_OID_PAIS = (SELECT OID_PAIS FROM SEG_PAIS WHERE COD_PAIS = $P{codigoPais}) 
+          AND VAL_INDI_IMPU = (select b.val_pain 
+                                 from bas_param_inter b 
+                                where b.inte_cod_inte = $P{codigoInterfaz}
+                                  and b.nom_pain = 'nombreImpuesto')) PORCENTAJE_IVA, 
+       RUV.IMP_IMPU MONTO_IVA   
+       , 
+      DECODE((CASE RUV.TIDO_OID_TIPO_DOCU 
+               WHEN (SELECT OID_TIPO_DOCU FROM FAC_TIPO_DOCUM WHERE COD_TIPO_DOCU = '001') THEN 
+                    1/*'1'*/ 
+               ELSE 
+                    3/*'3'*/ 
+               END ),1,(CASE RUV.TIDO_OID_TIPO_DOCU 
+                                WHEN (SELECT OID_TIPO_DOCU FROM FAC_TIPO_DOCUM WHERE COD_TIPO_DOCU = '021') THEN 
+                                     NULL 
+                                ELSE 
+                                     decode(ruv.val_seri_docu_lega,'001',null,'003',null,ruv.val_seri_docu_lega) || LPAD(RUV.VAL_NUME_DOCU_LEGA, 8, '0') 
+                                END), 3,(CASE RUV.TIDO_OID_TIPO_DOCU 
+                                                         WHEN (SELECT OID_TIPO_DOCU FROM FAC_TIPO_DOCUM WHERE COD_TIPO_DOCU = '001') THEN 
+                                                              NULL 
+                                                         ELSE 
+                                                              decode(ruv.val_seri_docu_lega,'001',null,'003',null,ruv.val_seri_docu_lega) || LPAD(RUV.VAL_NUME_DOCU_LEGA, 8, '0') 
+                                                         END)
+             ) as NUM_DOCU_LEGA 
+  FROM fac_regis_unico_venta ruv 
+  WHERE ruv.tido_oid_tipo_docu IN ((SELECT OID_TIPO_DOCU FROM FAC_TIPO_DOCUM WHERE COD_TIPO_DOCU = '001'),   
+                                  (SELECT OID_TIPO_DOCU FROM FAC_TIPO_DOCUM WHERE COD_TIPO_DOCU = '021')) 
+  AND ruv.fec_emis >= to_date($P{fechaInicio} , 'DD/MM/YYYY') 
+  AND ruv.fec_emis <= to_date($P{fechaFin}, 'DD/MM/YYYY')   
+  order by Fecha,NUM_DOCU_LEGA,NUM_CONTROL]]></queryString>
+
+	<field name="NEGOCIO" class="java.lang.String"/>
+	<field name="CANAL_VENTA" class="java.lang.String"/>
+	<field name="FECHA" class="java.lang.String"/>
+	<field name="DOC_IDENTIDAD" class="java.lang.String"/>
+	<field name="RAZON_SOCIAL" class="java.lang.String"/>
+	<field name="NUM_FACT" class="java.lang.String"/>
+	<field name="NUM_CONTROL" class="java.math.BigDecimal"/>
+	<field name="NUM_CONTROL2" class="java.math.BigDecimal"/>
+	<field name="NOTA_CREDITO" class="java.lang.String"/>
+	<field name="FACT_AFECTADO" class="java.lang.String"/>
+	<field name="TIPO_TRANSACCION" class="java.lang.String"/>
+	<field name="TOTAL_CON_IVA" class="java.math.BigDecimal"/>
+	<field name="TOTAL_SIN_IVA" class="java.math.BigDecimal"/>
+	<field name="PORCENTAJE_IVA" class="java.math.BigDecimal"/>
+	<field name="MONTO_IVA" class="java.math.BigDecimal"/>
+	<field name="NUM_DOCU_LEGA" class="java.lang.String"/>
+
+	<variable name="SUM_TOTAL_SIN_IVA" class="java.math.BigDecimal" resetType="Report" calculation="Sum">
+		<variableExpression><![CDATA[$F{TOTAL_SIN_IVA}]]></variableExpression>
+	</variable>
+	<variable name="SUM_MONTO_IVA" class="java.math.BigDecimal" resetType="Report" calculation="Sum">
+		<variableExpression><![CDATA[$F{MONTO_IVA}]]></variableExpression>
+	</variable>
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="70"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1001"
+						y="9"
+						width="239"
+						height="29"
+						key="textField"
+						stretchType="RelativeToTallestObject"/>
+					<box></box>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font size="10"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$P{marca}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="432"
+						y="33"
+						width="548"
+						height="36"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="18" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$P{titulo}]]></textFieldExpression>
+				</textField>
+			</band>
+		</title>
+		<pageHeader>
+			<band height="78"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1"
+						y="45"
+						width="76"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-1"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="0.0" lineStyle="Solid" lineColor="#000000"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.fechaFactura1}+"\n"+$R{reporteVENLibroVentaMensual.fechaFactura2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="77"
+						y="45"
+						width="64"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-2"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.numeroDocumento1}+"\n"+$R{reporteVENLibroVentaMensual.numeroDocumento2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="141"
+						y="45"
+						width="64"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-3"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.controlInicial1}+"\n"+$R{reporteVENLibroVentaMensual.controlInicial2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="205"
+						y="45"
+						width="64"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-4"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.controlFinal1}+"\n"+$R{reporteVENLibroVentaMensual.controlFinal2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="269"
+						y="45"
+						width="49"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-5"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.tipoTransaccion1}+"\n"+$R{reporteVENLibroVentaMensual.tipoTransaccion2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="318"
+						y="45"
+						width="64"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-6"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.facturaAfectada1}+"\n"+$R{reporteVENLibroVentaMensual.facturaAfectada2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="382"
+						y="45"
+						width="237"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-7"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.razonSocial}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="619"
+						y="45"
+						width="79"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-8"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.rif}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="698"
+						y="45"
+						width="64"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-9"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.planillaExportacion1}+"\n"+$R{reporteVENLibroVentaMensual.planillaExportacion2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="762"
+						y="45"
+						width="64"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-10"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.valorFob1}+"\n"+$R{reporteVENLibroVentaMensual.valorFob2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="826"
+						y="12"
+						width="191"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-11"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.ventasInternasNoGravadas1}+"\n"+$R{reporteVENLibroVentaMensual.ventasInternasNoGravadas2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="826"
+						y="45"
+						width="64"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-12"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.exentasOExoneradas1}+"\n"+$R{reporteVENLibroVentaMensual.exentasOExoneradas2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="890"
+						y="45"
+						width="64"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-13"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.noSujetas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="954"
+						y="45"
+						width="64"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-14"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.sinDerechoCreditoFiscal1}+"\n"+$R{reporteVENLibroVentaMensual.sinDerechoCreditoFiscal2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1018"
+						y="45"
+						width="64"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-15"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.totalVentasConIva1}+"\n"+$R{reporteVENLibroVentaMensual.totalVentasConIva2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1082"
+						y="45"
+						width="64"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-16"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.gravadas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1146"
+						y="45"
+						width="64"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-17"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.porcentajeAlic1}+"\n"+$R{reporteVENLibroVentaMensual.porcentajeAlic2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1210"
+						y="45"
+						width="64"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-18"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.debitoFiscal1}+"\n"+$R{reporteVENLibroVentaMensual.debitoFiscal2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1274"
+						y="45"
+						width="64"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-19"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.ivaRetenido1}+"\n"+$R{reporteVENLibroVentaMensual.ivaRetenido2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="1082"
+						y="12"
+						width="191"
+						height="33"
+						forecolor="#000000"
+						backcolor="#CCCCCC"
+						key="element-20"/>
+					<box leftPadding="2" rightPadding="2">					<topPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<leftPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+					<bottomPen lineWidth="1.0" lineColor="#999999"/>
+					<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#999999"/>
+</box>
+					<textElement textAlignment="Center" verticalAlignment="Middle" rotation="None" lineSpacing="Single">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="10" isBold="true" isItalic="false" isUnderline="false" pdfEncoding ="Cp1252" isStrikeThrough="false" />
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteVENLibroVentaMensual.ventasInternasOGravadas1}+"\n"+$R{reporteVENLibroVentaMensual.ventasInternasOGravadas2}]]></textFieldExpression>
+				</textField>
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="23"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1"
+						y="0"
+						width="76"
+						height="22"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{FECHA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="77"
+						y="0"
+						width="64"
+						height="22"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{NUM_DOCU_LEGA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="###0" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="141"
+						y="0"
+						width="64"
+						height="22"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{NUM_CONTROL}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="###0" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="205"
+						y="0"
+						width="64"
+						height="22"
+						key="textField-1"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{NUM_CONTROL2}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="269"
+						y="0"
+						width="49"
+						height="22"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{TIPO_TRANSACCION}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="318"
+						y="0"
+						width="64"
+						height="22"
+						key="textField"
+						stretchType="RelativeToTallestObject"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{FACT_AFECTADO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="382"
+						y="0"
+						width="237"
+						height="22"
+						key="textField"
+						stretchType="RelativeToTallestObject"/>
+					<box></box>
+					<textElement textAlignment="Left" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{RAZON_SOCIAL}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="619"
+						y="0"
+						width="79"
+						height="22"
+						key="textField"
+						stretchType="RelativeToTallestObject"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{DOC_IDENTIDAD}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1017"
+						y="0"
+						width="65"
+						height="22"
+						key="textField"
+						stretchType="RelativeToTallestObject"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{TOTAL_CON_IVA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1082"
+						y="0"
+						width="64"
+						height="22"
+						key="textField"
+						stretchType="RelativeToTallestObject"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{TOTAL_SIN_IVA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1146"
+						y="0"
+						width="64"
+						height="22"
+						key="textField"
+						stretchType="RelativeToTallestObject"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{PORCENTAJE_IVA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1210"
+						y="0"
+						width="64"
+						height="22"
+						key="textField"
+						stretchType="RelativeToTallestObject"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$F{MONTO_IVA}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<lastPageFooter>
+			<band height="150"  isSplitAllowed="true" >
+				<staticText>
+					<reportElement
+						x="1017"
+						y="6"
+						width="112"
+						height="16"
+						key="staticText-1"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="12" isBold="true" isItalic="false"/>
+					</textElement>
+				<text><![CDATA[Base Imponible]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						x="1163"
+						y="6"
+						width="112"
+						height="16"
+						key="staticText-2"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica-Bold" size="12" isBold="true" isItalic="false"/>
+					</textElement>
+				<text><![CDATA[Debito Fiscal]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						x="804"
+						y="30"
+						width="197"
+						height="16"
+						key="staticText-3"/>
+					<box></box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica" size="12" isBold="false" isItalic="false"/>
+					</textElement>
+				<text><![CDATA[Total Internas no Gravadas]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						x="742"
+						y="54"
+						width="259"
+						height="16"
+						key="staticText-4"/>
+					<box></box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica" size="12" isBold="false" isItalic="false"/>
+					</textElement>
+				<text><![CDATA[Suma de las Ventas de Exportaciones]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						x="657"
+						y="78"
+						width="344"
+						height="16"
+						key="staticText-5"/>
+					<box></box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica" size="12" isBold="false" isItalic="false"/>
+					</textElement>
+				<text><![CDATA[Suma de las Ventas Internas Afecta Alicuota General]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						x="608"
+						y="102"
+						width="393"
+						height="16"
+						key="staticText-6"/>
+					<box></box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica" size="12" isBold="false" isItalic="false"/>
+					</textElement>
+				<text><![CDATA[Suma de las Ventas Internas en Alicuota General + Adicional]]></text>
+				</staticText>
+				<staticText>
+					<reportElement
+						x="657"
+						y="127"
+						width="344"
+						height="16"
+						key="staticText-7"/>
+					<box></box>
+					<textElement textAlignment="Right" verticalAlignment="Middle">
+						<font pdfFontName="Helvetica" size="12" isBold="false" isItalic="false"/>
+					</textElement>
+				<text><![CDATA[Suma de las Ventas Internas en Alicuota Reducida]]></text>
+				</staticText>
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1016"
+						y="30"
+						width="112"
+						height="16"
+						key="textField-2"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[new BigDecimal(0.00)]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1162"
+						y="29"
+						width="112"
+						height="16"
+						key="textField-3"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[new BigDecimal(0.00)]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1016"
+						y="54"
+						width="112"
+						height="16"
+						key="textField-4"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[new BigDecimal(0.00)]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1162"
+						y="53"
+						width="112"
+						height="16"
+						key="textField-5"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[new BigDecimal(0.00)]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="#,##0.00" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1016"
+						y="78"
+						width="112"
+						height="15"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SUM_TOTAL_SIN_IVA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="#,##0.00" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1161"
+						y="77"
+						width="111"
+						height="15"
+						key="textField"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[$V{SUM_MONTO_IVA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1016"
+						y="102"
+						width="112"
+						height="16"
+						key="textField-6"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[new BigDecimal(0.00)]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1162"
+						y="102"
+						width="112"
+						height="16"
+						key="textField-7"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[new BigDecimal(0.00)]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1016"
+						y="127"
+						width="112"
+						height="16"
+						key="textField-8"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[new BigDecimal(0.00)]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" pattern="##0.00" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="1162"
+						y="127"
+						width="112"
+						height="16"
+						key="textField-9"/>
+					<box></box>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.math.BigDecimal"><![CDATA[new BigDecimal(0.00)]]></textFieldExpression>
+				</textField>
+			</band>
+		</lastPageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

@@ -1,0 +1,521 @@
+<?xml version="1.0" encoding="UTF-8"  ?>
+<!-- Created with iReport - A designer for JasperReports -->
+<!DOCTYPE jasperReport PUBLIC "//JasperReports//DTD Report Design//EN" "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
+<jasperReport
+		 name="reporteAPERelacionPedidosPDF"
+		 columnCount="1"
+		 printOrder="Vertical"
+		 orientation="Portrait"
+		 pageWidth="595"
+		 pageHeight="842"
+		 columnWidth="595"
+		 columnSpacing="0"
+		 leftMargin="0"
+		 rightMargin="0"
+		 topMargin="0"
+		 bottomMargin="0"
+		 whenNoDataType="NoPages"
+		 isTitleNewPage="false"
+		 isSummaryNewPage="false"
+		 resourceBundle="ReportResources">
+	<property name="ireport.scriptlethandling" value="0" />
+	<property name="ireport.encoding" value="UTF-8" />
+	<import value="java.util.*" />
+	<import value="net.sf.jasperreports.engine.*" />
+	<import value="net.sf.jasperreports.engine.data.*" />
+
+	<parameter name="SUBREPORT_DIR" isForPrompting="true" class="java.lang.String">
+		<defaultValueExpression ><![CDATA["C:\\!! Todo\\Reportes APE\\Pruebas\\Pruebas 15-09-2008\\"]]></defaultValueExpression>
+	</parameter>
+	<parameter name="parameterMap" isForPrompting="false" class="java.util.Map"/>
+	<parameter name="fechaFacturacion" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("fechaFacturacion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="REGION" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoRegion")]]></defaultValueExpression>
+	</parameter>
+	<parameter name="ZONA" isForPrompting="false" class="java.lang.String">
+		<defaultValueExpression ><![CDATA[$P{parameterMap}.get("codigoZona")]]></defaultValueExpression>
+	</parameter>
+	<queryString><![CDATA[SELECT   SUM (DECODE (ESTADO.VAL_ESTA_CAJA, 'Inducido', TO_NUMBER (1))) INDUCIDO,
+         SUM (DECODE (ESTADO.VAL_ESTA_CAJA, 'Embalado', TO_NUMBER (1))) EMBALADO,
+         SUM (DECODE (ESTADO.VAL_ESTA_CAJA, 'Chequeado', TO_NUMBER (1))) CHEQUEADO,
+         SUM (DECODE (ESTADO.VAL_ESTA_CAJA, 'Inconsistente', TO_NUMBER (1))) INCONSISTENTE,
+         SUM (DECODE (ESTADO.VAL_ESTA_CAJA, 'Revisado', TO_NUMBER (1))) REVISADO,
+         SUM (DECODE (ESTADO.VAL_ESTA_CAJA, 'Levantamiento chequeo', TO_NUMBER (1))) LEVANTAMIENTOCH,
+         SUM (DECODE (ESTADO.VAL_ESTA_CAJA, 'Terminado', TO_NUMBER (1))) TERMINADO,
+		 SUM (DECODE (ESTADO.VAL_ESTA_CAJA, 'Inducido',
+		 	 TO_NUMBER (1),(DECODE (ESTADO.VAL_ESTA_CAJA, 'Embalado', TO_NUMBER (1),(DECODE (ESTADO.VAL_ESTA_CAJA, 'Chequeado', TO_NUMBER (1),
+			 (DECODE (ESTADO.VAL_ESTA_CAJA, 'Inconsistente', TO_NUMBER (1),(DECODE (ESTADO.VAL_ESTA_CAJA, 'Revisado', TO_NUMBER (1),
+			 (DECODE (ESTADO.VAL_ESTA_CAJA, 'Levantamiento chequeo', TO_NUMBER (1),
+			 (DECODE (ESTADO.VAL_ESTA_CAJA, 'Terminado', TO_NUMBER (1))))))))))))))) FACTURADO,
+         (SELECT SUM(CAB.NUM_TOTA_CAJA) FROM APE_LISTA_PICAD_CABEC CAB WHERE CAB.FEC_FACTU=to_date($P{fechaFacturacion},'dd/mm/yyyy') AND CAB.CLIE_OID_CLIE IS NOT NULL) SUMACAJAS, PED.PEDIDOS PEDIDOS
+    FROM APE_ETIQU ETIQUETA,
+         APE_ESTAD_PEDID ESTADO,
+         APE_LISTA_PICAD_CABEC LISTACAB,
+         PED_SOLIC_CABEC SOLICITUD,
+         (SELECT SUM (TOTALZONA) PEDIDOS
+            FROM (SELECT (  SUM (DECODE (COD_SECC, 'A', TO_NUMBER (1), 0))
+                          + SUM (DECODE (COD_SECC, 'F', TO_NUMBER (1), 0))
+                          + SUM (DECODE (COD_SECC, 'B', TO_NUMBER (1), 0))
+                          + SUM (DECODE (COD_SECC, 'G', TO_NUMBER (1), 0))
+                          + SUM (DECODE (COD_SECC, 'C', TO_NUMBER (1), 0))
+                          + SUM (DECODE (COD_SECC, 'H', TO_NUMBER (1), 0))
+                          + SUM (DECODE (COD_SECC, 'D', TO_NUMBER (1), 0))
+                          + SUM (DECODE (COD_SECC, 'I', TO_NUMBER (1), 0))
+                          + SUM (DECODE (COD_SECC, 'E', TO_NUMBER (1), 0))
+                          + SUM (DECODE (COD_SECC, 'J', TO_NUMBER (1), 0))
+                         ) TOTALZONA
+                    FROM ZON_ZONA Z,
+                         ZON_REGIO R,
+                         PED_SOLIC_CABEC SOL,
+                         ZON_SECCI S,
+                         PED_TIPO_SOLIC_PAIS TIP,
+                         PED_TIPO_SOLIC SOLIC,
+                         ZON_TERRI_ADMIN AD,
+                         SEG_SUBAC SUB,
+                         PED_SOLIC_CABEC_SECUE SECUENCIA
+                   WHERE Z.ZORG_OID_REGI = R.OID_REGI
+                     AND SOL.ZZON_OID_ZONA = Z.OID_ZONA
+                     AND SOL.ZTAD_OID_TERR_ADMI = AD.OID_TERR_ADMI
+                     AND SOL.FEC_FACT = TO_DATE ($P{fechaFacturacion}, 'DD/MM/YYYY')
+                     AND TIP.OID_TIPO_SOLI_PAIS = SOL.TSPA_OID_TIPO_SOLI_PAIS
+                     AND SOLIC.OID_TIPO_SOLI = TIP.TSOL_OID_TIPO_SOLI
+                     AND (SOL.NUM_DOCU_ORIG IS NULL OR SOL.NUM_DOCU_ORIG = 0
+                         )
+                     AND AD.ZSCC_OID_SECC = S.OID_SECC
+                     AND (   SOL.NUM_DOCU_ORIG = 0
+                          OR LENGTH (SOL.NUM_DOCU_ORIG) < 2
+                          OR SOL.NUM_DOCU_ORIG IS NULL
+                         )
+                     AND SUB.OID_SBAC = SOL.SBAC_OID_SBAC
+                     AND SECUENCIA.SOCA_OID_SOLI_CABE = SOL.OID_SOLI_CABE) IMPRESION) PED
+   WHERE LISTACAB.FEC_FACTU = TO_DATE ($P{fechaFacturacion}, 'DD/MM/YYYY')
+     AND LISTACAB.SOCA_OID_SOLI_CABE = SOLICITUD.OID_SOLI_CABE
+     AND ETIQUETA.LPCA_OID_LIST_PICA_CABE = LISTACAB.OID_LIST_PICA_CABE
+     AND ETIQUETA.ESTP_OID_ESTA_PEDI = ESTADO.OID_ESTA_PEDI
+     AND LISTACAB.ZZON_OID_ZONA = (SELECT ZONA.OID_ZONA FROM ZON_ZONA ZONA WHERE ZONA.COD_ZONA =  NVL($P{ZONA},ZONA.COD_ZONA))
+     AND LISTACAB.ZORG_OID_REGI = (SELECT RE.OID_REGI FROM ZON_REGIO RE WHERE RE.COD_REGI =  NVL($P{REGION},RE.COD_REGI))
+   GROUP BY PED.PEDIDOS]]></queryString>
+
+	<field name="PEDIDOS" class="java.lang.String"/>
+	<field name="SUMACAJAS" class="java.lang.String"/>
+	<field name="INDUCIDO" class="java.lang.String"/>
+	<field name="FACTURADO" class="java.lang.String"/>
+	<field name="EMBALADO" class="java.lang.String"/>
+	<field name="CHEQUEADO" class="java.lang.String"/>
+	<field name="INCONSISTENTE" class="java.lang.String"/>
+	<field name="REVISADO" class="java.lang.String"/>
+	<field name="LEVANTAMIENTOCH" class="java.lang.String"/>
+	<field name="TERMINADO" class="java.lang.String"/>
+
+		<background>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</background>
+		<title>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</title>
+		<pageHeader>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageHeader>
+		<columnHeader>
+			<band height="30"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="57"
+						y="1"
+						width="57"
+						height="15"
+						key="textField-1"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$P{ZONA}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="174"
+						y="2"
+						width="67"
+						height="14"
+						key="textField-2"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$P{REGION}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="2"
+						y="1"
+						width="48"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-33"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPERelacionPedidosForm.zona}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="120"
+						y="2"
+						width="48"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-34"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPERelacionPedidosForm.region}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="304"
+						y="2"
+						width="67"
+						height="14"
+						key="textField-55"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$P{fechaFacturacion}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="250"
+						y="2"
+						width="48"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-56"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPERelacionPedidosForm.fecha}]]></textFieldExpression>
+				</textField>
+			</band>
+		</columnHeader>
+		<detail>
+			<band height="204"  isSplitAllowed="true" >
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="13"
+						y="16"
+						width="92"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-35"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPERelacionPedidosForm.pedidos}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="302"
+						y="15"
+						width="92"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-36"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPERelacionPedidosForm.cajas}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="120"
+						y="15"
+						width="101"
+						height="15"
+						key="textField-37"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{PEDIDOS}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="false" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="411"
+						y="15"
+						width="101"
+						height="15"
+						key="textField-38"/>
+					<box topBorder="None" topBorderColor="#000000" leftBorder="None" leftBorderColor="#000000" rightBorder="None" rightBorderColor="#000000" bottomBorder="None" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{SUMACAJAS}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="61"
+						y="54"
+						width="92"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-39"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPERelacionPedidosForm.inducido}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="61"
+						y="70"
+						width="92"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-40"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPERelacionPedidosForm.pedidos}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="61"
+						y="85"
+						width="92"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-41"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPERelacionPedidosForm.embalado}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="61"
+						y="100"
+						width="92"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-42"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPERelacionPedidosForm.chequeado}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="61"
+						y="115"
+						width="92"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-43"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPERelacionPedidosForm.inconsistente}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="61"
+						y="130"
+						width="92"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-44"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPERelacionPedidosForm.revisado}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="61"
+						y="145"
+						width="92"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-45"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPERelacionPedidosForm.levantamientoch}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="179"
+						y="54"
+						width="101"
+						height="13"
+						key="textField-46"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{INDUCIDO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="179"
+						y="69"
+						width="101"
+						height="14"
+						key="textField-47"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{FACTURADO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="179"
+						y="85"
+						width="101"
+						height="13"
+						key="textField-48"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{EMBALADO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="179"
+						y="100"
+						width="101"
+						height="13"
+						key="textField-49"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{CHEQUEADO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="179"
+						y="115"
+						width="101"
+						height="13"
+						key="textField-50"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{INCONSISTENTE}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="179"
+						y="130"
+						width="101"
+						height="12"
+						key="textField-51"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{REVISADO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="180"
+						y="145"
+						width="101"
+						height="13"
+						key="textField-52"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{LEVANTAMIENTOCH}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						x="180"
+						y="160"
+						width="101"
+						height="13"
+						key="textField-53"/>
+					<box topBorder="Thin" topBorderColor="#000000" leftBorder="Thin" leftBorderColor="#000000" rightBorder="Thin" rightBorderColor="#000000" bottomBorder="Thin" bottomBorderColor="#000000"/>
+					<textElement>
+						<font/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$F{TERMINADO}]]></textFieldExpression>
+				</textField>
+				<textField isStretchWithOverflow="false" isBlankWhenNull="true" evaluationTime="Now" hyperlinkType="None"  hyperlinkTarget="Self" >
+					<reportElement
+						mode="Opaque"
+						x="61"
+						y="160"
+						width="92"
+						height="13"
+						backcolor="#CCCCCC"
+						key="textField-54"
+						positionType="Float"/>
+					<box topBorder="Thin" topBorderColor="#999999" leftBorder="Thin" leftBorderColor="#999999" rightBorder="Thin" rightBorderColor="#999999" bottomBorder="Thin" bottomBorderColor="#999999"/>
+					<textElement textAlignment="Center" verticalAlignment="Middle">
+						<font fontName="Arial" pdfFontName="Helvetica-Bold" size="8" isBold="true"/>
+					</textElement>
+				<textFieldExpression   class="java.lang.String"><![CDATA[$R{reporteAPERelacionPedidosForm.terminado}]]></textFieldExpression>
+				</textField>
+			</band>
+		</detail>
+		<columnFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</columnFooter>
+		<pageFooter>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</pageFooter>
+		<summary>
+			<band height="0"  isSplitAllowed="true" >
+			</band>
+		</summary>
+</jasperReport>

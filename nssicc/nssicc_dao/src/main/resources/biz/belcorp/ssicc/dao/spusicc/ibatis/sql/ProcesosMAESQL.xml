@@ -1,0 +1,1324 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE sqlMap
+    PUBLIC "-//iBATIS.com//DTD SQL Map 2.0//EN"
+    "http://www.ibatis.com/dtd/sql-map-2.dtd">
+
+<sqlMap namespace="spusicc.ProcesosMAESQL">
+
+    <parameterMap id="paramExecuteClasificacionClientes" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoTipoCliente" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>                        
+        <parameter property="nroCampaniasEvaluar" jdbcType="NUMBER" mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeClasificacionClientes" parameterMap="paramExecuteClasificacionClientes" >
+		{call MAE_PKG_CLASI.MAE_PR_ACTUA_CLASI_CLIEN( ?, ?, ?, ?, ?, ? )}
+	</procedure>		
+
+    <select id="verificarCargaInicialEstatus" parameterClass="string" resultClass="string">
+		SELECT COUNT(*)
+		FROM   MAE_CLIEN_ESTAT_ACTUA
+		WHERE PAIS_COD_PAIS = #value#  
+    </select>
+
+   <parameterMap id="paramExecuteCalificacionEstatusCargaInicial" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+
+	<procedure id="executeCalificacionEstatusCargaInicial" parameterMap="paramExecuteCalificacionEstatusCargaInicial" >
+		{call MAE_PKG_ESTAT.MAE_PR_CARGA_INICI_ESTAT( ? )}
+	</procedure>	 
+	  
+    <parameterMap id="paramExecuteCalificacionEstatusFacturacionDiaria" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>                        
+        <parameter property="totalErrores" jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>                                
+    </parameterMap>
+    
+	<procedure id="executeCalificacionEstatusFacturacionDiaria" parameterMap="paramExecuteCalificacionEstatusFacturacionDiaria" >
+		{call MAE_PKG_ESTAT.MAE_PR_PROCE_FACTU_DIARI( ?, ?, ?, ? )}
+	</procedure>
+	
+    <select id="getUltimaFechaCierreRegion" parameterClass="java.util.Map" resultClass="string">
+		SELECT TO_CHAR(MAX(FEC_FINA_PROC), 'YYYY-MM-DD HH24:MI:SS')
+		 FROM  BAS_PROCE_BATCH_HISTO
+		WHERE  PAIS_COD_PAIS = #codigoPais#
+		  AND  SIST_COD_SIST = 'MAE'
+		  AND  PRBA_COD_PROC_BATC = '03'
+		  AND  EPBA_COD_ESTA_PROC = '10'
+		  AND  NUM_LOTE = #codigoPeriodo#
+    </select>
+
+  <resultMap id="regionesCerradasResult" class="java.util.HashMap">														
+		<result property="oidRegion" 			column="OID" 	javaType="java.lang.String"/>								
+		<result property="region" 				column="REGION"/>									
+		<result property="fechaUltimoProceso"	column="FEC_ULTI_ACTU"/>									
+    </resultMap>														
+
+    <select id="getRegionesCerradas" parameterClass="java.util.Map" resultMap="regionesCerradasResult">
+   	    SELECT con.ZORG_OID_REGI as OID, reg.COD_REGI || ' - ' || reg.DES_REGI as REGION, MAX (CON.FEC_ULTI_ACTU) as FEC_ULTI_ACTU
+	      FROM FAC_CONTR_CIERR CON, FAC_TIPOS_CIERR TIP, CRA_PERIO cra, SEG_PERIO_CORPO cor, SEG_PAIS pai, ZON_REGIO reg
+	     WHERE CON.TCIE_OID_TIPO_CIER = TIP.OID_TIPO_CIER
+	       AND cra.OID_PERI = con.PERD_OID_PERI
+		   AND cor.OID_PERI = cra.PERI_OID_PERI
+		   AND pai.OID_PAIS = cra.PAIS_OID_PAIS
+		   AND reg.OID_REGI = con.ZORG_OID_REGI
+	       AND tip.COD_TIPO_CIER = 'R'
+	       AND cor.COD_PERI = #codigoPeriodo#
+		   AND pai.COD_PAIS = #codigoPais#
+
+	      <isNotEmpty prepend="AND" property="fechaUltimoProceso">
+		   	<![CDATA[		  	      
+		 	   TO_CHAR(CON.FEC_ULTI_ACTU, 'YYYY-MM-DD HH24:MI:SS') > #fechaUltimoProceso#
+		    ]]>		   		 	   
+		  </isNotEmpty>
+		   
+	     GROUP BY con.ZORG_OID_REGI, reg.COD_REGI, reg.DES_REGI
+	     ORDER BY reg.DES_REGI   
+    </select>
+
+    <parameterMap id="paramExecuteCalificacionEstatusCierreRegion" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="oidRegionesCerradas" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>                        
+        <parameter property="totalErrores" jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>                                
+    </parameterMap>
+    
+	<procedure id="executeCalificacionEstatusCierreRegion" parameterMap="paramExecuteCalificacionEstatusCierreRegion" >
+		{call MAE_PKG_ESTAT.MAE_PR_PROCE_CIERR_REGIO( ?, ?, ?, ? )}
+	</procedure>
+		
+    <parameterMap id="paramExecuteCalificacionEstatusCierreCampana" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="totalErrores" jdbcType="VARCHAR" javaType="java.lang.String" mode="OUT"/>                                
+    </parameterMap>
+    
+	<procedure id="executeCalificacionEstatusCierreCampana" parameterMap="paramExecuteCalificacionEstatusCierreCampana" >
+		{call MAE_PKG_ESTAT.MAE_PR_PROCE_CIERR_CAMPA( ?, ?, ?)}
+	</procedure>		
+	
+    <resultMap id="baseResult"          class="baseGenerico">
+    	<result property="codigo" 		column="CODIGO" 	/>
+    	<result property="descripcion" 	column="DESCRIPCION"/>
+    </resultMap>
+    
+    <select id="getTipoProcesoList" parameterClass="string" resultMap="baseResult">
+		SELECT 'F' as CODIGO ,'Facturacion' as DESCRIPCION
+		FROM DUAL
+		UNION
+		SELECT 'R' as CODIGO ,'Cierre Región' as DESCRIPCION
+		FROM DUAL
+		UNION
+		SELECT 'C' as CODIGO,'Cierre Campaña' as DESCRIPCION
+		FROM DUAL
+    </select>
+
+	<resultMap id="getClasificacionEstatusResult"  class="java.util.HashMap">
+		<result property="cod_pais"	    column="COD_PAIS"/>
+		<result property="cod_clie"	    column="COD_CLIE"/>
+		<result property="cod_peri"     column="CAM_PROC"/>
+		<result property="fec_fact"     column="FEC_FACT"/>
+		<result property="msg_erro"     column="MSG_ERRO"/>
+		<result property="flg_aten"     column="FLG_ATEN"/>
+    </resultMap>
+
+    <select id="getClasificacionEstatusList" parameterClass="java.util.Map" resultMap="getClasificacionEstatusResult">
+		SELECT M.COD_PAIS, M.COD_CLIE, M.CAM_PROC, M.FEC_FACT, ME.MSG_ERRO, M.FLG_ATEN
+		FROM MAE_TMP_ESTAT_ERROR M,
+		     MAE_PARAM_ESTAT_ERROR ME
+		WHERE M.COD_ERRO = ME.COD_ERRO
+		      AND M.CAM_PROC = #codigoPeriodo#
+		      AND M.TIP_PROC = #tipoProceso#
+	</select>
+
+  	<update id="executeProcesoAtendidos" parameterClass="java.util.Map">
+				UPDATE MAE_TMP_ESTAT_ERROR
+				SET FLG_ATEN = '1'
+				WHERE COD_PAIS = #cod_pais#
+				      AND COD_CLIE =  #cod_clie#
+				      AND CAM_PROC = #cod_peri#
+				      AND FEC_FACT = #fec_fact#
+				      AND TIP_PROC = #TipoProceso#
+  	</update>
+
+
+  	<update id="deleteClasificacionEstatusList" parameterClass="java.util.Map">
+  	          DELETE FROM MAE_TMP_ESTAT_ERROR
+	          WHERE COD_PAIS = #CodigoPais#
+                AND CAM_PROC = #codigoPeriodo#
+                AND TIP_PROC = #tipoProceso#
+                AND FLG_ATEN = '1'
+  	</update>
+	
+    <parameterMap id="paramExecuteClasificacionLoveClientes" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeClasificacionLoveClientes" parameterMap="paramExecuteClasificacionLoveClientes" >
+		{call MAE_PKG_CLASI.MAE_PR_ACTUA_CLASI_LOVE( ?, ?, ? )}
+	</procedure>		
+	
+   <insert id="insertCargaClasificacionCliente" parameterClass="java.util.Map">
+		INSERT INTO MAE_CARGA_CLASI_CLIEN (
+		   NUM_CARG, NUM_FILA, COD_CLIE, FEC_CARG, COD_USUA,
+		   OID_TIPO_CLIE, OID_SUBT_CLIE, OID_TIPO_CLAS, OID_CLAS) 
+		VALUES (#numeroCarga#, #numeroFila#, #codigoCliente#, SYSDATE, #codigoUsuario#,
+		      #oidTipoCliente#, #oidSubTipoCliente#, #oidTipoClasificacion#, #oidClasificacion#)    
+    </insert>
+
+    <select id="getNumeroCarga" resultClass="string">
+		  SELECT NVL(MAX(NUM_CARG) + 1, 1) AS NUM_CARGA
+		  FROM MAE_CARGA_CLASI_CLIEN A
+    </select>  
+    
+    <select id="getNumeroLote" resultClass="string">
+		  SELECT TO_CHAR(SYSDATE, 'YYYYMMDD') || 
+		  		 LPAD(NVL(MAX(SUBSTR(A.NUM_LOTE, 9, 4)) + 1, 1), 4, '0') AS NUM_LOTE
+		  FROM MAE_CARGA_CLASI_CLIEN A
+    </select>  
+    
+    <parameterMap id="paramExecuteValidarCargaClasificacionClientes" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroCarga" jdbcType="NUMBER" mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeValidarCargaClasificacionClientes" parameterMap="paramExecuteValidarCargaClasificacionClientes" >
+		{call MAE_PKG_CLASI.MAE_PR_VALID_CARGA_CLASI( ?, ? )}
+	</procedure>
+	    
+	    
+	<resultMap id="getCargaClasificacionClientesResult"  class="java.util.HashMap">
+		<result property="numeroFila"	      column="NUM_FILA"/>
+		<result property="codigoCliente"	  column="COD_CLIE"/>
+		<result property="codigoMotivo"       column="COD_MOTI"/>
+		<result property="descripcionMotivo"  column="DES_MOTI"/>
+    </resultMap>
+
+    <select id="getCargaClasificacionClientesList" parameterClass="java.util.Map" resultMap="getCargaClasificacionClientesResult">
+		SELECT car.NUM_FILA, car.COD_CLIE, car.COD_MOTI, mot.DES_MOTI
+		  FROM MAE_CARGA_CLASI_CLIEN car, MAE_MOTIV_CARGA_CLASI mot
+		 WHERE car.NUM_CARG = #numeroCarga#
+		   AND car.COD_MOTI = mot.COD_MOTI
+		 ORDER BY car.NUM_FILA 
+	</select>	    
+	
+    <parameterMap id="paramExecuteActualizarCargaClasificacionClientes" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroCarga" jdbcType="NUMBER" mode="IN"/>
+		<parameter property="numeroLote" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeActualizarCargaClasificacionClientes" parameterMap="paramExecuteActualizarCargaClasificacionClientes" >
+		{call MAE_PKG_CLASI.MAE_PR_ACTUA_CARGA_CLASI( ?, ?, ?, ? )}
+	</procedure>
+
+	<procedure id="executeActualizarDatosClientes">
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_ACTUA_DATOS_CLIEN }
+	</procedure>
+	
+	
+    <parameterMap id="paramExecuteValidacionClientes" class="map">
+		<parameter property="codigoPais"  		  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="periodoProceso" 	  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaProceso" 		  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="login" 			  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="indTipoValid"        jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+ 		<parameter property="indTipoPrev"         jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="entorno"        	  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeValidacionClientes" parameterMap="paramExecuteValidacionClientes" >
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_VALID_INFOR_CLIEN( ?, ?, ? ,? ,?,?,?)}
+	</procedure>
+		
+	<parameterMap id="paramExecuteProcesoGENGenerarInformacionSolicitudes" class="map" >
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+	<procedure id="executeProcesoGENGenerarInformacionSolicitudes" parameterMap="paramExecuteProcesoGENGenerarInformacionSolicitudes">
+		{call INT_PKG_GENER.INT_PR_GENER_INFOR_SOLIC( ?, ?, ? ,?)}
+	</procedure>
+	
+	<parameterMap id="paramExecuteActivarEntregaDireccionVacaciones" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeActivarEntregaDireccionVacaciones" parameterMap="paramExecuteActivarEntregaDireccionVacaciones">
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_ACTIV_CLASI_DIREC_VACAC(?, ?, ?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteDesactivarEntregaDireccionVacaciones" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeDesactivarEntregaDireccionVacaciones" parameterMap="paramExecuteDesactivarEntregaDireccionVacaciones">
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_DESAC_CLASI_DIREC_VACAC(?, ?, ?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteBloquearClienteReingresoNoAutorizado" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoRegion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeBloquearClienteReingresoNoAutorizado" parameterMap="paramExecuteBloquearClienteReingresoNoAutorizado">
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_GENER_BLOQU_REING_NOAUT(?, ?, ?, ?, ?, ?) }
+	</procedure>
+
+	<parameterMap id="paramExecuteDesbloquearClienteConPedido" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+	
+	<procedure id="executeDesbloquearClienteConPedido" parameterMap="paramExecuteDesbloquearClienteConPedido">
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_GENER_DESBL_CLIEN_PEDID(?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramProcesoGENActualizar1erNivelConsultoraDuplaKit" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeProcesoGENActualizar1erNivel2doNivelConsultoraDuplaKit" parameterMap="paramProcesoGENActualizar1erNivelConsultoraDuplaKit">
+		{call NVS_PKG_PROGR_NUEVA.NVS_PR_ACTUA_1ER_2DO_NIV(?, ?, ?) }
+	</procedure>
+	
+	<procedure id="executeProcesoGENActualizar1erNivelSinNivelConsultoraDuplaKit" parameterMap="paramProcesoGENActualizar1erNivelConsultoraDuplaKit">
+		{call NVS_PKG_PROGR_NUEVA.NVS_PR_ACTUA_1ER_SIN_NIV(?, ?, ?) }
+	</procedure>
+	
+	<procedure id="executeProcesoGENActualizar2doNivel3erNivelConsultoraDuplaKit" parameterMap="paramProcesoGENActualizar1erNivelConsultoraDuplaKit">
+		{call NVS_PKG_PROGR_NUEVA.NVS_PR_ACTUA_2DO_3ER_NIV(?, ?, ?) }
+	</procedure>
+	
+	<procedure id="executeProcesoGENActualizar3erNivelSinNivelConsultoraDuplaKit" parameterMap="paramProcesoGENActualizar1erNivelConsultoraDuplaKit">
+		{call NVS_PKG_PROGR_NUEVA.NVS_PR_ACTUA_3ER_SIN_NIV(?, ?, ?) }
+	</procedure>
+
+	<parameterMap id="paramProcesoGENRegistrarClasificacion1erNivelDuplaKit" class="map">
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+	
+	<procedure id="executeProcesoGENRegistrarClasificacion1erNivelDuplaKit" parameterMap="paramProcesoGENRegistrarClasificacion1erNivelDuplaKit">
+		{call NVS_PKG_PROGR_NUEVA.NVS_PR_REGIS_PROGR_DUPLA(?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteAsignarEstatusCliente" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoRegion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeAsignarEstatusCliente" parameterMap="paramExecuteAsignarEstatusCliente">
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_PROCE_ASIGN_ESTAT(?, ?, ?, ?, ?, ?) }
+	</procedure>
+
+	<select id="getExistenRegionesCerradas" resultClass="string">
+		  SELECT COUNT(1)
+		  FROM FAC_CONTR_CIERR cierre, 
+		       FAC_TIPOS_CIERR tipoCierre,
+		       SEG_PERIO_CORPO cor,
+		       CRA_PERIO cra
+		 WHERE cierre.TCIE_OID_TIPO_CIER = tipoCierre.OID_TIPO_CIER 
+		   and tipoCierre.COD_TIPO_CIER = 'R' 
+		   and cierre.PERD_OID_PERI = cra.OID_PERI
+		   and cra.PERI_OID_PERI = cor.oid_peri
+		   AND cor.cod_peri = #codigoPeriodo#
+		   and cierre.VAL_PROC_EJEC = 'Asignar_estatus_en_lotes' 
+		   and cierre.VAL_RESU_PROC = 'OK'
+    </select>
+    	
+	<parameterMap id="paramExecuteReevaluarEstatusConsultora" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeReevaluarEstatusConsultora" parameterMap="paramExecuteReevaluarEstatusConsultora">
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_PROCE_REEVA_ESTAT_CONSU(?, ?, ?, ?, ?) }
+	</procedure> 
+	
+	<parameterMap id="paramsExecuteProcesoMAERevertirEstatusConsultora" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaProceso" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoRegion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap> 
+
+	<procedure id="executeProcesoMAERevertirEstatusConsultora" parameterMap="paramsExecuteProcesoMAERevertirEstatusConsultora">
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_GENER_REVER_ESTAT(?, ?, ?, ?, ?, ?, ?) }
+	</procedure> 
+	<select id="validarDireccion"  parameterClass="java.util.Map" resultClass="string">
+		 SELECT distinct CLIE_OID_CLIE FROM  mae_clien_direc 
+		         WHERE CLIE_OID_CLIE =(SELECT OID_CLIE  FROM MAE_CLIEN WHERE COD_CLIE = #codigoConsultora#)
+				 and ind_elim=0 and tidc_oid_tipo_dire =(SELECT td.oid_tipo_dire
+						FROM MAE_TIPO_DIREC td,
+     					gen_i18n_sicc_comun x
+				 WHERE td.oid_tipo_dire = x.val_oid AND     
+    					x.attr_enti = 'MAE_TIPO_DIREC' AND  td.cod_tipo_dire=#tipoDireccion#)
+    </select> 
+	<select id="validarCliente"  parameterClass="java.util.Map" resultClass="string">
+		  SELECT COD_CLIE  FROM MAE_CLIEN WHERE COD_CLIE = #codigoConsultora#
+    </select> 
+	<update id="executeActualizarDirecciones" parameterClass="java.util.Map">
+				 update  mae_clien_direc set 
+				 usu_modi=#usuario#, fec_ulti_actu=SYSDATE 				 
+				  <isNotEmpty prepend="," property="direccion">
+				    val_nomb_via=SUBSTR(TRIM(#direccion#),0,(select max(data_length) as cantidad from all_tab_columns where table_name = 'MAE_CLIEN_DIREC' and column_name='VAL_NOMB_VIA')) 
+				 </isNotEmpty>
+				  <isNotEmpty prepend="," property="referenciaDireccion">
+				   val_obse=SUBSTR(TRIM(#referenciaDireccion#),0,(select max(data_length) as cantidad from all_tab_columns where table_name = 'MAE_CLIEN_DIREC' and column_name='VAL_OBSE'))
+				 </isNotEmpty>
+		         WHERE CLIE_OID_CLIE =(SELECT OID_CLIE  FROM MAE_CLIEN WHERE COD_CLIE =#codigoConsultora#)
+				  and ind_elim=0
+				 and tidc_oid_tipo_dire =(SELECT td.oid_tipo_dire
+						FROM MAE_TIPO_DIREC td,
+     					gen_i18n_sicc_comun x
+				 WHERE td.oid_tipo_dire = x.val_oid AND     
+    					x.attr_enti = 'MAE_TIPO_DIREC' AND  td.cod_tipo_dire=#tipoDireccion#)
+  	</update>  	
+  	<update id="executeActualizarTelefonos" parameterClass="java.util.Map">
+	 update  MAE_CLIEN_COMUN set VAL_TEXT_COMU=SUBSTR(TRIM(#valor#),0,(select max(data_length) as cantidad from all_tab_columns where table_name = 'MAE_CLIEN_COMUN' and column_name='VAL_TEXT_COMU'))
+	 ,usu_modi=#usuario#,fec_ulti_actu=SYSDATE
+  	 WHERE
+       CLIE_OID_CLIE =(SELECT OID_CLIE  FROM MAE_CLIEN WHERE COD_CLIE =#codigoConsultora#)  AND TICM_OID_TIPO_COMU = (SELECT OID_TIPO_COMU
+  	   FROM mae_tipo_comun mtc
+       ,gen_i18n_sicc_comun dtc
+       WHERE mtc.oid_tipo_comu = dtc.val_oid
+       AND dtc.attr_enti = 'MAE_TIPO_COMUN' AND COD_TIPO_COMU=#tipo#)
+  	</update>
+  	
+  	 <insert id="insertClienteComunicacion" parameterClass="java.util.Map">
+		INSERT INTO MAE_CLIEN_COMUN
+            (OID_CLIE_COMU, 
+             CLIE_OID_CLIE, 
+             TICM_OID_TIPO_COMU, 
+             VAL_DIA_COMU,
+             VAL_TEXT_COMU, 
+             FEC_HORA_DESD, 
+             FEC_HORA_HAST, 
+             VAL_INTE_COMU,
+             IND_COMU_PPAL,
+             USU_MODI,
+             FEC_ULTI_ACTU
+            )
+     	VALUES 
+     	    (MAE_CLCO_SEQ.NEXTVAL, 
+     	     (SELECT OID_CLIE  FROM MAE_CLIEN WHERE COD_CLIE =#codigoConsultora#), 
+     	      (SELECT OID_TIPO_COMU  FROM mae_tipo_comun mtc  ,gen_i18n_sicc_comun dtc  WHERE mtc.oid_tipo_comu = dtc.val_oid AND dtc.attr_enti = 'MAE_TIPO_COMUN' AND COD_TIPO_COMU=#tipo#), 
+     	     #diaComunicacion#,
+             #valor#, 
+             '',
+             '', 
+             '0',
+             '0',
+             #usuario#,
+             SYSDATE
+            )
+            
+    </insert>   
+    
+     <select id="getNroConsultorasClasificacion" resultClass="string" parameterClass="java.util.Map">
+
+     SELECT  TO_CHAR(COUNT(*))
+     FROM mae_clien_tipo_subti cts ,
+            mae_clien_clasi cc,
+            mae_clien_datos_adici cda ,
+            mae_clien mc,
+            mae_clien_ident mci,
+            mae_clien_unida_admin ua,
+            zon_terri_admin za,
+            zon_secci sec,
+            zon_zona zon,
+            zon_regio reg,
+            zon_terri zt,
+           (SELECT * FROM own_comun.gen_i18n_sicc_comun
+              WHERE  attr_enti = 'MAE_ESTAT_CLIEN')   g1,
+           (SELECT * FROM own_comun.gen_i18n_sicc_comun
+              WHERE  attr_enti = 'MAE_TIPO_CLIEN')   g2,
+           (SELECT * FROM own_comun.gen_i18n_sicc_comun
+              WHERE  attr_enti = 'MAE_SUBTI_CLIEN')   g3,    
+           (SELECT * FROM own_comun.gen_i18n_sicc_comun
+              WHERE  attr_enti = 'MAE_TIPO_CLASI_CLIEN')   g4,
+            own_comun.gen_i18n_sicc_comun       g5
+  WHERE cts.oid_clie_tipo_subt = cc.ctsu_oid_clie_tipo_subt
+        AND mc.oid_clie = cts.clie_oid_clie
+        AND cda.clie_oid_clie = cts.clie_oid_clie 
+        AND mc.oid_clie = mci.clie_oid_clie
+        AND g1.val_oid(+) = cda.esta_oid_esta_clie
+        AND g2.val_oid(+) = cts.ticl_oid_tipo_clie
+        AND g3.val_oid(+) = cts.sbti_oid_subt_clie
+        AND g4.val_oid(+) = cc.tccl_oid_tipo_clasi
+        AND g5.attr_enti ='MAE_CLASI'
+        AND g5.val_oid = cc.clas_oid_clas
+        AND mc.oid_clie = ua.clie_oid_clie
+        AND ua.ztad_oid_terr_admi = za.oid_terr_admi
+        AND za.terr_oid_terr = zt.oid_terr
+        AND za.zscc_oid_secc = sec.oid_secc
+        AND sec.zzon_oid_zona = zon.oid_zona
+        AND zon.zorg_oid_regi = reg.oid_regi
+        AND ua.ind_acti = 1
+        AND mci.val_iden_docu_prin = 1
+        AND cc.tccl_oid_tipo_clasi = #oidTipoClasificacion#
+        <isNotEmpty property="oidClasificacion">
+        AND cc.clas_oid_clas = #oidClasificacion#
+		</isNotEmpty>
+        AND cts.ticl_oid_tipo_clie = #oidTipoCliente#
+        AND cts.sbti_oid_subt_clie = #oidSubTipoCliente#
+		  
+    </select>  
+    
+    <delete id="eliminarClasificacionCliente" parameterClass="java.util.Map">
+       DELETE  mae_clien_clasi x
+       WHERE x.tccl_oid_tipo_clasi = #oidTipoClasificacion#
+       <isNotEmpty property="oidClasificacion">
+        AND x.clas_oid_clas = #oidClasificacion#
+	   </isNotEmpty>
+    </delete>   
+    
+    
+    
+     <resultMap id="getObtenerBuscarConsultoraResult" class="java.util.HashMap">
+    <result property="codConsultora"           column="COD_CLIE"/>      
+	<result property="tipoCliente"             column="COD_TIPO_CLIE"/>      
+	<result property="subCliente"              column="COD_SUBT_CLIE"/>      
+	<result property="codZona"                 column="COD_ZONA"/>      
+	<result property="codTerri"                column="COD_TERR"/>      
+	<result property="fecIng"                  column="FEC_INGR"/>      
+	<result property="paqDoc"                  column="IND_IMPR_PDOC"/>      
+	<result property="apePat"                  column="VAL_APE1"/>      
+	<result property="apeMat"                  column="VAL_APE2"/>      
+	<result property="priNom"                  column="VAL_NOM1"/>      
+	<result property="segNom"                  column="VAL_NOM2"/>      
+	<result property="nacCliente"              column="COD_NACI"/>      
+	<result property="tipoDoc"                 column="COD_TIPO_DOCU"/>      
+	<result property="nroDoc"                  column="NUM_DOCU_IDEN"/>      
+	<result property="fecNac"                  column="FEC_NACI"/>      
+	<result property="sexo"                    column="COD_SEXO"/>      
+	<result property="estCivil"                column="COD_ESTA_CIVI"/>      
+	<result property="gradIns"                 column="COD_NIVE_ESTU"/>      
+	<result property="nomAbrev"                column="VAL_TRAT"/>      
+	<result property="CUB"                     column="COD_CUB"/>      
+	<result property="codPais"                 column="COD_PAIS"/>      
+	<result property="indActiva"               column="IND_ACTI"/>      
+	<result property="indOrigen"               column="IND_ORIG_REGI"/>      
+	<result property="codGrupoFuncional"       column="cod_grup_func"/>      
+	<result property="desGrupoFuncional"       column="des_grup_func"/>      
+	<result property="codJefeCUB"              column="cod_cub_jefe"/>      
+	<result property="valRelContr"             column="VAL_RELA_CONT"/>      
+	<result property="emailBelcorp"            column="COD_MAIL_BELC"/>      
+	<result property="usuRed"                  column="val_usua_red"/>      
+	<result property="nomJefeDir"              column="VAL_NOM_JEFE"/>      
+	<result property="valPueOrg"               column="VAL_PUE_ORG"/>      
+ </resultMap>
+ 
+  <select id="getObtenerBuscarConsultora" parameterClass="java.util.Map" resultMap="getObtenerBuscarConsultoraResult">
+     SELECT 
+       CLI.COD_CLIE,
+
+       (SELECT T.COD_TIPO_CLIE
+        FROM 
+         MAE_CLIEN_TIPO_SUBTI A,
+         mae_tipo_clien t
+        WHERE A.CLIE_OID_CLIE = CLI.OID_CLIE
+          AND A.TICL_OID_TIPO_CLIE = t.oid_tipo_clie
+          AND A.IND_PPAL = 1
+        ) COD_TIPO_CLIE,
+        
+       (SELECT T.COD_SUBT_CLIE 
+        FROM 
+         MAE_CLIEN_TIPO_SUBTI A,
+         mae_subti_clien t
+        WHERE A.CLIE_OID_CLIE = CLI.OID_CLIE
+          AND A.SBTI_OID_SUBT_CLIE = T.OID_SUBT_CLIE
+          AND A.IND_PPAL = 1
+       ) COD_SUBT_CLIE,
+       
+       ZO.COD_ZONA,
+       TO_CHAR(TE.COD_TERR) COD_TERR,
+       to_char(CLI.FEC_INGR,'dd/mm/yyyy') FEC_INGR, 
+       
+       DECODE(EST.IND_IMPR_PDOC,'N','0','1') IND_IMPR_PDOC,
+      
+       TRIM(CLI.VAL_APE1) VAL_APE1,
+       TRIM(CLI.VAL_APE2) VAL_APE2,
+       TRIM(CLI.VAL_NOM1) VAL_NOM1,
+       TRIM(CLI.VAL_NOM2) VAL_NOM2,
+       NACIO.COD_NACI, 
+       
+       ( SELECT DOCUM.COD_TIPO_DOCU
+         FROM mae_clien_ident mi,
+              MAE_TIPO_DOCUM  DOCUM
+         WHERE DOCUM.PAIS_OID_PAIS = CLI.PAIS_OID_PAIS
+           AND DOCUM.OID_TIPO_DOCU = MI.TDOC_OID_TIPO_DOCU
+           AND mi.clie_oid_clie = cli.oid_clie
+           AND MI.VAL_IDEN_DOCU_PRIN = 1
+       )  COD_TIPO_DOCU,
+       
+       ( SELECT MI.NUM_DOCU_IDEN 
+         FROM mae_clien_ident mi
+         WHERE mi.clie_oid_clie = cli.oid_clie
+           AND MI.VAL_IDEN_DOCU_PRIN = 1
+       )  NUM_DOCU_IDEN,
+       
+       to_char(EST.fec_naci,'dd/mm/yyyy') FEC_NACI,  
+       CLI.COD_SEXO,
+       CIV.COD_ESTA_CIVI,   
+       
+       (SELECT X.COD_NIVE_ESTU 
+        FROM MAE_NIVEL_ESTUD X
+        WHERE X.OID_NIVE_ESTU = EST.NIED_OID_NIVE_ESTU
+       ) COD_NIVE_ESTU,
+       CLI.VAL_TRAT,
+       EST.COD_CUB,  
+       PAIS.COD_PAIS, 
+       EST.IND_ACTI,  
+       CLI.IND_ORIG_REGI,
+       EST.cod_grup_func,     
+       EST.des_grup_func,    
+       EST.cod_cub_jefe,
+       EST.VAL_RELA_CONT,          
+       GEN_PKG_GENER.GEN_FN_CLIEN_TEXTO_COMUN(CLI.OID_CLIE,'MB') COD_MAIL_BELC ,  
+       EST.val_usua_red,
+       EST.VAL_PUE_ORG,  
+       EST.VAL_NOM_JEFE
+     FROM MAE_CLIEN CLI,
+          MAE_CLIEN_DIREC cdi,
+          mae_clien_unida_admin cu,
+          zon_terri_admin       zta,
+          ZON_REGIO             RE,
+          zon_zona              zo,
+          zon_secci             se,
+          zon_terri             te,
+          MAE_CLIEN_DATOS_ADICI EST,
+          SEG_NACIO             NACIO,
+          MAE_ESTAD_CIVIL       CIV,
+          SEG_PAIS              pais
+     WHERE CLI.PAIS_OID_PAIS = #oidPais#
+       <isNotEmpty prepend="AND" property="codigoCliente">     
+           cli.cod_clie = #codigoCliente#
+       </isNotEmpty>
+       <isNotEmpty prepend="AND" property="codigoCUB">      
+			EST.cod_cub = #codigoCUB#                      
+	    </isNotEmpty>                                        
+       <isNotEmpty prepend="AND" property="usuarioRed">       
+	       EST.val_usua_red = #usuarioRed#                         
+       </isNotEmpty> 
+       <isNotEmpty prepend="AND" property="tipoDocumento">     
+		  EXISTS  ( SELECT mi.clie_oid_clie
+		         FROM mae_clien_ident mi,
+		              MAE_TIPO_DOCUM  DOCUM
+		         WHERE DOCUM.PAIS_OID_PAIS = CLI.PAIS_OID_PAIS
+		           AND DOCUM.OID_TIPO_DOCU = MI.TDOC_OID_TIPO_DOCU
+		           AND mi.clie_oid_clie = cli.oid_clie
+		           AND MI.VAL_IDEN_DOCU_PRIN = 1
+		           AND DOCUM.COD_TIPO_DOCU = #tipoDocumento#                     
+			       AND MI.num_docu_iden = #numeroDocumento#    
+		       ) 			                 
+	   </isNotEmpty>                                             
+     
+       AND CLI.OID_CLIE = CU.CLIE_OID_CLIE 
+       AND CU.IND_ACTI = 1
+       AND cu.ztad_oid_terr_admi = zta.oid_terr_admi
+       
+       AND zta.zscc_oid_secc = se.oid_secc
+       AND ZTA.TERR_OID_TERR = TE.OID_TERR
+       AND SE.ZZON_OID_ZONA = ZO.OID_ZONA
+       AND ZO.ZORG_OID_REGI = RE.OID_REGI
+       
+       AND CLI.oid_clie  = cdi.clie_oid_clie
+       AND cdi.IND_DIRE_PPAL         = 1
+       AND cdi.IND_ELIM              = 0
+      
+       AND EST.IND_ACTI = 1
+       AND CLI.OID_CLIE = EST.CLIE_OID_CLIE
+       AND NACIO.OID_NACI = EST.SNON_OID_NACI
+       AND CIV.OID_ESTA_CIVI = EST.ESCV_OID_ESTA_CIVI
+       AND pais.oid_pais = cli.pais_oid_pais
+
+ </select>
+ 
+ <select id="getObtenerBuscarConsultoraDesactivadas" parameterClass="java.util.Map" resultMap="getObtenerBuscarConsultoraResult">
+     SELECT 
+       CLI.COD_CLIE,
+
+       (SELECT T.COD_TIPO_CLIE
+        FROM 
+         MAE_CLIEN_TIPO_SUBTI A,
+         mae_tipo_clien t
+        WHERE A.CLIE_OID_CLIE = CLI.OID_CLIE
+          AND A.TICL_OID_TIPO_CLIE = t.oid_tipo_clie
+          AND A.IND_PPAL = 1
+        ) COD_TIPO_CLIE,
+        
+       (SELECT T.COD_SUBT_CLIE 
+        FROM 
+         MAE_CLIEN_TIPO_SUBTI A,
+         mae_subti_clien t
+        WHERE A.CLIE_OID_CLIE = CLI.OID_CLIE
+          AND A.SBTI_OID_SUBT_CLIE = T.OID_SUBT_CLIE
+          AND A.IND_PPAL = 1
+       ) COD_SUBT_CLIE,
+       
+       ZO.COD_ZONA,
+       TO_CHAR(TE.COD_TERR) COD_TERR,
+       to_char(CLI.FEC_INGR,'dd/mm/yyyy') FEC_INGR, 
+       
+       DECODE(EST.IND_IMPR_PDOC,'N','0','1') IND_IMPR_PDOC,
+      
+       TRIM(CLI.VAL_APE1) VAL_APE1,
+       TRIM(CLI.VAL_APE2) VAL_APE2,
+       TRIM(CLI.VAL_NOM1) VAL_NOM1,
+       TRIM(CLI.VAL_NOM2) VAL_NOM2,
+       NACIO.COD_NACI, 
+        
+       ( SELECT DOCUM.COD_TIPO_DOCU
+         FROM mae_clien_ident mi,
+              MAE_TIPO_DOCUM  DOCUM
+         WHERE DOCUM.PAIS_OID_PAIS = CLI.PAIS_OID_PAIS
+           AND DOCUM.OID_TIPO_DOCU = MI.TDOC_OID_TIPO_DOCU
+           AND mi.clie_oid_clie = cli.oid_clie
+           AND MI.VAL_IDEN_DOCU_PRIN = 1
+       )  COD_TIPO_DOCU,
+       
+       ( SELECT MI.NUM_DOCU_IDEN 
+         FROM mae_clien_ident mi
+         WHERE mi.clie_oid_clie = cli.oid_clie
+           AND MI.VAL_IDEN_DOCU_PRIN = 1
+       )  NUM_DOCU_IDEN,
+       
+       to_char(EST.fec_naci,'dd/mm/yyyy') FEC_NACI,  
+       CLI.COD_SEXO,
+       CIV.COD_ESTA_CIVI,   
+       
+       (SELECT X.COD_NIVE_ESTU 
+        FROM MAE_NIVEL_ESTUD X
+        WHERE X.OID_NIVE_ESTU = EST.NIED_OID_NIVE_ESTU
+       ) COD_NIVE_ESTU,
+       CLI.VAL_TRAT,
+       EST.COD_CUB,  
+       PAIS.COD_PAIS, 
+       EST.IND_ACTI,  
+       CLI.IND_ORIG_REGI,
+       EST.cod_grup_func,     
+       EST.des_grup_func,    
+       EST.cod_cub_jefe,
+       EST.VAL_RELA_CONT,          
+       GEN_PKG_GENER.GEN_FN_CLIEN_TEXTO_COMUN(CLI.OID_CLIE,'MB') COD_MAIL_BELC ,  
+       EST.val_usua_red,
+       EST.VAL_PUE_ORG,  
+       EST.VAL_NOM_JEFE
+     FROM MAE_CLIEN CLI,
+          MAE_CLIEN_DIREC cdi,
+          mae_clien_unida_admin cu,
+          zon_terri_admin       zta,
+          ZON_REGIO             RE,
+          zon_zona              zo,
+          zon_secci             se,
+          zon_terri             te,
+          MAE_CLIEN_DATOS_ADICI EST,
+          SEG_NACIO             NACIO,
+          MAE_ESTAD_CIVIL       CIV,
+          SEG_PAIS              pais
+     WHERE CLI.PAIS_OID_PAIS = #oidPais#
+       <isNotEmpty prepend="AND" property="codigoCliente">     
+           cli.cod_clie = #codigoCliente#
+       </isNotEmpty>
+       <isNotEmpty prepend="AND" property="codigoCUB">      
+			EST.cod_cub = #codigoCUB#                      
+	    </isNotEmpty>                                        
+       <isNotEmpty prepend="AND" property="usuarioRed">       
+	       EST.val_usua_red = #usuarioRed#                         
+       </isNotEmpty> 
+       <isNotEmpty prepend="AND" property="tipoDocumento">   
+           EXISTS  ( SELECT mi.clie_oid_clie
+		         FROM mae_clien_ident mi,
+		              MAE_TIPO_DOCUM  DOCUM
+		         WHERE DOCUM.PAIS_OID_PAIS = CLI.PAIS_OID_PAIS
+		           AND DOCUM.OID_TIPO_DOCU = MI.TDOC_OID_TIPO_DOCU
+		           AND mi.clie_oid_clie = cli.oid_clie
+		           AND MI.VAL_IDEN_DOCU_PRIN = 1
+		           AND DOCUM.COD_TIPO_DOCU = #tipoDocumento#                     
+			       AND MI.num_docu_iden = #numeroDocumento#    
+		       ) 			                 
+	   </isNotEmpty>                                             
+       
+       AND CLI.OID_CLIE = CU.CLIE_OID_CLIE 
+       AND CU.IND_ACTI = 1
+       AND cu.ztad_oid_terr_admi = zta.oid_terr_admi
+       
+       AND zta.zscc_oid_secc = se.oid_secc
+       AND ZTA.TERR_OID_TERR = TE.OID_TERR
+       AND SE.ZZON_OID_ZONA = ZO.OID_ZONA
+       AND ZO.ZORG_OID_REGI = RE.OID_REGI
+       
+       AND CLI.oid_clie  = cdi.clie_oid_clie
+       AND cdi.IND_DIRE_PPAL         = 1
+       AND cdi.IND_ELIM              = 0
+       
+       AND EST.IND_ACTI != 1
+       AND CLI.OID_CLIE = EST.CLIE_OID_CLIE
+       AND NACIO.OID_NACI = EST.SNON_OID_NACI
+       AND CIV.OID_ESTA_CIVI = EST.ESCV_OID_ESTA_CIVI
+       AND pais.oid_pais = cli.pais_oid_pais
+
+ </select>
+ 
+ <resultMap id="getObtenerDireccionesConsultoraResult" class="java.util.HashMap">
+    <result property="tipoDir"            column="COD_TIPO_DIRE"/>
+ 	<result property="nivel1"             column="NIVEL1"/>
+ 	<result property="nivel2"             column="NIVEL2"/>
+ 	<result property="nivel3"             column="NIVEL3"/>
+ 	<result property="tipoVia"            column="COD_TIPO_VIA"/>
+ 	<result property="direccion"          column="VAL_NOMB_VIA"/>
+ 	<result property="numPrinc"           column="NUM_PPAL"/>
+ 	<result property="observaciones"      column="VAL_OBSE"/>
+ </resultMap>
+ 
+  <select id="getObtenerDireccionesConsultora" parameterClass="java.util.Map" resultMap="getObtenerDireccionesConsultoraResult">
+	  SELECT 
+		  TD.COD_TIPO_DIRE,
+		  VIA.COD_TIPO_VIA,
+		  DIR.VAL_NOMB_VIA,
+		  DIR.NUM_PPAL,
+		  DIR.VAL_OBSE,
+		                         
+		 ( SELECT DES_GEOG
+		      FROM ZON_VALOR_ESTRU_GEOPO eg
+		     WHERE eg.ORDE_1 = SUBSTR(dir.COD_UNID_GEOG,1,6)
+		       AND eg.ORDE_2 IS NULL
+		       AND eg.ORDE_3 IS NULL
+		   ) NIVEL1,
+		   
+		  ( SELECT DES_GEOG
+		        FROM ZON_VALOR_ESTRU_GEOPO eg
+		       WHERE eg.ORDE_1 = SUBSTR(dir.COD_UNID_GEOG,1,6)
+		         AND eg.ORDE_2 = SUBSTR(dir.COD_UNID_GEOG,7,6)
+		         AND eg.ORDE_3 IS NULL
+		    ) NIVEL2 , 
+		      
+		  (SELECT DES_GEOG
+		     FROM ZON_VALOR_ESTRU_GEOPO eg
+		    WHERE  eg.ORDE_1 = SUBSTR(dir.COD_UNID_GEOG,1,6)
+		      AND eg.ORDE_2 = SUBSTR(dir.COD_UNID_GEOG,7,6)
+		      AND eg.ORDE_3 = SUBSTR(dir.COD_UNID_GEOG,13,6)
+		      AND eg.orde_4 IS NULL
+		   ) AS NIVEL3 
+		FROM 
+		  MAE_CLIEN CLI,
+		  MAE_CLIEN_DIREC DIR,
+		  MAE_TIPO_DIREC td,
+		  SEG_TIPO_VIA VIA
+		WHERE CLI.PAIS_OID_PAIS = #oidPais#
+		  <isNotEmpty prepend="AND" property="codigoCliente">     
+             cli.cod_clie = #codigoCliente#
+          </isNotEmpty>
+		  AND DIR.CLIE_OID_CLIE = CLI.OID_CLIE
+		  AND TD.OID_TIPO_DIRE = DIR.TIDC_OID_TIPO_DIRE
+		  AND VIA.OID_TIPO_VIA = DIR.TIVI_OID_TIPO_VIA
+  
+  </select>     	
+  
+  <parameterMap id="paramExecuteInactivarConsultora2campanas" class="java.util.Map" >
+	    <parameter property="codigoPais"             jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo"          jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+        <parameter property="codigoUsuario"          jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>  
+   </parameterMap>
+
+   <procedure id="executeInactivarConsultora2campanas" parameterMap="paramExecuteInactivarConsultora2campanas" >
+		{call mae_pkg_proce_clien.MAE_PR_INACT_CLIEN_SINPE(?, ?, ?)}
+   </procedure>	
+  
+   <parameterMap id="executeActualizarClasificacionesFlexipagoParams" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+     	
+	<procedure id="executeActualizarClasificacionesFlexipago" parameterMap="executeActualizarClasificacionesFlexipagoParams">
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_ACTUA_CLASI_FLEXI(?,?,?,?,?)}
+	</procedure>
+	
+	
+  <select id="getExisteLider" parameterClass="java.util.Map" resultClass="int">
+     select count(1) from mae_clien_lider t
+     where t.PAIS_COD_PAIS = #codPais#
+       and t.COD_CLID = #codConsultora#
+  </select>
+  
+  <insert id="insertLider" parameterClass="java.util.Map" >
+    insert into mae_clien_lider(
+        PAIS_COD_PAIS, 
+		COD_CLID, 
+		NUM_DNI, 
+		USU_DIGI, 
+		FEC_DIGI, 
+		EST_CLID,
+		COD_PROV
+	 )
+	 values (
+	   #codigoPais#,
+	   #codConsultora#,
+	   #nroDocumento#,
+	   #codigoUsuario#,
+	   SYSDATE,
+	   '1',
+	   #codigoProveedor#
+	   )
+  </insert>
+  
+  <select id="getExistePagoLider" parameterClass="java.util.Map" resultClass="int">
+      select count(1) from LEC_LIDER_PAGO_COMIS t
+      WHERE NUM_SECU = #nroSecuencial#
+        AND COD_SAP_CONS = #codigoProveedor#
+  </select>
+  
+  <update id="updatePagoLiderContabilizarPago" parameterClass="java.util.Map" >
+    update LEC_LIDER_PAGO_COMIS
+    set VAL_MONT_NETO = #montoNeto#,
+        IND_PROC_PAGO = #indProcesoPago#,
+        USU_MODI = 'WS_ADMIN',
+        FEC_MODI = SYSDATE
+     WHERE NUM_SECU = #nroSecuencial#
+       AND COD_SAP_CONS = #codigoProveedor#
+      AND IND_PROC_PAGO= '2'
+      OR IND_PROC_PAGO= '4' 
+      AND IND_ACTI= '1'
+  </update>
+  
+   <update id="updatePagoLiderContabilizarPagoSinMonto" parameterClass="java.util.Map" >
+    update LEC_LIDER_PAGO_COMIS
+    set 
+        IND_PROC_PAGO = #indProcesoPago#,
+        USU_MODI = 'WS_ADMIN',
+        FEC_MODI = SYSDATE
+     WHERE NUM_SECU = #nroSecuencial#
+       AND COD_SAP_CONS = #codigoProveedor#
+      AND IND_PROC_PAGO= '2'
+      OR IND_PROC_PAGO= '4' 
+      AND IND_ACTI= '1'
+  </update>
+  
+   <insert id="insertCargaImpresionPaqueteDocumentario" parameterClass="java.util.Map">
+		INSERT INTO MAE_CARGA_IMPRE_PADOC (
+		   NUM_CARG, NUM_FILA, COD_CLIE, FEC_CARG, COD_USUA) 
+		VALUES (#numeroCarga#, #numeroFila#, #codigoCliente#, SYSDATE, #codigoUsuario#)    
+    </insert>
+
+    <select id="getNumeroCargaImpresion" resultClass="string">
+		  SELECT NVL(MAX(NUM_CARG) + 1, 1) AS NUM_CARGA
+		  FROM MAE_CARGA_IMPRE_PADOC A
+    </select>  
+ 
+    <parameterMap id="paramExecuteInsertarCargaImpresionPaqueteDocumentario" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroCarga" jdbcType="NUMBER" mode="IN"/>
+		<parameter property="oidTipoCliente" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="oidSubTipoCliente" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="oidTipoClasificacion" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="oidClasificacion" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoRegion" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoZona" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroRegistros" jdbcType="VARCHAR" javaType="java.lang.String"  mode="OUT"/>
+    </parameterMap>
+    
+	<procedure id="executeInsertarCargaImpresionPaqueteDocumentario" parameterMap="paramExecuteInsertarCargaImpresionPaqueteDocumentario" >
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_INSER_CARGA_IMPRE( ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )}
+	</procedure>
+	    
+    <parameterMap id="paramExecuteValidarCargaImpresionPaqueteDocumentario" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroCarga" jdbcType="NUMBER" mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeValidarCargaImpresionPaqueteDocumentario" parameterMap="paramExecuteValidarCargaImpresionPaqueteDocumentario" >
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_VALID_CARGA_IMPRE( ?, ? )}
+	</procedure>
+	    
+	    
+	<resultMap id="getCargaImpresionPaqueteDocumentarioResult"  class="java.util.HashMap">
+		<result property="numeroFila"	      column="NUM_FILA"/>
+		<result property="codigoCliente"	  column="COD_CLIE"/>
+		<result property="codigoMotivo"       column="COD_MOTI"/>
+		<result property="descripcionMotivo"  column="DES_MOTI"/>
+    </resultMap>
+
+    <select id="getCargaImpresionPaqueteDocumentarioList" parameterClass="java.util.Map" resultMap="getCargaImpresionPaqueteDocumentarioResult">
+		SELECT car.NUM_FILA, car.COD_CLIE, car.COD_MOTI, mot.DES_MOTI
+		  FROM MAE_CARGA_IMPRE_PADOC car, MAE_MOTIV_CARGA_IMPRE mot
+		 WHERE car.NUM_CARG = #numeroCarga#
+		   AND car.COD_MOTI = mot.COD_MOTI
+		 ORDER BY car.NUM_FILA 
+	</select>	    
+	
+    <parameterMap id="paramExecuteActualizarCargaImpresionPaqueteDocumentario" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroCarga" jdbcType="NUMBER" mode="IN"/>
+		<parameter property="indicadorImprimirPaqDoc" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeActualizarCargaImpresionPaqueteDocumentario" parameterMap="paramExecuteActualizarCargaImpresionPaqueteDocumentario" >
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_ACTUA_CARGA_IMPRE( ?, ?, ?, ? )}
+	</procedure>
+  
+   <insert id="insertCargaNivelRiesgo" parameterClass="java.util.Map">
+		INSERT INTO MAE_CARGA_NIVEL_RIESG (
+		   NUM_CARG, NUM_FILA, COD_CLIE, FEC_CARG, COD_USUA) 
+		VALUES (#numeroCarga#, #numeroFila#, #codigoCliente#, SYSDATE, #codigoUsuario#)    
+    </insert>
+
+    <select id="getNumeroCargaRiesgo" resultClass="string">
+		  SELECT NVL(MAX(NUM_CARG) + 1, 1) AS NUM_CARGA
+		  FROM MAE_CARGA_NIVEL_RIESG A
+    </select>  
+	    
+    <parameterMap id="paramExecuteValidarCargaNivelRiesgo" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroCarga" jdbcType="NUMBER" mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeValidarCargaNivelRiesgo" parameterMap="paramExecuteValidarCargaNivelRiesgo" >
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_VALID_CARGA_NIVEL_RIESG( ?, ? )}
+	</procedure>
+	    
+	    
+	<resultMap id="getCargaNivelRiesgoResult"  class="java.util.HashMap">
+		<result property="numeroFila"	      column="NUM_FILA"/>
+		<result property="codigoCliente"	  column="COD_CLIE"/>
+		<result property="codigoMotivo"       column="COD_MOTI"/>
+		<result property="descripcionMotivo"  column="DES_MOTI"/>
+    </resultMap>
+
+    <select id="getCargaNivelRiesgoList" parameterClass="java.util.Map" resultMap="getCargaNivelRiesgoResult">
+		SELECT car.NUM_FILA, car.COD_CLIE, car.COD_MOTI, mot.DES_MOTI
+		  FROM MAE_CARGA_NIVEL_RIESG car, MAE_MOTIV_CARGA_NIVRI mot
+		 WHERE car.NUM_CARG = #numeroCarga#
+		   AND car.COD_MOTI = mot.COD_MOTI
+		 ORDER BY car.NUM_FILA 
+	</select>	    
+	
+    <parameterMap id="paramExecuteActualizarCargaNivelRiesgo" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroCarga" jdbcType="NUMBER" mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeActualizarCargaNivelRiesgo" parameterMap="paramExecuteActualizarCargaNivelRiesgo" >
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_ACTUA_CARGA_NIVEL_RIESG( ?, ?, ? )}
+	</procedure>
+  
+	<parameterMap id="paramExecuteActualizarClasificacionNuevasDcto" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoMarca" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoCanal" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeActualizarClasificacionNuevasDcto" parameterMap="paramExecuteActualizarClasificacionNuevasDcto" >
+		{call MAE_PKG_CLASI.MAE_PR_ACTUA_CLASI_NUEVA( ?, ?, ?, ?, ? )}
+	</procedure>
+	
+	<insert id="insertClasificacionClienteHistorico" parameterClass="java.util.Map">
+		INSERT INTO MAE_CLASI_ELIMI_HISTO(
+			COR_CLAS_ELIM, 
+			PAIS_COD_PAIS, 
+			COD_SUBT_CLIE, 
+			COD_TIPO_CLIE, 
+			COD_TIPO_CLAS, 
+			COD_CLAS, 
+			NUM_REGI_ELIM, 
+			FEC_ELIM,
+			USU_ELIM)
+		VALUES(
+			(SELECT  NVL(MAX(COR_CLAS_ELIM), 0) + 1 FROM  MAE_CLASI_ELIMI_HISTO),
+			#codigoPais#,
+			(SELECT COD_SUBT_CLIE FROM MAE_SUBTI_CLIEN  WHERE OID_SUBT_CLIE = #oidSubTipoCliente#),
+			(SELECT COD_TIPO_CLIE FROM MAE_TIPO_CLIEN  WHERE OID_TIPO_CLIE = #oidTipoCliente#),
+			(SELECT COD_TIPO_CLAS FROM MAE_TIPO_CLASI_CLIEN  WHERE OID_TIPO_CLAS = #oidTipoClasificacion#),
+	
+			<isNotEmpty property="oidClasificacion">
+				(SELECT COD_CLAS FROM MAE_CLASI WHERE OID_CLAS = #oidClasificacion#),
+			</isNotEmpty>
+			<isEmpty property="oidClasificacion">
+				'T',
+			</isEmpty>
+			
+			#numRegistros#,
+			SYSDATE,
+			#codigoUsuario#)	
+	</insert>
+	  
+    
+    <parameterMap id="paramsExecuteInsertUpdateDirecEntrega" class="map">
+		<parameter property="usuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoConsultora" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="direccion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />		
+		<parameter property="referenciaDireccion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="tipoDireccion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap> 
+
+	<procedure id="executeInsertUpdateDirecEntrega" parameterMap="paramsExecuteInsertUpdateDirecEntrega">
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_INSER_DIREC_ENT(?, ?, ?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteActualizarEstatusConsultoras" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="fechaFacturacion" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeActualizarEstatusConsultoras" parameterMap="paramExecuteActualizarEstatusConsultoras">
+		{call MAE_PKG_ESTAT.MAE_PR_PROCE_FACTU_DIARI(?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteActualizarEstatusConsultorasRegion" class="map">
+		<parameter property="codigoPais" 		jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	
+		<parameter property="codigoPeriodo" 	jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoRegion"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaFacturacion" 	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario"    	jdbcType="VARCHAR2" javaType="java.lang.String"  mode="IN"/>
+	</parameterMap>
+
+	<procedure id="executeActualizarEstatusConsultorasRegion" parameterMap="paramExecuteActualizarEstatusConsultorasRegion">
+		{call MAE_PKG_ESTAT.MAE_PR_PROCE_CIERR_REGIO(?, ?, ?, ?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteActualizarEstatusConsultorasPeriodo" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+	</parameterMap>
+
+	<procedure id="executeActualizarEstatusConsultorasPeriodo" parameterMap="paramExecuteActualizarEstatusConsultorasPeriodo">
+		{call MAE_PKG_ESTAT.MAE_PR_PROCE_CIERR_CAMPA(?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramExecuteActualizarInformacionBasica" class="map">
+		<parameter property="codigoPeriodo" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoUsuario" jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />	
+	</parameterMap>
+	<procedure id="executeActualizarInformacionBasica" parameterMap="paramExecuteActualizarInformacionBasica">
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_ACTUA_INFOR_BASIC(?, ?) }
+	</procedure>
+	
+	<parameterMap id="paramProcesoGENBloquearConsultorasPrimerPedido" class="map">
+   		<parameter property="codigoPais"        jdbcType="VARCHAR" javaType="java.lang.String" mode="IN" />
+		<parameter property="codigoPeriodo"    	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="codigoUsuario" 	jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="fechaFacturacion"  jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>		
+	</parameterMap>
+	
+	<procedure id="executeProcesoGENBloquearConsultorasPrimerPedido" parameterMap="paramProcesoGENBloquearConsultorasPrimerPedido">
+		{call MAE_PKG_PROCE_CLIEN.MAE_PR_BLOQU_CONSU_PRIPE(?, ?, ?, ?) }
+	</procedure>
+	
+	
+	<select id="getExisteCodigoProveedor" parameterClass="map" resultClass="string">
+		select count(*)
+		  from MAE_CLIEN_DATOS_ADICI mcda, MAE_CLIEN mc
+		 where mcda.clie_oid_clie = mc.oid_clie
+		   and mcda.cod_prov = #codigoProveedor#  
+    </select>
+           
+	<update id="updatePagoLiderRegistarLider" parameterClass="java.util.Map" >
+	    update MAE_CLIEN_DATOS_ADICI t
+		   set t.cod_prov = #codigoProveedor#, t.usu_modi = #codigoUsuario#
+		 WHERE t.clie_oid_clie =
+		       (select a.oid_clie
+		          from mae_clien a
+		         where a.cod_clie = #codConsultora#
+		           and a.pais_oid_pais = gen_pkg_gener.gen_fn_devuelve_id_pais(#codigoPais#))
+  </update>           
+      
+	<insert id="insertCargaMasivaDireccion" parameterClass="java.util.Map">
+		INSERT INTO MAE_CARGA_MASIV_DIREC (
+		   NUM_CARG, NUM_FILA, COD_CLIE, VAL_REFE, VAL_BARR, COD_ZONA,
+ 			COD_TERR, VAL_TIPO_VIA, VAL_DIRE, VAL_NUME_PRIN, COD_TIPO_DIRE, FEC_CARG, COD_USUA,
+ 			VAL_MANZ,VAL_ETA_CONJ,VAL_CAL_PRIN,VAL_CAL_SEC) 
+		VALUES (#numeroCarga#, #numeroFila#, #codigoCliente#, #referencia#, #barrio#, #zona#,
+		        #territorio#, #tipoVia#, #direccion#, #numeroPrincipal#, #tipoDireccion#, SYSDATE, #codigoUsuario#,
+		        #manzanaLetra#,#etapaConjunto#,#callePrincipal#,#calleSecundaria#)    
+    </insert>
+
+    <select id="getNumeroCargaDireccion" resultClass="string">
+		  SELECT NVL(MAX(NUM_CARG) + 1, 1) AS NUM_CARGA
+		  FROM MAE_CARGA_MASIV_DIREC A
+    </select>  
+    
+    <select id="getNumeroLoteDireccion" resultClass="string">
+		  SELECT TO_CHAR(SYSDATE, 'YYYYMMDD') || 
+		  		 LPAD(NVL(MAX(SUBSTR(A.NUM_LOTE, 9, 4)) + 1, 1), 4, '0') AS NUM_LOTE
+		  FROM MAE_CARGA_MASIV_DIREC A
+    </select>  
+    
+    <parameterMap id="paramExecuteValidarCargaMasivaDireccion" class="map">
+		<parameter property="codigoPais" jdbcType="VARCHAR" javaType="java.lang.String"  mode="IN"/>
+		<parameter property="numeroCarga" jdbcType="NUMBER" mode="IN"/>
+    </parameterMap>
+    
+	<procedure id="executeValidarCargaMasivaDireccion" parameterMap="paramExecuteValidarCargaMasivaDireccion" >
+		{call MAE_PKG_CLASI.MAE_PR_VALID_CARGA_MASIV_DIREC( ?, ? )}
+	</procedure>
+
+	<resultMap id="getCargaMasivaDireccionUAResult"  class="java.util.HashMap">
+		<result property="numeroFila"	      column="NUM_FILA"/>
+		<result property="oidCliente"		  column="OID_CLIE"/>
+		<result property="codigoZona"	      column="COD_ZONA"/>
+		<result property="codigoZonaActual"   column="COD_ZONA_ACTU"/>
+    </resultMap>
+
+    <select id="getCargaMasivaDireccionUAList" parameterClass="java.util.Map" resultMap="getCargaMasivaDireccionUAResult">
+		SELECT NUM_FILA,
+		       OID_CLIE,
+		       COD_ZONA,
+		       COD_ZONA_ACTU
+		  FROM MAE_CARGA_MASIV_DIREC
+		 WHERE NUM_CARG = #numeroCarga#
+		   AND IND_VALI = 1
+		   AND OID_TERR_ADMI IS NOT NULL 
+	</select>
+	
+	<update id="updateCargaMasivaDireccionUA" parameterClass="java.util.Map">
+		UPDATE MAE_CARGA_MASIV_DIREC
+		   SET OID_PERI = #oidPeriodo#,
+		       COD_PERI = #codigoPeriodo#,
+		       IND_PASO_PEDI = #indicadorPasoPedido#,
+		       IND_GENE_ESTA = #indicadorGeneraEstatus#,
+		       COD_OBSE = #codigoObservacion# 
+		 WHERE NUM_CARG = #numeroCarga#
+		   AND NUM_FILA = #numeroFila#
+	</update>	    
+	    
+	<resultMap id="getCargaMasivaDireccionResult"  class="java.util.HashMap">
+		<result property="numeroFila"	      column="NUM_FILA"/>
+		<result property="codigoCliente"	  column="COD_CLIE"/>
+		<result property="codigoMotivo"       column="COD_MOTI"/>
+		<result property="descripcionMotivo"  column="DES_MOTI"/>
+    </resultMap>
+
+    <select id="getCargaMasivaDireccionList" parameterClass="java.util.Map" resultMap="getCargaMasivaDireccionResult">
+		SELECT car.NUM_FILA, car.COD_CLIE, car.COD_MOTI, mot.DES_MOTI
+		  FROM MAE_CARGA_MASIV_DIREC car, MAE_MOTIV_CARGA_DIREC mot
+		 WHERE car.NUM_CARG = #numeroCarga#
+		   AND car.COD_MOTI = mot.COD_MOTI
+		 ORDER BY car.NUM_FILA 
+	</select>
+	
+	<select id="getCargaMasivaDireccionObsList" parameterClass="java.util.Map" resultMap="getCargaMasivaDireccionResult">
+		SELECT car.NUM_FILA, car.COD_CLIE, car.COD_MOTI, mot.DES_MOTI
+		  FROM MAE_CARGA_MASIV_DIREC car, MAE_MOTIV_CARGA_DIREC mot
+		 WHERE car.NUM_CARG = #numeroCarga#
+		   AND car.IND_VALI = 1
+		   AND car.COD_OBSE = mot.COD_MOTI(+)
+		 ORDER BY car.NUM_FILA 
+	</select>	
+	
+	<resultMap id="getCargaMasivaDireccionOKResult"  class="java.util.HashMap">
+		<result property="numeroFila"	      column="NUM_FILA"/>
+		<result property="oidCliente"		  column="OID_CLIE"/>
+		<result property="codigoCliente"      column="COD_CLIE"/>
+		<result property="referencia"		  column="VAL_REFE"/>
+		<result property="barrio"		      column="VAL_BARR"/>
+		<result property="zona"				  column="COD_ZONA"/>
+		<result property="territorio"	      column="COD_TERR"/>
+		<result property="tipoVia"			  column="VAL_TIPO_VIA"/>
+		<result property="direccion"	      column="VAL_DIRE"/>
+		<result property="numeroPrincipal"	  column="VAL_NUME_PRIN"/>
+		<result property="tipoDireccion"      column="COD_TIPO_DIRE"/>
+		<result property="oidTerritorio"	  column="OID_TERR"/>
+		<result property="oidTerriAdmi"	      column="OID_TERR_ADMI"/>
+		<result property="codigoUbigeo" 	  column="COD_UNID_GEOG"/>
+		<result property="estatus"		      column="COD_ESTA"/>
+		<result property="oidPeriodo"		  column="OID_PERI"/>
+		<result property="codigoPeriodo" 	  column="COD_PERI"/>
+		<result property="indPasoPedido"      column="IND_PASO_PEDI"/>
+		<result property="indGeneraEstatus"	  column="IND_GENE_ESTA"/>
+		<result property="manzanaletra"	  	  column="VAL_MANZ"/>
+		<result property="etapaConjunto"	  column="VAL_ETA_CONJ"/>
+		<result property="callePrincipal"	  column="VAL_CAL_PRIN"/>
+		<result property="calleSecundaria"	  column="VAL_CAL_SEC"/>
+    </resultMap>
+    
+	<select id="getCargaMasivaDireccionOKList" parameterClass="java.util.Map" resultMap="getCargaMasivaDireccionOKResult">
+		SELECT NUM_FILA,
+		       OID_CLIE,
+			   COD_CLIE,
+			   VAL_REFE,
+			   VAL_BARR,
+			   COD_ZONA,
+			   COD_TERR,
+			   VAL_TIPO_VIA,
+			   VAL_DIRE,
+			   VAL_NUME_PRIN,
+			   COD_TIPO_DIRE,
+			   OID_TERR,
+			   OID_TERR_ADMI,
+			   COD_UNID_GEOG,
+			   COD_ESTA,
+			   OID_PERI,
+			   COD_PERI,
+			   IND_PASO_PEDI,
+			   IND_GENE_ESTA,
+			   VAL_MANZ,
+			   VAL_ETA_CONJ,
+			   VAL_CAL_PRIN,
+			   VAL_CAL_SEC			   
+		  FROM MAE_CARGA_MASIV_DIREC
+		 WHERE NUM_CARG = #numeroCarga#
+		   AND IND_VALI = 1
+		 ORDER BY NUM_FILA   
+	</select>
+	    
+	<update id="updateCargaMasivaDireccionOK" parameterClass="java.util.Map">
+		UPDATE MAE_CARGA_MASIV_DIREC
+		   SET NUM_LOTE = #numeroLote#,
+		       FEC_PROC = SYSDATE
+		 WHERE NUM_CARG = #numeroCarga#
+		   AND IND_VALI = 1
+	</update>
+	
+	<update id="updateClienteLider" parameterClass="java.util.Map">
+		update MAE_CLIEN_DATOS_ADICI mcda
+		   set mcda.cod_prov = #codigoProveedor#,
+		       mcda.fec_ulti_actu = sysdate,
+		       mcda.usu_modi = #codigoUsuario#
+		 where mcda.clie_oid_clie = gen_pkg_gener.gen_fn_devuelve_id_cliente(#codigoCliente#)     
+	</update>	
+	    
+</sqlMap>
